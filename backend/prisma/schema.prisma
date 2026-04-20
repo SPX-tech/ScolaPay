@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  TENANT_ADMIN
+  CASHIER
+  ACCOUNTANT
+  AUDITOR
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+}
+
+enum StudentStatus {
+  ACTIVE
+  SUSPENDED
+  GRADUATED
+}
+
+enum TransactionType {
+  CASH_PAYMENT
+  DEBT_ADJUSTMENT
+  REFUND
+}
+
+enum TransactionStatus {
+  POSTED
+  VOIDED
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  currency  String   @default("XAF")
+  timezone  String   @default("Africa/Ndjamena")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users        User[]
+  students     Student[]
+  transactions Transaction[]
+  outboxEvents OutboxEvent[]
+
+  @@map("tenants")
+}
+
+model User {
+  id           String     @id @default(cuid())
+  tenantId     String
+  email        String
+  phone        String?
+  fullName     String
+  passwordHash String
+  role         UserRole
+  status       UserStatus @default(ACTIVE)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  tenant               Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  recordedTransactions Transaction[] @relation("RecordedByUser")
+
+  @@unique([tenantId, email])
+  @@index([tenantId, role, status])
+  @@map("users")
+}
+
+model Student {
+  id            String        @id @default(cuid())
+  tenantId      String
+  studentNumber String
+  fullName      String
+  guardianPhone String?
+  status        StudentStatus @default(ACTIVE)
+  debtCents     BigInt        @default(0)
+  creditCents   BigInt        @default(0)
+  enrolledAt    DateTime?
+  lastPaymentAt DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  transactions Transaction[]
+
+  @@unique([tenantId, studentNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, fullName])
+  @@map("students")
+}
+
+model Transaction {
+  id               String            @id @default(cuid())
+  tenantId         String
+  studentId        String
+  recordedByUserId String
+  type             TransactionType   @default(CASH_PAYMENT)
+  status           TransactionStatus @default(POSTED)
+  amountCents      BigInt
+  previousDebtCents BigInt
+  newDebtCents     BigInt
+  currency         String            @default("XAF")
+  receiptNumber    String
+  receiptHash      String            @db.VarChar(64)
+  idempotencyKey   String?
+  note             String?
+  metadata         Json?
+  recordedAt       DateTime          @default(now())
+  voidedAt         DateTime?
+  voidReason       String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  student    Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  recordedBy User    @relation("RecordedByUser", fields: [recordedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, receiptNumber])
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, studentId, recordedAt])
+  @@index([tenantId, recordedByUserId, recordedAt])
+  @@index([tenantId, type, status])
+  @@map("transactions")
+}
+
+model OutboxEvent {
+  id            BigInt       @id @default(autoincrement())
+  tenantId      String
+  aggregateType String
+  aggregateId   String
+  eventType     String
+  payload       Json
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  availableAt   DateTime     @default(now())
+  publishedAt   DateTime?
+  lastError     String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, status, availableAt])
+  @@index([eventType, status])
+  @@map("outbox_events")
+}
