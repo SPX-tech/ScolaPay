@@ -4,18 +4,20 @@ import { useState, useEffect } from 'react';
 import { classesApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { BookOpen, Loader2, Plus, Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ClassesPage() {
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: '', description: '', academicYear: new Date().getFullYear().toString() });
+  const { toast } = useToast();
 
   const fetchClasses = async () => {
     try {
       const res = await classesApi.list();
       setClasses(res.data);
-    } catch (err) { console.error(err); }
+    } catch (err: any) { toast({ title: 'Erreur', description: err.response?.data?.message || 'Erreur', variant: 'error' }); }
     finally { setLoading(false); }
   };
 
@@ -26,10 +28,9 @@ export default function ClassesPage() {
     try {
       await classesApi.create(form);
       setShowCreate(false);
-      setForm({ name: '', description: '', academicYear: new Date().getFullYear().toString() });
-      fetchClasses();
+      setForm({ name: '', description: '', academicYear: new Date().getFullYear().toString() });      fetchClasses();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur');
+      toast({ title: 'Erreur', description: err.response?.data?.message || 'Erreur', variant: 'error' });
     }
   };
 
@@ -38,7 +39,9 @@ export default function ClassesPage() {
     try {
       await classesApi.delete(id);
       fetchClasses();
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err.response?.data?.message || 'Erreur lors de la suppression', variant: 'error' });
+    }
   };
 
   return (

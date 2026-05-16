@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { transactionsApi } from '@/lib/api';
 import { formatCurrency, formatDate, getStatusColor, cn } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, Loader2, Search, CreditCard, XCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Search, CreditCard, XCircle, Calendar } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -12,13 +13,23 @@ export default function TransactionsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [voidingId, setVoidingId] = useState<string | null>(null);
+  const { toast } = useToast();
   const limit = 20;
 
   const fetchTransactions = async () => {
     setLoading(true);
     try {
-      const res = await transactionsApi.list({ page, limit, type: typeFilter || undefined, status: statusFilter || undefined });
+      const res = await transactionsApi.list({
+        page,
+        limit,
+        type: typeFilter || undefined,
+        status: statusFilter || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      });
       setTransactions(res.data.data);
       setTotalPages(res.data.meta.totalPages);
     } catch (err) {
@@ -28,7 +39,7 @@ export default function TransactionsPage() {
     }
   };
 
-  useEffect(() => { fetchTransactions(); }, [page, typeFilter, statusFilter]);
+  useEffect(() => { fetchTransactions(); }, [page, typeFilter, statusFilter, startDate, endDate]);
 
   const handleVoid = async (id: string) => {
     const reason = prompt('Raison de l\'annulation :');
@@ -36,9 +47,10 @@ export default function TransactionsPage() {
     setVoidingId(id);
     try {
       await transactionsApi.void(id, reason);
+      toast({ title: 'Transaction annulée', description: 'Le solde de l\'étudiant a été mis à jour.', variant: 'success' });
       fetchTransactions();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err.response?.data?.message || 'Impossible d\'annuler la transaction.', variant: 'error' });
     } finally {
       setVoidingId(null);
     }
@@ -52,7 +64,7 @@ export default function TransactionsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
         <select
           value={typeFilter}
           onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
@@ -72,6 +84,30 @@ export default function TransactionsPage() {
           <option value="POSTED">Publié</option>
           <option value="VOIDED">Annulé</option>
         </select>
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-muted-foreground" />
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
+            className="px-3 py-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <span className="text-muted-foreground text-sm">→</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
+            className="px-3 py-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          {(startDate || endDate) && (
+            <button
+              onClick={() => { setStartDate(''); setEndDate(''); setPage(1); }}
+              className="px-2 py-1 text-xs rounded-md bg-secondary hover:bg-secondary/80 transition-colors"
+            >
+              Effacer
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Table */}
@@ -82,6 +118,7 @@ export default function TransactionsPage() {
               <tr className="border-b bg-secondary/50">
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Reçu</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Élève</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Agent</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Montant</th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Nouvelle dette</th>
@@ -92,13 +129,14 @@ export default function TransactionsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="text-center py-12"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></td></tr>
+                <tr><td colSpan={9} className="text-center py-12"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></td></tr>
               ) : transactions.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">Aucune transaction</td></tr>
+                <tr><td colSpan={9} className="text-center py-12 text-muted-foreground">Aucune transaction</td></tr>
               ) : transactions.map((tx: any) => (
                 <tr key={tx.id} className="border-b last:border-0 hover:bg-secondary/30 transition-colors">
                   <td className="px-4 py-3 text-sm font-mono">{tx.receiptNumber}</td>
                   <td className="px-4 py-3 text-sm font-medium">{tx.student?.fullName || 'N/A'}</td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">{tx.recordedBy?.fullName || 'N/A'}</td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     {tx.type === 'CASH_PAYMENT' ? 'Paiement cash' : tx.type === 'DEBT_ADJUSTMENT' ? 'Ajustement' : 'Remb.'}
                   </td>

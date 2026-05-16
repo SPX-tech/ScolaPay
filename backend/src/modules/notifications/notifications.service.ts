@@ -16,6 +16,36 @@ type CashPaymentPayload = {
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
+  private africastalking: any = null;
+  private initialized = false;
+
+  private async initialize() {
+    if (this.initialized) return;
+
+    const apiKey = process.env.AT_API_KEY;
+    const username = process.env.AT_USERNAME || 'sandbox';
+
+    if (apiKey) {
+      try {
+        const at = await import('africastalking');
+        this.africastalking = at.default({
+          apiKey,
+          username,
+        });
+        this.logger.log(`Africa's Talking initialisé (username: ${username})`);
+      } catch (err) {
+        this.logger.warn(
+          `Impossible d'initialiser Africa's Talking: ${(err as Error).message}. Fallback vers mock SMS.`,
+        );
+      }
+    } else {
+      this.logger.warn(
+        'AT_API_KEY non défini. Les SMS seront simulés (mock). Définissez AT_API_KEY et AT_USERNAME dans .env pour activer les vrais SMS.',
+      );
+    }
+
+    this.initialized = true;
+  }
 
   async queueCashPaymentNotification(eventPayload: unknown): Promise<{
     status: string;
@@ -27,9 +57,44 @@ export class NotificationsService {
       ? (Number(payload.amountCents) / 100).toLocaleString('fr-FR')
       : '0';
 
-    // En DEV, on mock l'envoi SMS (simple log console)
+    await this.initialize();
+
+    const message = `Edu-Cash Tchad - Paiement reçu pour ${payload.studentName}. Montant: ${amountFormatted} XAF. Reçu n°: ${payload.receiptNumber}. Merci pour votre confiance.`;
+
+    // Si Africa's Talking est configuré, envoyer un vrai SMS
+    if (this.africastalking && payload.guardianPhone) {
+      try {
+        const result = await this.africastalking.SMS.send({
+          to: [payload.guardianPhone],
+          message,
+          from: process.env.AT_SENDER_ID || undefined,
+        });
+
+        this.logger.log(
+          `📱 SMS envoyé via Africa's Talking à ${payload.guardianPhone} (SMS ID: ${result?.SMSMessageData?.Recipients?.[0]?.messageId || 'N/A'})`,
+        );
+
+        return {
+          status: 'sent',
+          provider: 'africastalking',
+          payload,
+        };
+      } catch (error) {
+        this.logger.error(
+          `Erreur d'envoi SMS Africa's Talking: ${(error as Error).message}`,
+        );
+
+        return {
+          status: 'failed',
+          provider: 'africastalking',
+          payload,
+        };
+      }
+    }
+
+    // Fallback: mock SMS en dev
     this.logger.log('═══════════════════════════════════════════');
-    this.logger.log('📱 [DEV MOCK SMS] Notification de paiement');
+    this.logger.log('📱 [MOCK SMS] Notification de paiement');
     this.logger.log('═══════════════════════════════════════════');
     this.logger.log(`   Élève    : ${payload.studentName}`);
     this.logger.log(`   Montant  : ${amountFormatted} XAF`);
@@ -38,12 +103,8 @@ export class NotificationsService {
     this.logger.log('───────────────────────────────────────────');
 
     if (payload.guardianPhone) {
-      this.logger.log(`   📞 SMS envoyé à : ${payload.guardianPhone}`);
-      this.logger.log(`   📄 Message :`);
-      this.logger.log(`   "Paiement de ${amountFormatted} XAF`);
-      this.logger.log(`    reçu pour ${payload.studentName}.`);
-      this.logger.log(`    Reçu n°: ${payload.receiptNumber}.`);
-      this.logger.log(`    Merci pour votre confiance."`);
+      this.logger.log(`   📞 SMS à envoyer à : ${payload.guardianPhone}`);
+      this.logger.log(`   📄 Message : "${message}"`);
     }
 
     this.logger.log('═══════════════════════════════════════════\n');

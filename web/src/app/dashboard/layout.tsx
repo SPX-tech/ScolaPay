@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   DollarSign,
+  FileText,
   GraduationCap,
   LayoutDashboard,
   LogOut,
@@ -21,6 +22,7 @@ import {
   X,
 } from 'lucide-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ToastProvider } from '@/hooks/use-toast';
 
 const queryClient = new QueryClient();
 
@@ -29,6 +31,7 @@ const sidebarLinks = [
   { href: '/dashboard/students', label: 'Étudiants', icon: BookOpen },
   { href: '/dashboard/ledger', label: 'Encaissement', icon: DollarSign },
   { href: '/dashboard/transactions', label: 'Transactions', icon: Receipt },
+  { href: '/dashboard/reports', label: 'Rapports', icon: FileText },
   { href: '/dashboard/users', label: 'Utilisateurs', icon: Users },
   { href: '/dashboard/settings', label: 'Paramètres', icon: Settings },
 ];
@@ -51,6 +54,7 @@ export default function DashboardLayout({
 
   return (
     <QueryClientProvider client={queryClient}>
+      <ToastProvider>
       <div className="min-h-screen flex">
         {/* Mobile overlay */}
         {mobileSidebarOpen && (
@@ -169,6 +173,7 @@ export default function DashboardLayout({
           </div>
         </main>
       </div>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

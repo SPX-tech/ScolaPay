@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { usersApi } from '@/lib/api';
 import { formatDate, getStatusColor, cn } from '@/lib/utils';
 import { Loader2, Plus, UserPlus, UserX, UserCheck } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -11,6 +12,7 @@ export default function UsersPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ email: '', fullName: '', password: '', role: 'CASHIER', phone: '' });
+  const { toast } = useToast();
 
   const fetchUsers = async () => {
     try {
@@ -34,7 +36,7 @@ export default function UsersPage() {
       setForm({ email: '', fullName: '', password: '', role: 'CASHIER', phone: '' });
       fetchUsers();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur');
+      toast({ title: 'Erreur', description: err.response?.data?.message || 'Erreur lors de la création', variant: 'error' });
     } finally {
       setActionLoading(null);
     }
@@ -45,7 +47,9 @@ export default function UsersPage() {
     try {
       await usersApi.suspend(id);
       fetchUsers();
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err.response?.data?.message || 'Erreur', variant: 'error' });
+    }
     finally { setActionLoading(null); }
   };
 
@@ -53,8 +57,11 @@ export default function UsersPage() {
     setActionLoading(id);
     try {
       await usersApi.activate(id);
+      toast({ title: 'Utilisateur activé', variant: 'success' });
       fetchUsers();
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err.response?.data?.message || 'Erreur', variant: 'error' });
+    }
     finally { setActionLoading(null); }
   };
 

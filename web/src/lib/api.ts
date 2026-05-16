@@ -91,6 +91,13 @@ export const usersApi = {
   activate: (id: string) => api.post(`/users/${id}/activate`),
 };
 
+// Reports API
+export const reportsApi = {
+  getCollections: (params?: { startDate?: string; endDate?: string }) =>
+    api.get('/dashboard/reports/collections', { params }),
+  getStudentDebts: () => api.get('/dashboard/reports/students-debt'),
+};
+
 // Tenant API
 export const tenantApi = {
   getMe: () => api.get('/tenants/me'),
