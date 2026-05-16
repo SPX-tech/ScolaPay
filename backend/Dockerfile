@@ -46,8 +46,11 @@ COPY --from=build /app/dist ./dist
 # Expose the API port
 EXPOSE 3000
 
+# Fix permissions for the node user
+RUN chown -R node:node /app
+
 # Use non-root user for security
 USER node
 
 # Run database migrations and start the server
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]

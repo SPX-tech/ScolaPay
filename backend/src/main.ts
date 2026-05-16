@@ -5,7 +5,6 @@ import { AppModule } from './app.module';
 import { AuthGuard } from './common/guards/auth.guard';
 import { TenantGuard } from './common/guards/tenant.guard';
 import { BigIntSerializerInterceptor } from './common/interceptors/bigint-serializer.interceptor';
-import { PrismaService } from './prisma/prisma.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -25,8 +24,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
   const port = Number(process.env.PORT ?? process.env.APP_PORT ?? 3000);
 
-  const prismaService = app.get(PrismaService);
-  await prismaService.enableShutdownHooks(app);
+  app.enableShutdownHooks();
 
   await app.listen(port, '0.0.0.0');
 }

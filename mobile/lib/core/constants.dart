@@ -19,5 +19,7 @@ class AppConstants {
   static const int receiveTimeout = 15000;
 
   // API
-  static const String defaultApiUrl = 'http://10.0.2.2:3000/api/v1';
+  // Pour un émulateur Android : remplacer par http://10.0.2.2:3001/api/v1
+  // Pour un iPhone / appareil physique : http://13.48.43.198:3001/api/v1
+  static const String defaultApiUrl = 'http://13.48.43.198:3001/api/v1';
 }

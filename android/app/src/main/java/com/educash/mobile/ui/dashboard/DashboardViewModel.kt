@@ -1,0 +1,59 @@
+package com.educash.mobile.ui.dashboard
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.educash.mobile.data.model.DashboardSummary
+import com.educash.mobile.data.model.MonthlyReport
+import com.educash.mobile.data.repository.AuthRepository
+import com.educash.mobile.data.repository.DashboardRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import java.util.Calendar
+
+data class DashboardUiState(
+    val isLoading: Boolean = true,
+    val summary: DashboardSummary? = null,
+    val monthlyReport: MonthlyReport? = null,
+    val userName: String = "",
+    val userRole: String = "",
+    val error: String? = null
+)
+
+class DashboardViewModel : ViewModel() {
+
+    private val dashboardRepo = DashboardRepository()
+    private val authRepo = AuthRepository()
+
+    private val _uiState = MutableStateFlow(DashboardUiState())
+    val uiState: StateFlow<DashboardUiState> = _uiState
+
+    init {
+        loadDashboard()
+    }
+
+    fun loadDashboard() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                userName = authRepo.getCurrentUserName() ?: "",
+                userRole = authRepo.getCurrentUserRole() ?: ""
+            )
+
+            val now = Calendar.getInstance()
+            val year = now.get(Calendar.YEAR)
+            val month = now.get(Calendar.MONTH) + 1
+
+            // Load summary and monthly report in parallel
+            val summaryResult = dashboardRepo.getSummary()
+            val reportResult = dashboardRepo.getMonthlyReport(year, month)
+
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                summary = summaryResult.getOrNull(),
+                monthlyReport = reportResult.getOrNull(),
+                error = if (summaryResult.isFailure) summaryResult.exceptionOrNull()?.message else null
+            )
+        }
+    }
+}
