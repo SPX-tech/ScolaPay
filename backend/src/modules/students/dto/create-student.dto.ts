@@ -1,4 +1,4 @@
-import { IsOptional, IsString, Length, Matches, MinLength } from 'class-validator';
+import { IsObject, IsOptional, IsString, Length, Matches, MinLength } from 'class-validator';
 
 export class CreateStudentDto {
   @IsString()
@@ -13,4 +13,21 @@ export class CreateStudentDto {
   @IsString()
   @Matches(/^\+?[0-9]{8,15}$/)
   guardianPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  guardianName?: string;
+
+  @IsOptional()
+  @IsString()
+  classId?: string;
+
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  initialDebtCents?: string;
 }

@@ -1,23 +1,40 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ReqContext } from '../../common/decorators/request-context.decorator';
-import { RequestContext } from '../../common/types/request-context.type';
+import type { RequestContext } from '../../common/types/request-context.type';
 import { TransactionsService } from './transactions.service';
+import type { ListTransactionsQueryDto } from './dto/list-transactions-query.dto';
+import type { VoidTransactionDto } from './dto/void-transaction.dto';
 
 @Controller('transactions')
 export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
 
   @Get()
-  listTransactions(@ReqContext() context: RequestContext) {
-    return this.transactionsService.listTenantTransactions(context.tenantId);
+  listTransactions(
+    @ReqContext() context: RequestContext,
+    @Query() query: ListTransactionsQueryDto,
+  ) {
+    return this.transactionsService.listTenantTransactions(context.tenantId, query);
   }
 
   @Get('student/:studentId')
   listStudentTransactions(
     @ReqContext() context: RequestContext,
     @Param('studentId') studentId: string,
+    @Query() query: ListTransactionsQueryDto,
   ) {
-    return this.transactionsService.listStudentTransactions(context.tenantId, studentId);
+    return this.transactionsService.listStudentTransactions(
+      context.tenantId,
+      studentId,
+      query,
+    );
   }
 
   @Get(':transactionId')
@@ -28,6 +45,20 @@ export class TransactionsController {
     return this.transactionsService.getTenantTransactionById(
       context.tenantId,
       transactionId,
+    );
+  }
+
+  @Post(':transactionId/void')
+  voidTransaction(
+    @ReqContext() context: RequestContext,
+    @Param('transactionId') transactionId: string,
+    @Body() dto: VoidTransactionDto,
+  ) {
+    return this.transactionsService.voidTransaction(
+      context.tenantId,
+      transactionId,
+      context.userId,
+      dto,
     );
   }
 }

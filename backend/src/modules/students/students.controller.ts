@@ -1,7 +1,19 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ReqContext } from '../../common/decorators/request-context.decorator';
-import { RequestContext } from '../../common/types/request-context.type';
-import { CreateStudentDto } from './dto/create-student.dto';
+import type { RequestContext } from '../../common/types/request-context.type';
+import type { CreateStudentDto } from './dto/create-student.dto';
+import type { UpdateStudentDto } from './dto/update-student.dto';
+import type { ListStudentsQueryDto } from './dto/list-students-query.dto';
+import type { ImportStudentsDto } from './dto/import-students.dto';
 import { StudentsService } from './students.service';
 
 @Controller('students')
@@ -17,8 +29,11 @@ export class StudentsController {
   }
 
   @Get()
-  listStudents(@ReqContext() context: RequestContext) {
-    return this.studentsService.listStudents(context.tenantId);
+  listStudents(
+    @ReqContext() context: RequestContext,
+    @Query() query: ListStudentsQueryDto,
+  ) {
+    return this.studentsService.listStudents(context.tenantId, query);
   }
 
   @Get(':studentId')
@@ -27,5 +42,30 @@ export class StudentsController {
     @Param('studentId') studentId: string,
   ) {
     return this.studentsService.getStudentById(context.tenantId, studentId);
+  }
+
+  @Patch(':studentId')
+  updateStudent(
+    @ReqContext() context: RequestContext,
+    @Param('studentId') studentId: string,
+    @Body() dto: UpdateStudentDto,
+  ) {
+    return this.studentsService.updateStudent(context.tenantId, studentId, dto);
+  }
+
+  @Delete(':studentId')
+  deleteStudent(
+    @ReqContext() context: RequestContext,
+    @Param('studentId') studentId: string,
+  ) {
+    return this.studentsService.deleteStudent(context.tenantId, studentId);
+  }
+
+  @Post('import')
+  importStudents(
+    @ReqContext() context: RequestContext,
+    @Body() dto: ImportStudentsDto,
+  ) {
+    return this.studentsService.importStudents(context.tenantId, dto);
   }
 }

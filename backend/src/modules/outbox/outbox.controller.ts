@@ -1,12 +1,16 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Post, Query } from '@nestjs/common';
 import { ReqContext } from '../../common/decorators/request-context.decorator';
-import { RequestContext } from '../../common/types/request-context.type';
-import { ListPendingEventsDto } from './dto/list-pending-events.dto';
+import type { RequestContext } from '../../common/types/request-context.type';
 import { OutboxService } from './outbox.service';
+import { OutboxWorkerService } from './outbox-worker.service';
+import type { ListPendingEventsDto } from './dto/list-pending-events.dto';
 
 @Controller('outbox')
 export class OutboxController {
-  constructor(private readonly outboxService: OutboxService) {}
+  constructor(
+    private readonly outboxService: OutboxService,
+    private readonly outboxWorkerService: OutboxWorkerService,
+  ) {}
 
   @Get('pending')
   listPendingEvents(
@@ -14,5 +18,10 @@ export class OutboxController {
     @Query() query: ListPendingEventsDto,
   ) {
     return this.outboxService.listPendingEvents(context.tenantId, query.limit);
+  }
+
+  @Post('process')
+  async processPendingEvents() {
+    return this.outboxWorkerService.processPendingEvents();
   }
 }

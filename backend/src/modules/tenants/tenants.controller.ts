@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ReqContext } from '../../common/decorators/request-context.decorator';
-import { RequestContext } from '../../common/types/request-context.type';
+import type { RequestContext } from '../../common/types/request-context.type';
 import { TenantsService } from './tenants.service';
 
 @Controller('tenants')

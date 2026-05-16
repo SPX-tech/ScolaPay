@@ -26,6 +26,11 @@ enum StudentStatus {
   GRADUATED
 }
 
+enum ClassStatus {
+  ACTIVE
+  ARCHIVED
+}
+
 enum TransactionType {
   CASH_PAYMENT
   DEBT_ADJUSTMENT
@@ -56,6 +61,7 @@ model Tenant {
 
   users        User[]
   students     Student[]
+  classes      SchoolClass[]
   transactions Transaction[]
   outboxEvents OutboxEvent[]
 
@@ -86,22 +92,27 @@ model User {
 model Student {
   id            String        @id @default(cuid())
   tenantId      String
+  classId       String?
   studentNumber String
   fullName      String
   guardianPhone String?
+  guardianName   String?
   status        StudentStatus @default(ACTIVE)
   debtCents     BigInt        @default(0)
   creditCents   BigInt        @default(0)
   enrolledAt    DateTime?
   lastPaymentAt DateTime?
+  metadata      Json?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
   tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  class        SchoolClass?   @relation(fields: [classId], references: [id], onDelete: SetNull)
   transactions Transaction[]
 
   @@unique([tenantId, studentNumber])
   @@index([tenantId, status])
+  @@index([tenantId, classId])
   @@index([tenantId, fullName])
   @@map("students")
 }
@@ -119,6 +130,7 @@ model Transaction {
   currency         String            @default("XAF")
   receiptNumber    String
   receiptHash      String            @db.VarChar(64)
+  qrCodeData       String?
   idempotencyKey   String?
   note             String?
   metadata         Json?
@@ -137,7 +149,28 @@ model Transaction {
   @@index([tenantId, studentId, recordedAt])
   @@index([tenantId, recordedByUserId, recordedAt])
   @@index([tenantId, type, status])
+  @@index([tenantId, recordedAt])
+  @@index([tenantId, status, recordedAt])
   @@map("transactions")
+}
+
+model SchoolClass {
+  id           String      @id @default(cuid())
+  tenantId     String
+  name         String
+  description  String?
+  academicYear String
+  status       ClassStatus @default(ACTIVE)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  students Student[]
+
+  @@unique([tenantId, name, academicYear])
+  @@index([tenantId, status])
+  @@index([tenantId, academicYear])
+  @@map("school_classes")
 }
 
 model OutboxEvent {

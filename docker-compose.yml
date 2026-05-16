@@ -1,0 +1,64 @@
+version: "3.8"
+
+services:
+  # ============================================================
+  # PostgreSQL Database
+  # ============================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: edu-cash-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-edu_cash}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================
+  # Backend API (NestJS + Prisma)
+  # ============================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: edu-cash-api
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-3001}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/edu_cash?schema=public}
+      ACCESS_TOKEN_SECRET: ${ACCESS_TOKEN_SECRET:?ACCESS_TOKEN_SECRET is required}
+      ACCESS_TOKEN_EXPIRY_SECONDS: ${ACCESS_TOKEN_EXPIRY_SECONDS:-28800}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ============================================================
+  # Web Dashboard (Next.js)
+  # ============================================================
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: edu-cash-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
