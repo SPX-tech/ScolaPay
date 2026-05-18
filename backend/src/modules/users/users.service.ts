@@ -7,10 +7,14 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { hashPassword } from '../../common/security/password.util';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async listTenantUsers(tenantId: string) {
     return this.prisma.user.findMany({
@@ -33,9 +37,9 @@ export class UsersService {
     return user;
   }
 
-  async createUser(tenantId: string, dto: CreateUserDto) {
+  async createUser(tenantId: string, actorUserId: string, dto: CreateUserDto) {
     try {
-      return await this.prisma.user.create({
+      const user = await this.prisma.user.create({
         data: {
           tenantId,
           email: dto.email.trim().toLowerCase(),
@@ -47,6 +51,17 @@ export class UsersService {
         },
         omit: { passwordHash: true },
       });
+
+      await this.auditService.record({
+        tenantId,
+        actorUserId,
+        action: 'user.create',
+        targetType: 'user',
+        targetId: user.id,
+        after: user,
+      });
+
+      return user;
     } catch (error: any) {
       if (error?.code === 'P2002') {
         throw new ConflictException(
@@ -57,8 +72,8 @@ export class UsersService {
     }
   }
 
-  async updateUser(tenantId: string, userId: string, dto: UpdateUserDto) {
-    await this.getUserById(tenantId, userId);
+  async updateUser(tenantId: string, actorUserId: string, userId: string, dto: UpdateUserDto) {
+    const existingUser = await this.getUserById(tenantId, userId);
 
     try {
       const data: any = {};
@@ -69,11 +84,24 @@ export class UsersService {
       if (dto.status) data.status = dto.status;
       if (dto.password) data.passwordHash = hashPassword(dto.password);
 
-      return await this.prisma.user.update({
+      const user = await this.prisma.user.update({
         where: { id: userId },
         data,
         omit: { passwordHash: true },
       });
+
+      await this.auditService.record({
+        tenantId,
+        actorUserId,
+        action: 'user.update',
+        targetType: 'user',
+        targetId: user.id,
+        before: existingUser,
+        after: user,
+        metadata: { passwordChanged: Boolean(dto.password) },
+      });
+
+      return user;
     } catch (error: any) {
       if (error?.code === 'P2002') {
         throw new ConflictException(
@@ -84,21 +112,45 @@ export class UsersService {
     }
   }
 
-  async suspendUser(tenantId: string, userId: string) {
-    await this.getUserById(tenantId, userId);
-    return this.prisma.user.update({
+  async suspendUser(tenantId: string, actorUserId: string, userId: string) {
+    const existingUser = await this.getUserById(tenantId, userId);
+    const user = await this.prisma.user.update({
       where: { id: userId },
       data: { status: 'SUSPENDED' },
       omit: { passwordHash: true },
     });
+
+    await this.auditService.record({
+      tenantId,
+      actorUserId,
+      action: 'user.suspend',
+      targetType: 'user',
+      targetId: user.id,
+      before: existingUser,
+      after: user,
+    });
+
+    return user;
   }
 
-  async activateUser(tenantId: string, userId: string) {
-    await this.getUserById(tenantId, userId);
-    return this.prisma.user.update({
+  async activateUser(tenantId: string, actorUserId: string, userId: string) {
+    const existingUser = await this.getUserById(tenantId, userId);
+    const user = await this.prisma.user.update({
       where: { id: userId },
       data: { status: 'ACTIVE' },
       omit: { passwordHash: true },
     });
+
+    await this.auditService.record({
+      tenantId,
+      actorUserId,
+      action: 'user.activate',
+      targetType: 'user',
+      targetId: user.id,
+      before: existingUser,
+      after: user,
+    });
+
+    return user;
   }
 }

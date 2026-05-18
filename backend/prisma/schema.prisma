@@ -64,6 +64,7 @@ model Tenant {
   classes      SchoolClass[]
   transactions Transaction[]
   outboxEvents OutboxEvent[]
+  auditLogs    AuditLog[]
 
   @@map("tenants")
 }
@@ -96,7 +97,7 @@ model Student {
   studentNumber String
   fullName      String
   guardianPhone String?
-  guardianName   String?
+  guardianName  String?
   status        StudentStatus @default(ACTIVE)
   debtCents     BigInt        @default(0)
   creditCents   BigInt        @default(0)
@@ -106,8 +107,8 @@ model Student {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  class        SchoolClass?   @relation(fields: [classId], references: [id], onDelete: SetNull)
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  class        SchoolClass?  @relation(fields: [classId], references: [id], onDelete: SetNull)
   transactions Transaction[]
 
   @@unique([tenantId, studentNumber])
@@ -118,27 +119,27 @@ model Student {
 }
 
 model Transaction {
-  id               String            @id @default(cuid())
-  tenantId         String
-  studentId        String
-  recordedByUserId String
-  type             TransactionType   @default(CASH_PAYMENT)
-  status           TransactionStatus @default(POSTED)
-  amountCents      BigInt
+  id                String            @id @default(cuid())
+  tenantId          String
+  studentId         String
+  recordedByUserId  String
+  type              TransactionType   @default(CASH_PAYMENT)
+  status            TransactionStatus @default(POSTED)
+  amountCents       BigInt
   previousDebtCents BigInt
-  newDebtCents     BigInt
-  currency         String            @default("XAF")
-  receiptNumber    String
-  receiptHash      String            @db.VarChar(64)
-  qrCodeData       String?
-  idempotencyKey   String?
-  note             String?
-  metadata         Json?
-  recordedAt       DateTime          @default(now())
-  voidedAt         DateTime?
-  voidReason       String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  newDebtCents      BigInt
+  currency          String            @default("XAF")
+  receiptNumber     String
+  receiptHash       String            @db.VarChar(64)
+  qrCodeData        String?
+  idempotencyKey    String?
+  note              String?
+  metadata          Json?
+  recordedAt        DateTime          @default(now())
+  voidedAt          DateTime?
+  voidReason        String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   student    Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
@@ -193,4 +194,24 @@ model OutboxEvent {
   @@index([tenantId, status, availableAt])
   @@index([eventType, status])
   @@map("outbox_events")
+}
+
+model AuditLog {
+  id          BigInt   @id @default(autoincrement())
+  tenantId    String
+  actorUserId String
+  action      String
+  targetType  String
+  targetId    String
+  before      Json?
+  after       Json?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, actorUserId, createdAt])
+  @@index([tenantId, targetType, targetId])
+  @@map("audit_logs")
 }

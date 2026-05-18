@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ReqContext } from '../../common/decorators/request-context.decorator';
 import type { RequestContext } from '../../common/types/request-context.type';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { ClassesService } from './classes.service';
 import { CreateClassDto } from './dto/create-class.dto';
 import { UpdateClassDto } from './dto/update-class.dto';
@@ -18,6 +19,7 @@ import { UpdateClassDto } from './dto/update-class.dto';
 export class ClassesController {
   constructor(private readonly classesService: ClassesService) {}
 
+  @Roles('TENANT_ADMIN', 'ACCOUNTANT')
   @Post()
   createClass(
     @ReqContext() context: RequestContext,
@@ -42,6 +44,7 @@ export class ClassesController {
     return this.classesService.getClassById(context.tenantId, classId);
   }
 
+  @Roles('TENANT_ADMIN', 'ACCOUNTANT')
   @Patch(':classId')
   updateClass(
     @ReqContext() context: RequestContext,
@@ -51,6 +54,7 @@ export class ClassesController {
     return this.classesService.updateClass(context.tenantId, classId, dto);
   }
 
+  @Roles('TENANT_ADMIN', 'ACCOUNTANT')
   @Delete(':classId')
   deleteClass(
     @ReqContext() context: RequestContext,

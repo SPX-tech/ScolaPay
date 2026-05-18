@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../prisma/prisma.module';
+import { AuditModule } from '../audit/audit.module';
 import { OutboxModule } from '../outbox/outbox.module';
 import { LedgerController } from './ledger.controller';
 import { LedgerService } from './ledger.service';
@@ -8,7 +9,7 @@ import { DashboardService } from './dashboard.service';
 import { DashboardController } from './dashboard.controller';
 
 @Module({
-  imports: [PrismaModule, OutboxModule],
+  imports: [PrismaModule, OutboxModule, AuditModule],
   controllers: [LedgerController, DashboardController],
   providers: [LedgerService, ReceiptService, DashboardService],
   exports: [LedgerService, ReceiptService, DashboardService],

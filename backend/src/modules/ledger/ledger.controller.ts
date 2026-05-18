@@ -1,6 +1,7 @@
 import { Body, Controller, Get, NotFoundException, Param, Post } from '@nestjs/common';
 import { ReqContext } from '../../common/decorators/request-context.decorator';
 import type { RequestContext } from '../../common/types/request-context.type';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { LedgerService } from './ledger.service';
 import { ReceiptService } from './receipt.service';
 import { RecordCashPaymentDto } from './dto/record-cash-payment.dto';
@@ -14,6 +15,7 @@ export class LedgerController {
     private readonly prisma: PrismaService,
   ) {}
 
+  @Roles('TENANT_ADMIN', 'CASHIER', 'ACCOUNTANT')
   @Post('record-cash-payment')
   recordCashPayment(
     @ReqContext() context: RequestContext,

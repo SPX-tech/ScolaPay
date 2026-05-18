@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { AuthGuard } from './common/guards/auth.guard';
 import { TenantGuard } from './common/guards/tenant.guard';
+import { RolesGuard } from './common/guards/roles.guard';
 import { BigIntSerializerInterceptor } from './common/interceptors/bigint-serializer.interceptor';
 
 async function bootstrap() {
@@ -18,7 +19,11 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalGuards(new AuthGuard(reflector), new TenantGuard(reflector));
+  app.useGlobalGuards(
+    new AuthGuard(reflector),
+    new TenantGuard(reflector),
+    new RolesGuard(reflector),
+  );
   app.useGlobalInterceptors(new BigIntSerializerInterceptor());
 
   app.setGlobalPrefix('api/v1');

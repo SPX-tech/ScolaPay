@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 
 describe('StudentsService', () => {
   let service: StudentsService;
@@ -20,12 +21,16 @@ describe('StudentsService', () => {
       findFirst: jest.fn(),
     },
   };
+  const mockAuditService = {
+    record: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StudentsService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
 
@@ -35,6 +40,7 @@ describe('StudentsService', () => {
   });
 
   const tenantId = 'tenant-1';
+  const actorUserId = 'user-1';
   const studentId = 'student-1';
 
   const baseDto = {
@@ -66,7 +72,7 @@ describe('StudentsService', () => {
     it('should create a student successfully', async () => {
       mockPrisma.student.create.mockResolvedValue(baseStudent);
 
-      const result = await service.createStudent(tenantId, baseDto);
+      const result = await service.createStudent(tenantId, actorUserId, baseDto);
 
       expect(result).toEqual(baseStudent);
       expect(mockPrisma.student.create).toHaveBeenCalledWith({
@@ -85,13 +91,20 @@ describe('StudentsService', () => {
           class: { select: { id: true, name: true, academicYear: true } },
         },
       });
+      expect(mockAuditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'student.create',
+          targetId: studentId,
+          actorUserId,
+        }),
+      );
     });
 
     it('should throw ConflictException on duplicate studentNumber', async () => {
       const error = { code: 'P2002' };
       mockPrisma.student.create.mockRejectedValue(error);
 
-      await expect(service.createStudent(tenantId, baseDto)).rejects.toThrow(
+      await expect(service.createStudent(tenantId, actorUserId, baseDto)).rejects.toThrow(
         ConflictException,
       );
     });
@@ -112,7 +125,7 @@ describe('StudentsService', () => {
         class: null,
       });
 
-      const result = await service.createStudent(tenantId, minimalDto);
+      const result = await service.createStudent(tenantId, actorUserId, minimalDto);
 
       expect(result.fullName).toBe('Marie Diallo');
       expect(mockPrisma.student.create).toHaveBeenCalledWith({
@@ -222,7 +235,7 @@ describe('StudentsService', () => {
       const updatedStudent = { ...baseStudent, fullName: 'Jean Dupont Modifié' };
       mockPrisma.student.update.mockResolvedValue(updatedStudent);
 
-      const result = await service.updateStudent(tenantId, studentId, {
+      const result = await service.updateStudent(tenantId, actorUserId, studentId, {
         fullName: 'Jean Dupont Modifié',
       });
 
@@ -233,7 +246,7 @@ describe('StudentsService', () => {
       mockPrisma.student.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.updateStudent(tenantId, 'nonexistent', { fullName: 'Test' }),
+        service.updateStudent(tenantId, actorUserId, 'nonexistent', { fullName: 'Test' }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -243,29 +256,42 @@ describe('StudentsService', () => {
       mockPrisma.student.update.mockRejectedValue(error);
 
       await expect(
-        service.updateStudent(tenantId, studentId, { studentNumber: 'DUPLICATE' }),
+        service.updateStudent(tenantId, actorUserId, studentId, { studentNumber: 'DUPLICATE' }),
       ).rejects.toThrow(ConflictException);
     });
   });
 
   describe('deleteStudent', () => {
-    it('should delete a student successfully', async () => {
+    it('should archive a student successfully', async () => {
       mockPrisma.student.findFirst.mockResolvedValue(baseStudent);
-      mockPrisma.student.delete.mockResolvedValue(baseStudent);
+      const archivedStudent = { ...baseStudent, status: 'SUSPENDED' };
+      mockPrisma.student.update.mockResolvedValue(archivedStudent);
 
-      const result = await service.deleteStudent(tenantId, studentId);
+      const result = await service.deleteStudent(tenantId, actorUserId, studentId);
 
-      expect(result).toEqual(baseStudent);
-      expect(mockPrisma.student.delete).toHaveBeenCalledWith({
+      expect(result).toEqual(archivedStudent);
+      expect(mockPrisma.student.update).toHaveBeenCalledWith({
         where: { id: studentId },
+        data: { status: 'SUSPENDED' },
+        include: {
+          class: { select: { id: true, name: true, academicYear: true } },
+        },
       });
+      expect(mockPrisma.student.delete).not.toHaveBeenCalled();
+      expect(mockAuditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'student.archive',
+          targetId: studentId,
+          actorUserId,
+        }),
+      );
     });
 
     it('should throw NotFoundException if student does not exist', async () => {
       mockPrisma.student.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.deleteStudent(tenantId, 'nonexistent'),
+        service.deleteStudent(tenantId, actorUserId, 'nonexistent'),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -287,7 +313,7 @@ describe('StudentsService', () => {
         .mockResolvedValueOnce({ id: 'new-1' })
         .mockResolvedValueOnce({ id: 'new-2' });
 
-      const result = await service.importStudents(tenantId, importDto);
+      const result = await service.importStudents(tenantId, actorUserId, importDto);
 
       expect(result.success).toBe(2);
       expect(result.errors).toHaveLength(0);
@@ -306,7 +332,7 @@ describe('StudentsService', () => {
         .mockResolvedValueOnce({ id: 'ok' })
         .mockRejectedValueOnce(new Error('DB error'));
 
-      const result = await service.importStudents(tenantId, importDto);
+      const result = await service.importStudents(tenantId, actorUserId, importDto);
 
       expect(result.success).toBe(1);
       expect(result.errors).toHaveLength(1);
@@ -320,7 +346,7 @@ describe('StudentsService', () => {
       });
       mockPrisma.student.create.mockResolvedValue({ id: 'new-1' });
 
-      await service.importStudents(tenantId, {
+      await service.importStudents(tenantId, actorUserId, {
         students: [{ studentNumber: 'C001', fullName: 'Class Test', className: '5ème B' }],
       });
 

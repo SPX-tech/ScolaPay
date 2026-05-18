@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { ReqContext } from '../../common/decorators/request-context.decorator';
 import type { RequestContext } from '../../common/types/request-context.type';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { TransactionsService } from './transactions.service';
 import { ListTransactionsQueryDto } from './dto/list-transactions-query.dto';
 import { VoidTransactionDto } from './dto/void-transaction.dto';
@@ -48,6 +49,7 @@ export class TransactionsController {
     );
   }
 
+  @Roles('TENANT_ADMIN', 'ACCOUNTANT')
   @Post(':transactionId/void')
   voidTransaction(
     @ReqContext() context: RequestContext,

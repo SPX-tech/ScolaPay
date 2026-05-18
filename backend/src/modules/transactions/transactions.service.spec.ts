@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 
 describe('TransactionsService', () => {
   let service: TransactionsService;
@@ -20,12 +21,16 @@ describe('TransactionsService', () => {
     },
     $transaction: jest.fn(),
   };
+  const mockAuditService = {
+    record: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TransactionsService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
 
@@ -216,7 +221,11 @@ describe('TransactionsService', () => {
         (callback: (tx: any) => Promise<any>) =>
           callback({
             transaction: {
-              update: jest.fn().mockResolvedValue({}),
+              update: jest.fn().mockResolvedValue({
+                ...baseTransaction,
+                status: 'VOIDED',
+                voidReason: voidDto.reason,
+              }),
             },
             student: {
               update: jest.fn().mockResolvedValue({}),
@@ -243,6 +252,13 @@ describe('TransactionsService', () => {
 
       expect(result.message).toBe('Transaction voided successfully.');
       expect(result.transactionId).toBe(transactionId);
+      expect(mockAuditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'transaction.void',
+          targetId: transactionId,
+          actorUserId: userId,
+        }),
+      );
     });
 
     it('should throw NotFoundException if transaction not found or already voided', async () => {

@@ -9,6 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { OutboxService } from '../outbox/outbox.service';
 import { ReceiptService } from './receipt.service';
 import { RecordCashPaymentDto } from './dto/record-cash-payment.dto';
+import { AuditService } from '../audit/audit.service';
 
 type RoleType = 'TENANT_ADMIN' | 'CASHIER' | 'ACCOUNTANT' | 'AUDITOR';
 
@@ -32,6 +33,7 @@ export class LedgerService {
     private readonly prisma: PrismaService,
     private readonly outboxService: OutboxService,
     private readonly receiptService: ReceiptService,
+    private readonly auditService: AuditService,
   ) {}
 
   async recordCashPayment(
@@ -176,7 +178,7 @@ export class LedgerService {
         return transaction;
       });
 
-      return {
+      const response = {
         transactionId: result.id,
         studentId: student.id,
         amountCents: result.amountCents,
@@ -189,6 +191,24 @@ export class LedgerService {
         qrCodeData: result.qrCodeData!,
         recordedAt: result.recordedAt,
       };
+
+      await this.auditService.record({
+        tenantId,
+        actorUserId: userId,
+        action: 'transaction.cash_payment.record',
+        targetType: 'transaction',
+        targetId: result.id,
+        metadata: {
+          studentId: student.id,
+          amountCents: amountCents.toString(),
+          previousDebtCents: previousDebtCents.toString(),
+          newDebtCents: result.newDebtCents.toString(),
+          creditCents: newCreditCents.toString(),
+          receiptNumber,
+        },
+      });
+
+      return response;
     } catch (error: any) {
       if (error?.code === 'P2002') {
         throw new ConflictException('Transaction already recorded (duplicate).');

@@ -8,14 +8,18 @@ import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { ListStudentsQueryDto } from './dto/list-students-query.dto';
 import { ImportStudentsDto } from './dto/import-students.dto';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class StudentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
-  async createStudent(tenantId: string, dto: CreateStudentDto) {
+  async createStudent(tenantId: string, actorUserId: string, dto: CreateStudentDto) {
     try {
-      return await this.prisma.student.create({
+      const student = await this.prisma.student.create({
         data: {
           tenantId,
           studentNumber: dto.studentNumber.trim(),
@@ -31,6 +35,17 @@ export class StudentsService {
           class: { select: { id: true, name: true, academicYear: true } },
         },
       });
+
+      await this.auditService.record({
+        tenantId,
+        actorUserId,
+        action: 'student.create',
+        targetType: 'student',
+        targetId: student.id,
+        after: student,
+      });
+
+      return student;
     } catch (error: any) {
       if (error?.code === 'P2002') {
         throw new ConflictException(
@@ -94,8 +109,13 @@ export class StudentsService {
     return student;
   }
 
-  async updateStudent(tenantId: string, studentId: string, dto: UpdateStudentDto) {
-    await this.getStudentById(tenantId, studentId);
+  async updateStudent(
+    tenantId: string,
+    actorUserId: string,
+    studentId: string,
+    dto: UpdateStudentDto,
+  ) {
+    const existingStudent = await this.getStudentById(tenantId, studentId);
 
     try {
       const data: any = {};
@@ -109,13 +129,25 @@ export class StudentsService {
       if (dto.creditCents !== undefined) data.creditCents = BigInt(dto.creditCents);
       if (dto.metadata !== undefined) data.metadata = dto.metadata as any;
 
-      return await this.prisma.student.update({
+      const student = await this.prisma.student.update({
         where: { id: studentId },
         data,
         include: {
           class: { select: { id: true, name: true, academicYear: true } },
         },
       });
+
+      await this.auditService.record({
+        tenantId,
+        actorUserId,
+        action: 'student.update',
+        targetType: 'student',
+        targetId: student.id,
+        before: existingStudent,
+        after: student,
+      });
+
+      return student;
     } catch (error: any) {
       if (error?.code === 'P2002') {
         throw new ConflictException(
@@ -126,12 +158,30 @@ export class StudentsService {
     }
   }
 
-  async deleteStudent(tenantId: string, studentId: string) {
-    await this.getStudentById(tenantId, studentId);
-    return this.prisma.student.delete({ where: { id: studentId } });
+  async deleteStudent(tenantId: string, actorUserId: string, studentId: string) {
+    const existingStudent = await this.getStudentById(tenantId, studentId);
+    const student = await this.prisma.student.update({
+      where: { id: studentId },
+      data: { status: 'SUSPENDED' },
+      include: {
+        class: { select: { id: true, name: true, academicYear: true } },
+      },
+    });
+
+    await this.auditService.record({
+      tenantId,
+      actorUserId,
+      action: 'student.archive',
+      targetType: 'student',
+      targetId: student.id,
+      before: existingStudent,
+      after: student,
+    });
+
+    return student;
   }
 
-  async importStudents(tenantId: string, dto: ImportStudentsDto) {
+  async importStudents(tenantId: string, actorUserId: string, dto: ImportStudentsDto) {
     const results: { success: number; errors: { row: number; message: string }[] } = {
       success: 0,
       errors: [],
@@ -174,6 +224,19 @@ export class StudentsService {
         });
       }
     }
+
+    await this.auditService.record({
+      tenantId,
+      actorUserId,
+      action: 'student.import',
+      targetType: 'student',
+      targetId: 'bulk-import',
+      metadata: {
+        total: dto.students.length,
+        success: results.success,
+        errors: results.errors.length,
+      },
+    });
 
     return results;
   }

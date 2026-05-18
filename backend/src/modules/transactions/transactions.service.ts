@@ -3,10 +3,14 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ListTransactionsQueryDto } from './dto/list-transactions-query.dto';
 import { VoidTransactionDto } from './dto/void-transaction.dto';
 import { Prisma } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class TransactionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async listTenantTransactions(tenantId: string, query: ListTransactionsQueryDto) {
     const { page = 1, limit = 50, type, status, studentId, startDate, endDate } = query;
@@ -153,9 +157,9 @@ export class TransactionsService {
         : 0n;
     const newCreditCents = currentCreditCents - overpaymentCents;
 
-    return await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const result = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Void the transaction
-      await tx.transaction.update({
+      const voidedTransaction = await tx.transaction.update({
         where: { id: transactionId },
         data: {
           status: 'VOIDED',
@@ -173,7 +177,25 @@ export class TransactionsService {
         },
       });
 
-      return { message: 'Transaction voided successfully.', transactionId };
+      return voidedTransaction;
     });
+
+    await this.auditService.record({
+      tenantId,
+      actorUserId: userId,
+      action: 'transaction.void',
+      targetType: 'transaction',
+      targetId: transactionId,
+      before: transaction,
+      after: result,
+      metadata: {
+        reason: dto.reason,
+        studentId: student.id,
+        restoredDebtCents: previousDebtCents.toString(),
+        restoredCreditCents: newCreditCents < 0n ? '0' : newCreditCents.toString(),
+      },
+    });
+
+    return { message: 'Transaction voided successfully.', transactionId };
   }
 }
