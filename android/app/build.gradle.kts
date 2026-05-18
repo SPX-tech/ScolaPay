@@ -75,8 +75,8 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
-    // DataStore (secure token storage)
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    // Encrypted SharedPreferences (secure token storage)
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     // Gson
     implementation("com.google.code.gson:gson:2.11.0")

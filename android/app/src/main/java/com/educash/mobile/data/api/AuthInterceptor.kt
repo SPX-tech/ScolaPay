@@ -1,15 +1,23 @@
 package com.educash.mobile.data.api
 
 import android.content.Context
-import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKeys
 import okhttp3.Interceptor
 import okhttp3.Response
 import com.educash.mobile.util.Constants
 
 class AuthInterceptor(context: Context) : Interceptor {
 
-    private val prefs: SharedPreferences =
-        context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
+    private val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+
+    private val prefs = EncryptedSharedPreferences.create(
+        Constants.PREFS_NAME,
+        masterKeyAlias,
+        context,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val token = prefs.getString(Constants.KEY_TOKEN, null)

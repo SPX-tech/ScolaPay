@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ListTransactionsQueryDto } from './dto/list-transactions-query.dto';
 import { VoidTransactionDto } from './dto/void-transaction.dto';
@@ -103,8 +103,14 @@ export class TransactionsService {
     tenantId: string,
     transactionId: string,
     userId: string,
+    userRole: string,
     dto: VoidTransactionDto,
   ) {
+    const allowedRoles = ['TENANT_ADMIN', 'ACCOUNTANT'];
+    if (!allowedRoles.includes(userRole)) {
+      throw new ForbiddenException('Only admins and accountants can void transactions.');
+    }
+
     const transaction = await this.prisma.transaction.findFirst({
       where: { id: transactionId, tenantId, status: 'POSTED' },
     });
@@ -122,12 +128,30 @@ export class TransactionsService {
       throw new NotFoundException('Associated student not found.');
     }
 
-    // Calculate reversal amounts
-    const debtAdjustment = transaction.amountCents;
-    const newDebtCents = student.debtCents + debtAdjustment;
-    const newCreditCents = student.creditCents > 0n
-      ? student.creditCents - transaction.amountCents
-      : student.creditCents;
+    const laterPostedTransaction = await this.prisma.transaction.findFirst({
+      where: {
+        tenantId,
+        studentId: transaction.studentId,
+        status: 'POSTED',
+        recordedAt: { gt: transaction.recordedAt },
+      },
+      orderBy: { recordedAt: 'asc' },
+    });
+
+    if (laterPostedTransaction) {
+      throw new ForbiddenException(
+        'Cannot void an older transaction while newer posted transactions exist.',
+      );
+    }
+
+    const amountCents = BigInt(transaction.amountCents);
+    const previousDebtCents = BigInt(transaction.previousDebtCents);
+    const currentCreditCents = BigInt(student.creditCents);
+    const overpaymentCents =
+      amountCents > previousDebtCents
+        ? amountCents - previousDebtCents
+        : 0n;
+    const newCreditCents = currentCreditCents - overpaymentCents;
 
     return await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Void the transaction
@@ -144,7 +168,7 @@ export class TransactionsService {
       await tx.student.update({
         where: { id: student.id },
         data: {
-          debtCents: newDebtCents < 0n ? 0n : newDebtCents,
+          debtCents: previousDebtCents,
           creditCents: newCreditCents < 0n ? 0n : newCreditCents,
         },
       });

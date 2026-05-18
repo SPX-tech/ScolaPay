@@ -10,10 +10,10 @@ import {
 } from '@nestjs/common';
 import { ReqContext } from '../../common/decorators/request-context.decorator';
 import type { RequestContext } from '../../common/types/request-context.type';
-import type { CreateStudentDto } from './dto/create-student.dto';
-import type { UpdateStudentDto } from './dto/update-student.dto';
-import type { ListStudentsQueryDto } from './dto/list-students-query.dto';
-import type { ImportStudentsDto } from './dto/import-students.dto';
+import { CreateStudentDto } from './dto/create-student.dto';
+import { UpdateStudentDto } from './dto/update-student.dto';
+import { ListStudentsQueryDto } from './dto/list-students-query.dto';
+import { ImportStudentsDto } from './dto/import-students.dto';
 import { StudentsService } from './students.service';
 
 @Controller('students')

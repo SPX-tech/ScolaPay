@@ -7,9 +7,11 @@ import com.educash.mobile.data.model.Student
 import com.educash.mobile.data.repository.ClassRepository
 import com.educash.mobile.data.repository.LedgerRepository
 import com.educash.mobile.data.repository.StudentRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class LedgerUiState(
     val isLoading: Boolean = true,
@@ -25,11 +27,12 @@ data class LedgerUiState(
     val searchQuery: String = ""
 )
 
-class LedgerViewModel : ViewModel() {
-
-    private val ledgerRepo = LedgerRepository()
-    private val studentRepo = StudentRepository()
-    private val classRepo = ClassRepository()
+@HiltViewModel
+class LedgerViewModel @Inject constructor(
+    private val ledgerRepo: LedgerRepository,
+    private val studentRepo: StudentRepository,
+    private val classRepo: ClassRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LedgerUiState())
     val uiState: StateFlow<LedgerUiState> = _uiState

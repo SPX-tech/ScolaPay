@@ -3,7 +3,7 @@ import { ReqContext } from '../../common/decorators/request-context.decorator';
 import type { RequestContext } from '../../common/types/request-context.type';
 import { OutboxService } from './outbox.service';
 import { OutboxWorkerService } from './outbox-worker.service';
-import type { ListPendingEventsDto } from './dto/list-pending-events.dto';
+import { ListPendingEventsDto } from './dto/list-pending-events.dto';
 
 @Controller('outbox')
 export class OutboxController {

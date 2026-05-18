@@ -5,15 +5,17 @@ import androidx.lifecycle.viewModelScope
 import com.educash.mobile.data.model.RevenueReport
 import com.educash.mobile.data.model.StudentDebt
 import com.educash.mobile.data.repository.ReportRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import javax.inject.Inject
 
 data class ReportsUiState(
     val isLoading: Boolean = false,
-    val selectedTab: Int = 0, // 0: Revenue, 1: Debts
+    val selectedTab: Int = 0,
     val startDate: String = LocalDate.now().withDayOfMonth(1).format(DateTimeFormatter.ISO_LOCAL_DATE),
     val endDate: String = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE),
     val revenueReport: RevenueReport? = null,
@@ -21,9 +23,10 @@ data class ReportsUiState(
     val error: String? = null
 )
 
-class ReportsViewModel : ViewModel() {
-
-    private val repo = ReportRepository()
+@HiltViewModel
+class ReportsViewModel @Inject constructor(
+    private val repo: ReportRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReportsUiState())
     val uiState: StateFlow<ReportsUiState> = _uiState

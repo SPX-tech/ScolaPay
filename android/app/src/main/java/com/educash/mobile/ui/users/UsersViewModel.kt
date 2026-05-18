@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.educash.mobile.data.model.*
 import com.educash.mobile.data.repository.UserRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class UsersUiState(
     val isLoading: Boolean = true,
@@ -29,9 +31,10 @@ data class UserFormUiState(
     val isSaved: Boolean = false
 )
 
-class UsersViewModel : ViewModel() {
-
-    private val repo = UserRepository()
+@HiltViewModel
+class UsersViewModel @Inject constructor(
+    private val repo: UserRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UsersUiState())
     val uiState: StateFlow<UsersUiState> = _uiState

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -37,6 +37,7 @@ describe('TransactionsService', () => {
   const tenantId = 'tenant-1';
   const transactionId = 'txn-1';
   const userId = 'user-1';
+  const adminRole = 'TENANT_ADMIN';
   const studentId = 'student-1';
 
   const baseTransaction = {
@@ -228,7 +229,17 @@ describe('TransactionsService', () => {
       mockPrisma.transaction.findFirst.mockResolvedValue(baseTransaction);
       mockPrisma.student.findFirst.mockResolvedValue(baseStudent);
 
-      const result = await service.voidTransaction(tenantId, transactionId, userId, voidDto);
+      mockPrisma.transaction.findFirst
+        .mockResolvedValueOnce(baseTransaction)
+        .mockResolvedValueOnce(null);
+
+      const result = await service.voidTransaction(
+        tenantId,
+        transactionId,
+        userId,
+        adminRole,
+        voidDto,
+      );
 
       expect(result.message).toBe('Transaction voided successfully.');
       expect(result.transactionId).toBe(transactionId);
@@ -238,7 +249,7 @@ describe('TransactionsService', () => {
       mockPrisma.transaction.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.voidTransaction(tenantId, transactionId, userId, voidDto),
+        service.voidTransaction(tenantId, transactionId, userId, adminRole, voidDto),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -247,7 +258,7 @@ describe('TransactionsService', () => {
       mockPrisma.transaction.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.voidTransaction(tenantId, transactionId, userId, voidDto),
+        service.voidTransaction(tenantId, transactionId, userId, adminRole, voidDto),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -255,7 +266,7 @@ describe('TransactionsService', () => {
       mockPrisma.transaction.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.voidTransaction(tenantId, transactionId, userId, voidDto),
+        service.voidTransaction(tenantId, transactionId, userId, adminRole, voidDto),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -264,7 +275,7 @@ describe('TransactionsService', () => {
       mockPrisma.student.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.voidTransaction(tenantId, transactionId, userId, voidDto),
+        service.voidTransaction(tenantId, transactionId, userId, adminRole, voidDto),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -272,7 +283,11 @@ describe('TransactionsService', () => {
       mockPrisma.transaction.findFirst.mockResolvedValue(baseTransaction);
       mockPrisma.student.findFirst.mockResolvedValue(baseStudent);
 
-      await service.voidTransaction(tenantId, transactionId, userId, voidDto);
+      mockPrisma.transaction.findFirst
+        .mockResolvedValueOnce(baseTransaction)
+        .mockResolvedValueOnce(null);
+
+      await service.voidTransaction(tenantId, transactionId, userId, adminRole, voidDto);
 
       // Transaction amount is 25000, student debt is 25000
       // After reversal: newDebt = 25000 + 25000 = 50000
@@ -292,12 +307,31 @@ describe('TransactionsService', () => {
         creditCents: BigInt(5000),
       };
 
-      mockPrisma.transaction.findFirst.mockResolvedValue(txWithCredit);
+      mockPrisma.transaction.findFirst
+        .mockResolvedValueOnce(txWithCredit)
+        .mockResolvedValueOnce(null);
       mockPrisma.student.findFirst.mockResolvedValue(studentWithCredit);
 
-      await service.voidTransaction(tenantId, transactionId, userId, voidDto);
+      await service.voidTransaction(tenantId, transactionId, userId, adminRole, voidDto);
 
       expect(mockPrisma.$transaction).toHaveBeenCalled();
+    });
+
+    it('should reject users without void permissions', async () => {
+      await expect(
+        service.voidTransaction(tenantId, transactionId, userId, 'CASHIER', voidDto),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should reject voiding older transactions when newer posted transactions exist', async () => {
+      mockPrisma.transaction.findFirst
+        .mockResolvedValueOnce(baseTransaction)
+        .mockResolvedValueOnce({ ...baseTransaction, id: 'txn-2' });
+      mockPrisma.student.findFirst.mockResolvedValue(baseStudent);
+
+      await expect(
+        service.voidTransaction(tenantId, transactionId, userId, adminRole, voidDto),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 });

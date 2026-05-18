@@ -6,10 +6,12 @@ import com.educash.mobile.data.model.DashboardSummary
 import com.educash.mobile.data.model.MonthlyReport
 import com.educash.mobile.data.repository.AuthRepository
 import com.educash.mobile.data.repository.DashboardRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import javax.inject.Inject
 
 data class DashboardUiState(
     val isLoading: Boolean = true,
@@ -20,10 +22,11 @@ data class DashboardUiState(
     val error: String? = null
 )
 
-class DashboardViewModel : ViewModel() {
-
-    private val dashboardRepo = DashboardRepository()
-    private val authRepo = AuthRepository()
+@HiltViewModel
+class DashboardViewModel @Inject constructor(
+    private val dashboardRepo: DashboardRepository,
+    private val authRepo: AuthRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState
@@ -44,7 +47,6 @@ class DashboardViewModel : ViewModel() {
             val year = now.get(Calendar.YEAR)
             val month = now.get(Calendar.MONTH) + 1
 
-            // Load summary and monthly report in parallel
             val summaryResult = dashboardRepo.getSummary()
             val reportResult = dashboardRepo.getMonthlyReport(year, month)
 

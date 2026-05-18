@@ -2,7 +2,7 @@
 
 > **Mission :** Système SaaS de gestion financière pour écoles et universités au Tchad
 > **Architecture :** Multi-Tenant (isolation par `tenantId`) | Numérisation du Cash
-> **Stack :** NestJS + PostgreSQL + Prisma (Backend) → Next.js (Dashboard) → Flutter (Mobile)
+> **Stack :** NestJS + PostgreSQL + Prisma (Backend) → Next.js (Dashboard) → Kotlin / Jetpack Compose (Android)
 
 ---
 
@@ -114,14 +114,14 @@ Le backend NestJS est déjà en place avec une architecture solide :
 
 ---
 
-### Phase 3 : Application Mobile B2C — Flutter (Semaine 3-4)
+### Phase 3 : Application Android B2C — Kotlin / Jetpack Compose (Semaine 3-4)
 
-#### 3.1 Initialisation du projet Flutter
-- [ ] Créer un dossier `mobile/` avec Flutter
-- [ ] Configurer l'architecture (Provider / Riverpod / Bloc)
-- [ ] Thème et design system
+#### 3.1 Application Android native
+- [x] Créer un dossier `android/` avec Kotlin / Jetpack Compose
+- [x] Configurer l'architecture Android (ViewModel, Repository, Hilt)
+- [ ] Stabiliser le thème et le design system Compose
 
-#### 3.2 Authentification Mobile
+#### 3.2 Authentification Android
 - [ ] Login avec code école + email + mot de passe
 - [ ] Stockage sécurisé du token
 - [ ] Biometric authentication (optionnel)
@@ -179,7 +179,7 @@ edu-cash/
 │   │   └── prisma/            # ✅ PrismaModule, PrismaService
 │   └── test/                  # ✅ Tests E2E configurés
 │
-├── web/                       # 🌐 Dashboard Next.js (À CRÉER)
+├── web/                       # 🌐 Dashboard Next.js
 │   ├── src/
 │   │   ├── app/               # App Router (pages, layouts)
 │   │   ├── components/        # Composants réutilisables (Shadcn)
@@ -187,12 +187,12 @@ edu-cash/
 │   │   └── hooks/             # Custom hooks
 │   └── ...
 │
-├── mobile/                    # 📱 App Flutter (À CRÉER)
-│   ├── lib/
-│   │   ├── screens/           # Écrans de l'app
-│   │   ├── services/          # Services API
-│   │   ├── models/            # Modèles de données
-│   │   └── widgets/           # Widgets réutilisables
+├── android/                   # 📱 App Android Kotlin / Jetpack Compose
+│   ├── app/src/main/java/com/educash/mobile/
+│   │   ├── data/              # API, modèles, repositories
+│   │   ├── di/                # Injection Hilt
+│   │   ├── ui/                # Écrans Compose + ViewModels
+│   │   └── util/              # Constantes et helpers
 │   └── ...
 │
 └── implementation_plan.md     # 📄 Ce document

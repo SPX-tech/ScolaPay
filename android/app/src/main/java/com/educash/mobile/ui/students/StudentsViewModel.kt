@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.educash.mobile.data.model.*
 import com.educash.mobile.data.repository.ClassRepository
 import com.educash.mobile.data.repository.StudentRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class StudentsListUiState(
     val isLoading: Boolean = true,
@@ -40,10 +42,11 @@ data class StudentFormUiState(
     val isSaved: Boolean = false
 )
 
-class StudentsViewModel : ViewModel() {
-
-    private val studentRepo = StudentRepository()
-    private val classRepo = ClassRepository()
+@HiltViewModel
+class StudentsViewModel @Inject constructor(
+    private val studentRepo: StudentRepository,
+    private val classRepo: ClassRepository
+) : ViewModel() {
 
     private val _listState = MutableStateFlow(StudentsListUiState())
     val listState: StateFlow<StudentsListUiState> = _listState
@@ -137,7 +140,6 @@ class StudentsViewModel : ViewModel() {
         viewModelScope.launch {
             _formState.value = _formState.value.copy(isLoading = true, error = null)
             val result = if (state.isEditing) {
-                // We need the student ID - this is handled via navigation
                 Result.success(null)
             } else {
                 studentRepo.createStudent(

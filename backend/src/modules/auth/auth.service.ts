@@ -3,10 +3,10 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { createHash } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { signAccessToken } from '../../common/security/access-token.util';
+import { hashPassword, verifyPassword } from '../../common/security/password.util';
 
 @Injectable()
 export class AuthService {
@@ -31,10 +31,11 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials.');
     }
 
-    const expectedHash = this.hashPassword(dto.password);
-    if (expectedHash !== user.passwordHash) {
+    if (!verifyPassword(dto.password, user.passwordHash)) {
       throw new UnauthorizedException('Invalid credentials.');
     }
+
+    const isLegacyPasswordHash = !user.passwordHash.startsWith('scrypt$');
 
     const secret = process.env.ACCESS_TOKEN_SECRET;
     if (!secret) {
@@ -54,7 +55,10 @@ export class AuthService {
 
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+      data: {
+        lastLoginAt: new Date(),
+        ...(isLegacyPasswordHash ? { passwordHash: hashPassword(dto.password) } : {}),
+      },
     });
 
     return {
@@ -70,7 +74,4 @@ export class AuthService {
     };
   }
 
-  private hashPassword(value: string): string {
-    return createHash('sha256').update(value).digest('hex');
-  }
 }

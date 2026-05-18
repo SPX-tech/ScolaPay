@@ -3,7 +3,7 @@ import { ReqContext } from '../../common/decorators/request-context.decorator';
 import type { RequestContext } from '../../common/types/request-context.type';
 import { LedgerService } from './ledger.service';
 import { ReceiptService } from './receipt.service';
-import type { RecordCashPaymentDto } from './dto/record-cash-payment.dto';
+import { RecordCashPaymentDto } from './dto/record-cash-payment.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Controller('ledger')

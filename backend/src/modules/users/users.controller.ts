@@ -9,8 +9,8 @@ import {
 import { ReqContext } from '../../common/decorators/request-context.decorator';
 import type { RequestContext } from '../../common/types/request-context.type';
 import { UsersService } from './users.service';
-import type { CreateUserDto } from './dto/create-user.dto';
-import type { UpdateUserDto } from './dto/update-user.dto';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('users')
 export class UsersController {

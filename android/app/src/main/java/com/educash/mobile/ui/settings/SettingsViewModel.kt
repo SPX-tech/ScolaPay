@@ -2,8 +2,10 @@ package com.educash.mobile.ui.settings
 
 import androidx.lifecycle.ViewModel
 import com.educash.mobile.data.repository.AuthRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import javax.inject.Inject
 
 data class SettingsUiState(
     val userName: String = "",
@@ -11,9 +13,10 @@ data class SettingsUiState(
     val apiUrl: String = ""
 )
 
-class SettingsViewModel : ViewModel() {
-
-    private val authRepo = AuthRepository()
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
+    private val authRepo: AuthRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState

@@ -6,26 +6,24 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { createHash } from 'node:crypto';
+import { hashPassword } from '../../common/security/password.util';
 
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private hashPassword(password: string): string {
-    return createHash('sha256').update(password).digest('hex');
-  }
-
   async listTenantUsers(tenantId: string) {
     return this.prisma.user.findMany({
       where: { tenantId },
       orderBy: { createdAt: 'desc' },
+      omit: { passwordHash: true },
     });
   }
 
   async getUserById(tenantId: string, userId: string) {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, tenantId },
+      omit: { passwordHash: true },
     });
 
     if (!user) {
@@ -43,10 +41,11 @@ export class UsersService {
           email: dto.email.trim().toLowerCase(),
           fullName: dto.fullName.trim(),
           role: dto.role,
-          passwordHash: this.hashPassword(dto.password),
+          passwordHash: hashPassword(dto.password),
           phone: dto.phone?.trim(),
           status: 'ACTIVE',
         },
+        omit: { passwordHash: true },
       });
     } catch (error: any) {
       if (error?.code === 'P2002') {
@@ -68,11 +67,12 @@ export class UsersService {
       if (dto.phone !== undefined) data.phone = dto.phone?.trim();
       if (dto.role) data.role = dto.role;
       if (dto.status) data.status = dto.status;
-      if (dto.password) data.passwordHash = this.hashPassword(dto.password);
+      if (dto.password) data.passwordHash = hashPassword(dto.password);
 
       return await this.prisma.user.update({
         where: { id: userId },
         data,
+        omit: { passwordHash: true },
       });
     } catch (error: any) {
       if (error?.code === 'P2002') {
@@ -89,6 +89,7 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id: userId },
       data: { status: 'SUSPENDED' },
+      omit: { passwordHash: true },
     });
   }
 
@@ -97,6 +98,7 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id: userId },
       data: { status: 'ACTIVE' },
+      omit: { passwordHash: true },
     });
   }
 }

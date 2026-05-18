@@ -11,8 +11,8 @@ import {
 import { ReqContext } from '../../common/decorators/request-context.decorator';
 import type { RequestContext } from '../../common/types/request-context.type';
 import { ClassesService } from './classes.service';
-import type { CreateClassDto } from './dto/create-class.dto';
-import type { UpdateClassDto } from './dto/update-class.dto';
+import { CreateClassDto } from './dto/create-class.dto';
+import { UpdateClassDto } from './dto/update-class.dto';
 
 @Controller('classes')
 export class ClassesController {

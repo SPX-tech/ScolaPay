@@ -9,8 +9,8 @@ import {
 import { ReqContext } from '../../common/decorators/request-context.decorator';
 import type { RequestContext } from '../../common/types/request-context.type';
 import { TransactionsService } from './transactions.service';
-import type { ListTransactionsQueryDto } from './dto/list-transactions-query.dto';
-import type { VoidTransactionDto } from './dto/void-transaction.dto';
+import { ListTransactionsQueryDto } from './dto/list-transactions-query.dto';
+import { VoidTransactionDto } from './dto/void-transaction.dto';
 
 @Controller('transactions')
 export class TransactionsController {
@@ -58,6 +58,7 @@ export class TransactionsController {
       context.tenantId,
       transactionId,
       context.userId,
+      context.userRole,
       dto,
     );
   }

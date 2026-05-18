@@ -3,11 +3,20 @@ backend/dist/
 backend/coverage/
 backend/.env
 backend/.DS_Store
+backend-deploy.tar.gz
 
 # Web (Dashboard Next.js)
 web/node_modules/
 web/.next/
 web/out/
+web/tsconfig.tsbuildinfo
+
+# Android
+android/.gradle/
+android/.idea/
+android/app/build/
+android/build/
+android/local.properties
 
 # OS
 .DS_Store

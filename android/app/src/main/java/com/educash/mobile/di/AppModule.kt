@@ -1,7 +1,6 @@
 package com.educash.mobile.di
 
 import android.content.Context
-import com.educash.mobile.EduCashApp
 import com.educash.mobile.data.api.ApiClient
 import com.educash.mobile.data.repository.*
 import dagger.Module
@@ -13,7 +12,7 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object NetworkModule {
+object AppModule {
 
     @Provides
     @Singleton
@@ -21,11 +20,6 @@ object NetworkModule {
         ApiClient.initialize(context)
         return ApiClient
     }
-}
-
-@Module
-@InstallIn(SingletonComponent::class)
-object RepositoryModule {
 
     @Provides
     @Singleton
