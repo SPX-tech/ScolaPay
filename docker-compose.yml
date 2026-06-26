@@ -37,6 +37,12 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/edu_cash?schema=public}
       ACCESS_TOKEN_SECRET: ${ACCESS_TOKEN_SECRET:?ACCESS_TOKEN_SECRET is required}
       ACCESS_TOKEN_EXPIRY_SECONDS: ${ACCESS_TOKEN_EXPIRY_SECONDS:-28800}
+      # Worker outbox : polling cron actif par défaut (mettre "false" pour désactiver)
+      OUTBOX_POLLING_ENABLED: ${OUTBOX_POLLING_ENABLED:-true}
+      # SMS Africa's Talking : sans AT_API_KEY, les SMS restent en mode mock
+      AT_USERNAME: ${AT_USERNAME:-sandbox}
+      AT_API_KEY: ${AT_API_KEY:-}
+      AT_SENDER_ID: ${AT_SENDER_ID:-}
     depends_on:
       postgres:
         condition: service_healthy
