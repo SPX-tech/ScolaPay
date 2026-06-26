@@ -1,240 +1,162 @@
-# 📋 PLAN D'IMPLÉMENTATION — EDU-CASH TCHAD (SaaS B2B2C)
+# 📋 ÉTAT DU PROJET — EDU-CASH TCHAD (SaaS B2B2C)
 
-> **Mission :** Système SaaS de gestion financière pour écoles et universités au Tchad
+> **Mission :** Système SaaS de gestion financière 100 % cash pour écoles et universités au Tchad
 > **Architecture :** Multi-Tenant (isolation par `tenantId`) | Numérisation du Cash
-> **Stack :** NestJS + PostgreSQL + Prisma (Backend) → Next.js (Dashboard) → Kotlin / Jetpack Compose (Android)
+> **Stack :** NestJS + PostgreSQL + Prisma (Backend) · Next.js 15 (Dashboard web) · Kotlin / Jetpack Compose (Android)
+>
+> _Dernière mise à jour : 2026-06-26 — ce document décrit l'état **réel** du code, pas une roadmap prévisionnelle._
 
 ---
 
-## ✅ ÉTAT DES LIEUX — Ce qui EXISTE DÉJÀ
+## 🎯 Périmètre de la version actuelle
 
-Le backend NestJS est déjà en place avec une architecture solide :
+La version en cours est volontairement **100 % Cash**. L'intégration de paiements externes
+(**Kadryza Pay**, connexions bancaires) est **explicitement hors périmètre** pour l'instant :
+l'objectif est de rendre la version cash robuste et prête à l'emploi avant d'élargir.
 
-### Base de données (Prisma)
-| Modèle | Statut | Notes |
-|---|---|---|
-| `Tenant` (École) | ✅ Fait | `code` unique, currency, timezone |
-| `User` (Admin/Caissier) | ✅ Fait | Rôles : TENANT_ADMIN, CASHIER, ACCOUNTANT, AUDITOR |
-| `Student` | ✅ Fait | `debtCents`, `creditCents`, statuts |
-| `Transaction` | ✅ Fait | Type CASH_PAYMENT, idempotency, receiptHash SHA-256 |
-| `OutboxEvent` | ✅ Fait | Outbox pattern pour évolutivité async |
+---
 
-### API Backend (NestJS)
-| Module | Statut | Ce qui existe |
-|---|---|---|
-| `auth` | ✅ Fait | Login JWT, AuthGuard |
-| `tenants` | ✅ Fait | getTenantById |
-| `users` | ✅ Fait | listTenantUsers |
-| `students` | ✅ Fait | CRUD (create, list, getById) |
-| `ledger` | ✅ Fait | recordCashPayment (ACID, idempotent) |
-| `transactions` | ✅ Fait | List/filter transactions |
-| `outbox` | ✅ Fait | Outbox pattern avec pending events |
-| `notifications` | ⚠️ Placeholder | Prêt pour branchement SMS |
+## ✅ CE QUI EST EN PLACE
 
-### Sécurité
-| Composant | Statut |
+### 1. Base de données (Prisma / PostgreSQL)
+
+Tous les modèles métier portent `tenantId` (isolation multi-tenant), avec index composites et
+clés uniques par tenant. Les montants financiers sont en **cents (BigInt)**, jamais en float.
+
+| Modèle | Détails |
 |---|---|
-| AuthGuard (JWT) | ✅ Fait |
-| TenantGuard (isolation) | ✅ Fait |
-| BigInt Serializer | ✅ Fait |
-| ValidationPipe global | ✅ Fait |
+| `Tenant` | École : `code` unique, `currency` (XAF), `timezone` (Africa/Ndjamena), `isActive` |
+| `User` | Rôles `TENANT_ADMIN` / `CASHIER` / `ACCOUNTANT` / `AUDITOR` ; statuts ACTIVE/INVITED/SUSPENDED |
+| `Student` | `debtCents` / `creditCents` (BigInt), rattachement classe, statut, `metadata` JSON |
+| `SchoolClass` | Classes par `academicYear`, statut ACTIVE/ARCHIVED |
+| `Transaction` | Types `CASH_PAYMENT` / `DEBT_ADJUSTMENT` / `REFUND` ; POSTED/VOIDED ; `receiptHash` SHA-256, `qrCodeData`, `idempotencyKey` unique, void avec raison |
+| `OutboxEvent` | Outbox pattern (PENDING → PROCESSING → SENT/FAILED) pour notifications async |
+| `AuditLog` | Traçabilité : actor, action, `before`/`after` JSON |
+
+Migration la plus récente : `20260518000000_add_audit_logs`.
+Seed (`prisma/seed.ts`) : tenant `DEMO001`, 3 utilisateurs (`admin@demo.td`, `caissier@demo.td`,
+`comptable@demo.td`), 6 classes, 12 étudiants.
+
+### 2. API Backend (NestJS) — préfixe `/api/v1`
+
+Sécurité globale : **AuthGuard (JWT)** + **TenantGuard** + **RolesGuard**, `ValidationPipe` global,
+`BigIntSerializerInterceptor`, `enableShutdownHooks`.
+
+| Module | Endpoints / capacités |
+|---|---|
+| `auth` | `POST /auth/login` (JWT) |
+| `tenants` | `GET /tenants/me` |
+| `users` | list, getById, create, update, `suspend`, `activate` |
+| `students` | CRUD complet, query paginée/filtrée, `POST /students/import` (import en masse) |
+| `classes` | CRUD complet |
+| `ledger` | `POST /ledger/record-cash-payment` (ACID, idempotent, calcul dette/crédit) ; `GET /ledger/receipts/:id` (reçu + QR code) |
+| `transactions` | list/filtres, par étudiant, getById, `POST /:id/void` |
+| `dashboard` | `GET /dashboard/summary` (KPIs) ; `reports/collections` ; `reports/students-debt` |
+| `outbox` | `GET /pending` ; `POST /process` (déclenchement manuel) **+ polling automatique** |
+| `notifications` | Envoi SMS via Africa's Talking, avec **fallback mock** automatique |
+| `audit` | Service de journalisation transverse |
+| `health` | `GET /health` |
+
+### 3. Worker Outbox — **automatisé** ✅
+
+- `OutboxWorkerService.processPendingEvents()` : traite les events `PENDING`/`FAILED`,
+  retry avec back-off exponentiel, `MAX_RETRIES = 3`, garde `isProcessing` anti-chevauchement.
+- `OutboxSchedulerService` : déclenche le worker **toutes les minutes**
+  (`@Cron(CronExpression.EVERY_MINUTE)`), activé via `ScheduleModule.forRoot()`.
+- Désactivable par environnement : `OUTBOX_POLLING_ENABLED=false` (tests, CI, instance non-worker).
+- L'endpoint `POST /outbox/process` reste disponible pour un déclenchement manuel / diagnostic.
+
+### 4. Notifications SMS (Africa's Talking) — **validé** ✅
+
+- **Mode mock par défaut** : sans `AT_API_KEY`, les SMS sont simulés dans les logs (statut `queued`).
+- **Bascule réelle automatique** : dès que `AT_API_KEY` (+ `AT_USERNAME`, `AT_SENDER_ID` optionnel)
+  sont définis, le SDK est instancié et envoie de vrais SMS au tuteur (statut `sent` / `failed`).
+- Comportement verrouillé par tests unitaires (`notifications.service.spec.ts`).
+
+### 5. Front-ends
+
+- **Web** (`web/`, Next.js 15 App Router, React 19, TanStack Query, Tailwind + shadcn/Radix) :
+  login + pages dashboard (accueil, students + détail, classes, transactions, ledger, users,
+  reports, settings).
+- **Android** (`android/`, Kotlin / Jetpack Compose, Hilt, Retrofit/OkHttp, EncryptedSharedPreferences) :
+  architecture MVVM (data/api, repositories, di, ui + ViewModels) couvrant login, dashboard,
+  students, transactions, ledger, reports, users, settings.
+
+### 6. Infra & tests
+
+- `docker-compose.yml` : Postgres 16 + backend + web + Nginx (reverse proxy port 8080).
+- Tests : specs unitaires (students, transactions, receipt, notifications) + E2E (`test/`).
+  Suite verte : **54 tests** côté backend.
 
 ---
 
-## 🗺️ ROADMAP D'IMPLÉMENTATION
+## 🔭 RESTE À FAIRE (pour finaliser la version cash)
 
-### Phase 1 : Renforcement du Backend Existant (Semaine 1)
-
-#### 1.1 Améliorations Prisma & Base de données
-- [x] Schéma existant : Tenant, User, Student, Transaction, OutboxEvent
-- [ ] **Ajouter des index composites** pour les performances (recherches par date, statut)
-- [ ] **Ajouter champ `metadata` pour les étudiants** (classe, filière, année académique)
-- [ ] **Ajouter une table `Receipt`** dédiée avec QR code data
-- [ ] **Ajouter une table `SchoolClass`** (gestion des classes/groupes)
-
-#### 1.2 Améliorations API
-- [ ] **Pagination** sur les listes (students, transactions, users)
-- [ ] **Filtres avancés** (par date, statut, montant)
-- [ ] **Export CSV/Excel** des transactions
-- [ ] **Endpoint de summary** (dashboard stats : total encaissé, nombre d'étudiants, etc.)
-- [ ] **Gestion des utilisateurs complète** (invite, suspend, change role)
-- [ ] **Void/Annulation de transaction** avec raison et audit trail
-
-#### 1.3 Système de Notifications (SMS)
-- [ ] Implémenter le **NotificationService** complet
-- [ ] Intégration avec **Africa's Talking API** ou Twilio
-- [ ] Worker de polling **Outbox** → envoi SMS après paiement cash
-- [ ] Template SMS personnalisable par école
-
-#### 1.4 Tests & Qualité
-- [ ] Tests unitaires pour chaque service (Jest)
-- [ ] Tests d'intégration pour les endpoints critiques
-- [ ] Tests E2E (déjà configurés dans `test/`)
+| Sujet | Statut | Note |
+|---|---|---|
+| Automatisation worker outbox | ✅ Fait | Cron 1 min + flag d'activation |
+| Validation module SMS (mock ↔ réel) | ✅ Fait | Couvert par tests |
+| CI/CD (GitHub Actions) | ⬜ À faire | Lint + build + tests sur PR |
+| Couverture de tests | 🟡 Partielle | Étendre aux services non couverts (ledger, classes, users) |
+| Durcissement prod | ⬜ À faire | HTTPS, secrets, backup Postgres, monitoring/logs |
 
 ---
 
-### Phase 2 : Portail Web B2B — Next.js (Semaine 2-3)
+## ⚠️ LIMITES CONNUES / DETTE TECHNIQUE
 
-#### 2.1 Initialisation du projet Next.js
-- [ ] Créer un dossier `web/` avec Next.js 14+ (App Router)
-- [ ] Installer TailwindCSS + Shadcn UI
-- [ ] Configurer les librairies : react-query, axios, react-hook-form, zod
+### Worker outbox en multi-instance
+Le garde `isProcessing` est **en mémoire** : il empêche le chevauchement au sein d'**une seule
+instance**. En cas de scaling horizontal (plusieurs réplicas backend), deux instances pourraient
+traiter le même événement, car la séquence `findMany` → `update` n'est **pas atomique** entre
+process. Acceptable pour le déploiement mono-instance actuel (docker-compose).
 
-#### 2.2 Authentification & Layout
-- [ ] Page de login avec sélection d'école (tenant code)
-- [ ] Layout avec Sidebar + TopBar responsives
-- [ ] Guard de routes (protégées par rôle)
-- [ ] Gestion de session (JWT stocké, refresh)
-
-#### 2.3 Dashboard Principal (Role-based)
-- [ ] **Dashboard Admin** : KPIs globaux (encaissements du jour, dette totale, etc.)
-- [ ] **Dashboard Caissier** : Interface d'encaissement rapide
-- [ ] **Dashboard Comptable** : Rapports et exports
-
-#### 2.4 Gestion des Étudiants
-- [ ] Liste paginée avec recherche et filtres
-- [ ] Fiche étudiant détaillée (solde, historique)
-- [ ] Création/Modification d'étudiant
-- [ ] Import CSV d'étudiants
-
-#### 2.5 Encaissement Cash (Record Payment)
-- [ ] Formulaire d'encaissement rapide (sélection étudiant, montant)
-- [ ] Reçu imprimable avec QR Code
-- [ ] Confirmation et animation de succès
-
-#### 2.6 Gestion des Utilisateurs (Admin)
-- [ ] Liste des utilisateurs de l'école
-- [ ] Invitation par email
-- [ ] Gestion des rôles
-
-#### 2.7 Rapports & Export
-- [ ] Rapport journalier/mensuel des encaissements
-- [ ] État des impayés (dettes étudiants)
-- [ ] Export PDF et Excel
+> **Amélioration future** : verrouillage au niveau base — sélection des events avec
+> `SELECT … FOR UPDATE SKIP LOCKED` (ou un advisory lock Postgres) afin que chaque réplica prenne
+> un lot distinct sans collision. À implémenter avant tout passage en multi-instance.
 
 ---
 
-### Phase 3 : Application Android B2C — Kotlin / Jetpack Compose (Semaine 3-4)
-
-#### 3.1 Application Android native
-- [x] Créer un dossier `android/` avec Kotlin / Jetpack Compose
-- [x] Configurer l'architecture Android (ViewModel, Repository, Hilt)
-- [ ] Stabiliser le thème et le design system Compose
-
-#### 3.2 Authentification Android
-- [ ] Login avec code école + email + mot de passe
-- [ ] Stockage sécurisé du token
-- [ ] Biometric authentication (optionnel)
-
-#### 3.3 Interface Étudiant
-- [ ] **Dashboard** : Solde actuel, statut, dernier paiement
-- [ ] **Historique** : Liste des transactions avec détails
-- [ ] **Reçus** : Visualisation des reçus avec QR Code
-- [ ] **Profil** : Informations personnelles
-
-#### 3.4 Notifications Push
-- [ ] Réception des notifications de paiement
-- [ ] Alerte de rappel de paiement
-
----
-
-### Phase 4 : Production & Déploiement (Semaine 4-5)
-
-#### 4.1 Infrastructure
-- [ ] Docker Compose (NestJS + PostgreSQL + Redis optionnel)
-- [ ] CI/CD avec GitHub Actions
-- [ ] Déploiement sur VPS (ou services cloud)
-
-#### 4.2 Configuration de Production
-- [ ] HTTPS (Let's Encrypt)
-- [ ] Variables d'environnement sécurisées
-- [ ] Backup automatique PostgreSQL
-- [ ] Monitoring (logs, erreurs, uptime)
-
-#### 4.3 Seed & Fixtures
-- [ ] Script de seed pour données de démo
-- [ ] Création d'un tenant "demo" avec données fictives
-
----
-
-## 🏛️ STRUCTURE DES DOSSIERS PROPOSÉE
+## 🏛️ STRUCTURE DES DOSSIERS
 
 ```
 edu-cash/
-├── backend/                    # API NestJS (EXISTANT)
-│   ├── prisma/
-│   │   └── schema.prisma      # ✅ Schéma Prisma complet
-│   ├── src/
-│   │   ├── common/            # ✅ Guards, decorators, interceptors
-│   │   ├── modules/
-│   │   │   ├── auth/          # ✅ Login JWT
-│   │   │   ├── health/        # ✅ Health check
-│   │   │   ├── ledger/        # ✅ RecordCashPayment
-│   │   │   ├── notifications/ # ⚠️ À compléter (SMS)
-│   │   │   ├── outbox/        # ✅ Outbox pattern
-│   │   │   ├── students/      # ✅ CRUD étudiant
-│   │   │   ├── tenants/       # ✅ Gestion école
-│   │   │   ├── transactions/  # ✅ Historique transactions
-│   │   │   └── users/         # ✅ Gestion utilisateurs
-│   │   └── prisma/            # ✅ PrismaModule, PrismaService
-│   └── test/                  # ✅ Tests E2E configurés
+├── backend/                    # API NestJS + Prisma + PostgreSQL
+│   ├── prisma/                 # schema.prisma, migrations, seed.ts
+│   └── src/
+│       ├── common/             # guards, decorators, interceptors, security, validation
+│       ├── modules/
+│       │   ├── auth/           # login JWT
+│       │   ├── audit/          # journalisation
+│       │   ├── dashboard/      # reports (collections, students-debt)
+│       │   ├── health/
+│       │   ├── ledger/         # record-cash-payment, reçus + QR
+│       │   ├── notifications/  # SMS Africa's Talking (+ mock)
+│       │   ├── outbox/         # worker + scheduler (cron 1 min)
+│       │   ├── students/       # CRUD + classes + import
+│       │   ├── tenants/
+│       │   ├── transactions/   # historique + void
+│       │   └── users/          # gestion utilisateurs
+│       └── prisma/             # PrismaModule / PrismaService
 │
-├── web/                       # 🌐 Dashboard Next.js
-│   ├── src/
-│   │   ├── app/               # App Router (pages, layouts)
-│   │   ├── components/        # Composants réutilisables (Shadcn)
-│   │   ├── lib/               # Utilitaires, API client
-│   │   └── hooks/             # Custom hooks
-│   └── ...
+├── web/                        # Dashboard Next.js 15 (App Router)
+│   └── src/{app,components,lib,hooks}/
 │
-├── android/                   # 📱 App Android Kotlin / Jetpack Compose
-│   ├── app/src/main/java/com/educash/mobile/
-│   │   ├── data/              # API, modèles, repositories
-│   │   ├── di/                # Injection Hilt
-│   │   ├── ui/                # Écrans Compose + ViewModels
-│   │   └── util/              # Constantes et helpers
-│   └── ...
+├── android/                    # App Android Kotlin / Jetpack Compose
+│   └── app/src/main/java/com/educash/mobile/{data,di,ui,util}/
 │
-└── implementation_plan.md     # 📄 Ce document
+├── nginx/                      # reverse proxy
+├── docker-compose.yml
+└── implementation_plan.md      # ce document
 ```
 
 ---
 
-## 🔒 CONFIRMATION DE COMPRÉHENSION
+## 🔒 PRINCIPES À RESPECTER
 
-### Multi-Tenant (Isolation des données)
-✅ **Compris et déjà implémenté.**
-- Chaque table métier (`User`, `Student`, `Transaction`, `OutboxEvent`) a une colonne `tenantId`
-- `TenantGuard` valide le contexte à chaque requête
-- Les clés `@@unique([tenantId, email])` et `@@unique([tenantId, studentNumber])` empêchent les collisions inter-écoles
-- Relations `Restrict` pour empêcher la suppression accidentelle
-
-### Numérisation du Cash
-✅ **Compris et déjà implémenté dans `LedgerService.recordCashPayment()`.**
-- Transaction `CASH_PAYMENT` enregistrée avec `amountCents` (BigInt, pas de float)
-- Calcul automatique : `newDebtCents = previousDebtCents - amountCents`
-- Gestion du trop-perçu : `creditCents` incrémenté si le montant dépasse la dette
-- Reçu infalsifiable : `receiptHash` = SHA-256(tenantId + studentId + amount + receiptNumber + secret)
-- Idempotence : clé unique `idempotencyKey` pour éviter les doublons
-- Outbox pattern : événement créé en transaction pour notification SMS future
-
-### Event-Driven / Notifications
-✅ **Compris et partiellement implémenté.**
-- `OutboxService` : stocke les événements dans une table dédiée
-- Les événements sont créés **dans la même transaction** que le paiement (ACID)
-- `NotificationsService` : placeholder prêt à être branché sur Africa's Talking / Twilio
-- Reste à implémenter : le worker de polling et l'intégration SMS
-
----
-
-## ⚠️ RISQUES & DÉCISIONS À VALIDER
-
-1. **QR Code** : Sur le reçu imprimable — utiliser une lib standard (qrcode) ou une API externe ?
-2. **Africa's Talking** : API SMS réelle ou mock en dev ?
-3. **Stockage fichiers** : Les reçus PDF/QR — stockage local S3/cloud ?
-4. **Monnaie** : XAF par défaut — support multi-devises nécessaire ?
-5. **Dette étudiant** : Montant saisi manuellement ou importé depuis un système existant ?
-
----
-
-> **📌 Prochaine étape :** J'attends ton approbation explicite pour commencer l'implémentation des phases ci-dessus. Tu peux également ajuster les priorités ou me demander de commencer par une partie spécifique.
+- **Multi-tenant** : toute table métier porte `tenantId` ; `TenantGuard` valide le contexte ;
+  clés `@@unique([tenantId, …])` contre les collisions inter-écoles ; relations `Restrict`.
+- **Cash** : montants en `*Cents` (BigInt), jamais de float. `recordCashPayment` est ACID et
+  idempotent ; reçu infalsifiable via `receiptHash` SHA-256 ; event outbox créé dans la **même
+  transaction** que le paiement.
+- **Sécurité** : routes sensibles protégées par auth + tenant + rôles. Ne pas versionner les
+  builds (`android/app/build`, `web/tsconfig.tsbuildinfo`, artefacts de déploiement).

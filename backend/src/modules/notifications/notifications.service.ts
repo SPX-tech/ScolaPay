@@ -1,4 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import africastalkingFactory from 'africastalking';
+
+type AfricastalkingInstance = ReturnType<typeof africastalkingFactory>;
 
 type CashPaymentPayload = {
   transactionId: string;
@@ -16,10 +19,10 @@ type CashPaymentPayload = {
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
-  private africastalking: any = null;
+  private africastalking: AfricastalkingInstance | null = null;
   private initialized = false;
 
-  private async initialize() {
+  private initialize(): void {
     if (this.initialized) return;
 
     const apiKey = process.env.AT_API_KEY;
@@ -27,11 +30,9 @@ export class NotificationsService {
 
     if (apiKey) {
       try {
-        const at = await import('africastalking');
-        this.africastalking = at.default({
-          apiKey,
-          username,
-        });
+        // Le SDK n'est instancié que lorsqu'une clé API est fournie ;
+        // sans clé, on reste en mode mock (voir plus bas).
+        this.africastalking = africastalkingFactory({ apiKey, username });
         this.logger.log(`Africa's Talking initialisé (username: ${username})`);
       } catch (err) {
         this.logger.warn(
@@ -57,7 +58,7 @@ export class NotificationsService {
       ? (Number(payload.amountCents) / 100).toLocaleString('fr-FR')
       : '0';
 
-    await this.initialize();
+    this.initialize();
 
     const message = `Edu-Cash Tchad - Paiement reçu pour ${payload.studentName}. Montant: ${amountFormatted} XAF. Reçu n°: ${payload.receiptNumber}. Merci pour votre confiance.`;
 
