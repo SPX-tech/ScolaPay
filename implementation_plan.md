@@ -33,9 +33,10 @@ clés uniques par tenant. Les montants financiers sont en **cents (BigInt)**, ja
 | `OutboxEvent` | Outbox pattern (PENDING → PROCESSING → SENT/FAILED) pour notifications async |
 | `AuditLog` | Traçabilité : actor, action, `before`/`after` JSON |
 
-Migration la plus récente : `20260518000000_add_audit_logs`.
+Migration la plus récente : `20260627000000_add_financial_foundations`
+(modèles `VirtualAccount` et `WithdrawalRequest`, voir section 7).
 Seed (`prisma/seed.ts`) : tenant `DEMO001`, 3 utilisateurs (`admin@demo.td`, `caissier@demo.td`,
-`comptable@demo.td`), 6 classes, 12 étudiants.
+`comptable@demo.td`), 6 classes, 12 étudiants, 1 compte virtuel (solde 0).
 
 ### 2. API Backend (NestJS) — préfixe `/api/v1`
 
@@ -55,6 +56,7 @@ Sécurité globale : **AuthGuard (JWT)** + **TenantGuard** + **RolesGuard**, `Va
 | `outbox` | `GET /pending` ; `POST /process` (déclenchement manuel) **+ polling automatique** |
 | `notifications` | Envoi SMS via Africa's Talking, avec **fallback mock** automatique |
 | `audit` | Service de journalisation transverse |
+| `finance` | `GET /schools/balance` ; `POST /schools/withdraw` (rails locaux, voir section 7) |
 | `health` | `GET /health` |
 
 ### 3. Worker Outbox — **automatisé** ✅
@@ -85,8 +87,29 @@ Sécurité globale : **AuthGuard (JWT)** + **TenantGuard** + **RolesGuard**, `Va
 ### 6. Infra & tests
 
 - `docker-compose.yml` : Postgres 16 + backend + web + Nginx (reverse proxy port 8080).
-- Tests : specs unitaires (students, transactions, receipt, notifications) + E2E (`test/`).
-  Suite verte : **54 tests** côté backend.
+  Les variables SMS (`AT_*`) et `OUTBOX_POLLING_ENABLED` sont transmises au service `backend`.
+- Tests : specs unitaires (students, transactions, receipt, notifications, virtual-account) + E2E (`test/`).
+  Suite verte : **62 tests** côté backend.
+
+### 7. Rails financiers — **posés, non activés** 🧱
+
+Fondations préparées pour les paiements numériques / retraits (Kadryza Pay, mobile money,
+banque), **découplées du ledger cash** et **sans aucune connexion externe** pour l'instant.
+
+- **Modèles Prisma** : `VirtualAccount` (1-1 `Tenant` : `balanceCents`, `pendingWithdrawalCents`,
+  `currency`) et `WithdrawalRequest` (`method` MOBILE_MONEY/BANK_TRANSFER, `status`
+  PENDING/PROCESSING/COMPLETED/FAILED, `reference` **unique global** pour la réconciliation).
+  `TransactionType` enrichi de `MOBILE_PAYMENT` et `WITHDRAWAL`.
+- **`VirtualAccountService`** : invariant `disponible = balanceCents - pendingWithdrawalCents ≥ 0`,
+  garanti par des incréments atomiques (`credit` / `reserve` / `complete` / `release`).
+  `creditFromPayment` est réservé aux `MOBILE_PAYMENT` (le cash physique n'alimente pas le float).
+- **`WithdrawalsService`** : blocage des fonds + création de la demande PENDING dans une **seule
+  transaction ACID**.
+- **`SchoolsController`** : `GET /schools/balance` et `POST /schools/withdraw` (fonctionnels en
+  local, aucun transfert réel). Couvert par 8 tests unitaires sur l'invariant de solde.
+
+> ⚠️ Non encore branché : `creditFromPayment` sera appelé depuis le flux `MOBILE_PAYMENT`
+> quand celui-ci sera implémenté ; aucun appel prestataire (Kadryza/banque) n'existe à ce stade.
 
 ---
 
@@ -96,6 +119,9 @@ Sécurité globale : **AuthGuard (JWT)** + **TenantGuard** + **RolesGuard**, `Va
 |---|---|---|
 | Automatisation worker outbox | ✅ Fait | Cron 1 min + flag d'activation |
 | Validation module SMS (mock ↔ réel) | ✅ Fait | Couvert par tests |
+| Rails financiers (schéma + services + endpoints) | ✅ Fait | Locaux, non activés (voir section 7) |
+| Activation paiements numériques (Kadryza, mobile money) | ⬜ À faire | Brancher `creditFromPayment` + intégration prestataire |
+| Verrou SQL anti-concurrence (outbox + retraits) | ⬜ À faire | Voir dette technique ci-dessous (avant multi-instance) |
 | CI/CD (GitHub Actions) | ⬜ À faire | Lint + build + tests sur PR |
 | Couverture de tests | 🟡 Partielle | Étendre aux services non couverts (ledger, classes, users) |
 | Durcissement prod | ⬜ À faire | HTTPS, secrets, backup Postgres, monitoring/logs |
@@ -104,15 +130,31 @@ Sécurité globale : **AuthGuard (JWT)** + **TenantGuard** + **RolesGuard**, `Va
 
 ## ⚠️ LIMITES CONNUES / DETTE TECHNIQUE
 
-### Worker outbox en multi-instance
-Le garde `isProcessing` est **en mémoire** : il empêche le chevauchement au sein d'**une seule
-instance**. En cas de scaling horizontal (plusieurs réplicas backend), deux instances pourraient
-traiter le même événement, car la séquence `findMany` → `update` n'est **pas atomique** entre
-process. Acceptable pour le déploiement mono-instance actuel (docker-compose).
+> **Thème commun : concurrence en multi-instances.** Les deux points ci-dessous reposent sur un
+> motif « lire puis écrire » correct en **mono-instance** (déploiement docker-compose actuel) mais
+> sujet aux *race conditions* si plusieurs réplicas backend tournent en parallèle. La parade est la
+> même : un **verrou de ligne PostgreSQL** (`SELECT … FOR UPDATE`) dans la transaction. À traiter
+> **avant tout scaling horizontal**.
 
-> **Amélioration future** : verrouillage au niveau base — sélection des events avec
-> `SELECT … FOR UPDATE SKIP LOCKED` (ou un advisory lock Postgres) afin que chaque réplica prenne
-> un lot distinct sans collision. À implémenter avant tout passage en multi-instance.
+### 1. Worker outbox
+Le garde `isProcessing` est **en mémoire** : il empêche le chevauchement au sein d'**une seule
+instance**. En cas de scaling horizontal, deux instances pourraient traiter le même événement, car
+la séquence `findMany` → `update` n'est **pas atomique** entre process.
+
+> **Parade** : sélectionner les events avec `SELECT … FOR UPDATE SKIP LOCKED` (ou un advisory lock
+> Postgres) afin que chaque réplica prenne un lot distinct sans collision.
+
+### 2. Demandes de retrait (double-retrait concurrent)
+`VirtualAccountService.reserveForWithdrawal` **lit** le compte virtuel, calcule le disponible, puis
+**incrémente** `pendingWithdrawalCents` — le tout dans une transaction ACID. En mono-instance c'est
+correct. En multi-instances, deux retraits simultanés peuvent **lire le même disponible** avant que
+l'un n'ait bloqué les fonds, et tous deux passer la vérification → **double-retrait** dépassant le
+solde (l'invariant `disponible ≥ 0` serait violé).
+
+> **Parade** : verrouiller la ligne du compte avant lecture, p. ex.
+> `SELECT * FROM virtual_accounts WHERE "tenantId" = $1 FOR UPDATE` (via `$queryRaw` dans la
+> transaction) pour sérialiser les réservations concurrentes sur un même tenant. À implémenter
+> avant d'activer les retraits réels et/ou le multi-instance.
 
 ---
 
@@ -128,6 +170,7 @@ edu-cash/
 │       │   ├── auth/           # login JWT
 │       │   ├── audit/          # journalisation
 │       │   ├── dashboard/      # reports (collections, students-debt)
+│       │   ├── finance/        # virtual account + retraits (rails locaux)
 │       │   ├── health/
 │       │   ├── ledger/         # record-cash-payment, reçus + QR
 │       │   ├── notifications/  # SMS Africa's Talking (+ mock)
