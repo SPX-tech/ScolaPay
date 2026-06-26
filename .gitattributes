@@ -1,0 +1,3 @@
+# Forcer les fins de ligne LF pour les scripts shell : ils doivent rester
+# exécutables tels quels sur les serveurs Linux, quel que soit l'OS de dev.
+*.sh text eol=lf
