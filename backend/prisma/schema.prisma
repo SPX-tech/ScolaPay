@@ -35,6 +35,20 @@ enum TransactionType {
   CASH_PAYMENT
   DEBT_ADJUSTMENT
   REFUND
+  MOBILE_PAYMENT
+  WITHDRAWAL
+}
+
+enum WithdrawalMethod {
+  MOBILE_MONEY
+  BANK_TRANSFER
+}
+
+enum WithdrawalStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
 }
 
 enum TransactionStatus {
@@ -59,12 +73,14 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users        User[]
-  students     Student[]
-  classes      SchoolClass[]
-  transactions Transaction[]
-  outboxEvents OutboxEvent[]
-  auditLogs    AuditLog[]
+  users              User[]
+  students           Student[]
+  classes            SchoolClass[]
+  transactions       Transaction[]
+  outboxEvents       OutboxEvent[]
+  auditLogs          AuditLog[]
+  virtualAccount     VirtualAccount?
+  withdrawalRequests WithdrawalRequest[]
 
   @@map("tenants")
 }
@@ -82,8 +98,9 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  tenant               Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  recordedTransactions Transaction[] @relation("RecordedByUser")
+  tenant               Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  recordedTransactions Transaction[]       @relation("RecordedByUser")
+  withdrawalRequests   WithdrawalRequest[] @relation("RequestedWithdrawals")
 
   @@unique([tenantId, email])
   @@index([tenantId, role, status])
@@ -214,4 +231,37 @@ model AuditLog {
   @@index([tenantId, actorUserId, createdAt])
   @@index([tenantId, targetType, targetId])
   @@map("audit_logs")
+}
+
+model VirtualAccount {
+  id                     String   @id @default(cuid())
+  tenantId               String   @unique
+  balanceCents           BigInt   @default(0)
+  pendingWithdrawalCents BigInt   @default(0)
+  currency               String   @default("XAF")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@map("virtual_accounts")
+}
+
+model WithdrawalRequest {
+  id            String           @id @default(cuid())
+  tenantId      String
+  amountCents   BigInt
+  method        WithdrawalMethod
+  destination   String
+  status        WithdrawalStatus @default(PENDING)
+  reference     String           @unique
+  requestedById String
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  requestedBy User   @relation("RequestedWithdrawals", fields: [requestedById], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, status, createdAt])
+  @@map("withdrawal_requests")
 }

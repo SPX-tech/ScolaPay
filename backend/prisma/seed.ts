@@ -33,6 +33,14 @@ async function main() {
   });
   console.log(`✅ École créée : ${tenant.name} (${tenant.code})`);
 
+  // Compte virtuel (float numérique retirable) de l'école
+  await prisma.virtualAccount.upsert({
+    where: { tenantId: tenant.id },
+    update: {},
+    create: { tenantId: tenant.id, currency: tenant.currency },
+  });
+  console.log('✅ Compte virtuel initialisé (solde 0)');
+
   // ──────────────────────────────────────
   // 2. Création des Utilisateurs
   // ──────────────────────────────────────
