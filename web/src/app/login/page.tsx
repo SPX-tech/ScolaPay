@@ -46,7 +46,7 @@ export default function LoginPage() {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
               <GraduationCap className="w-8 h-8 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold text-foreground">Edu-Cash</h1>
+            <h1 className="text-3xl font-bold text-foreground">ScolaPay</h1>
             <p className="text-muted-foreground mt-2">
               Portail d&apos;administration scolaire
             </p>
@@ -150,7 +150,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white/10 backdrop-blur-sm mb-6">
             <GraduationCap className="w-10 h-10" />
           </div>
-          <h2 className="text-4xl font-bold mb-4">Edu-Cash Tchad</h2>
+          <h2 className="text-4xl font-bold mb-4">ScolaPay Tchad</h2>
           <p className="text-xl text-white/80 leading-relaxed">
             La plateforme de digitalisation des encaissements scolaires.
             <br />

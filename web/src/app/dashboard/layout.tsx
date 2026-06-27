@@ -82,7 +82,7 @@ export default function DashboardLayout({
                 <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                   <GraduationCap className="w-5 h-5 text-white" />
                 </div>
-                <span className="font-bold text-sm">Edu-Cash</span>
+                <span className="font-bold text-sm">ScolaPay</span>
               </div>
             )}
             <button
@@ -163,7 +163,7 @@ export default function DashboardLayout({
               <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
                 <GraduationCap className="w-4 h-4 text-white" />
               </div>
-              <span className="font-semibold text-sm">Edu-Cash</span>
+              <span className="font-semibold text-sm">ScolaPay</span>
             </div>
           </div>
 

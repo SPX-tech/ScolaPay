@@ -342,7 +342,7 @@ function LedgerContent() {
         <div className="hidden print:block print:fixed print:inset-0 print:bg-white print:z-50">
           <div className="flex flex-col items-center justify-center min-h-screen p-8">
             <ReceiptIcon className="w-12 h-12 mb-4 text-blue-600" />
-            <h1 className="text-2xl font-bold mb-1">Edu-Cash Tchad</h1>
+            <h1 className="text-2xl font-bold mb-1">ScolaPay Tchad</h1>
             <p className="text-sm text-gray-500 mb-6">Reçu de paiement</p>
 
             <div className="w-full max-w-sm border-t border-b border-dashed py-4 mb-4 space-y-3 text-sm">
@@ -385,7 +385,7 @@ function LedgerContent() {
               Hash: {result.receiptHash?.substring(0, 16)}...
             </p>
             <p className="text-xs text-gray-400 mt-2">
-              Document authentique généré par Edu-Cash
+              Document authentique généré par ScolaPay
             </p>
           </div>
         </div>

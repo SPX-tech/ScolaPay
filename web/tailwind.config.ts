@@ -49,6 +49,14 @@ const config: Config = {
           muted: 'hsl(var(--sidebar-muted))',
           accent: 'hsl(var(--sidebar-accent))',
         },
+        // Identité de la vitrine publique (landing)
+        ink: '#0B1220',
+        gold: {
+          DEFAULT: '#E0A82E',
+          soft: '#F4E2B8',
+        },
+        paper: '#FAF8F3',
+        slatey: '#475569',
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -57,6 +65,22 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['"Bricolage Grotesque"', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
+      },
+      keyframes: {
+        'accordion-down': {
+          from: { height: '0' },
+          to: { height: 'var(--radix-accordion-content-height)' },
+        },
+        'accordion-up': {
+          from: { height: 'var(--radix-accordion-content-height)' },
+          to: { height: '0' },
+        },
+      },
+      animation: {
+        'accordion-down': 'accordion-down 0.2s ease-out',
+        'accordion-up': 'accordion-up 0.2s ease-out',
       },
     },
   },

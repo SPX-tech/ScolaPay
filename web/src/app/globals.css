@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 @layer base {
   :root {
@@ -80,5 +80,45 @@
       opacity: 1;
       transform: translateY(0);
     }
+  }
+
+  /* Cachet « VÉRIFIÉ » : descend et se pose comme un tampon encreur */
+  .animate-stamp {
+    animation: stamp 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) 0.5s both;
+  }
+
+  @keyframes stamp {
+    0% {
+      opacity: 0;
+      transform: rotate(-8deg) scale(2.4);
+    }
+    60% {
+      opacity: 1;
+      transform: rotate(-8deg) scale(0.92);
+    }
+    100% {
+      opacity: 1;
+      transform: rotate(-8deg) scale(1);
+    }
+  }
+
+  /* Liseré perforé du reçu */
+  .receipt-perf {
+    --perf: 9px;
+    -webkit-mask:
+      radial-gradient(var(--perf) at var(--perf) 50%, #0000 98%, #000) left / 51% 100%,
+      radial-gradient(var(--perf) at calc(100% - var(--perf)) 50%, #0000 98%, #000) right / 51% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask:
+      radial-gradient(var(--perf) at var(--perf) 50%, #0000 98%, #000) left / 51% 100%,
+      radial-gradient(var(--perf) at calc(100% - var(--perf)) 50%, #0000 98%, #000) right / 51% 100%;
+    mask-repeat: no-repeat;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .animate-stamp {
+    animation: none;
   }
 }
