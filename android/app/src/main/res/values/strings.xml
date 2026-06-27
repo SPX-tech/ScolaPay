@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Edu-Cash</string>
+    <string name="app_name">ScolaPay</string>
     <string name="app_tagline">Gestion Financière Scolaire</string>
     <string name="country">Tchad</string>
     <string name="currency">XAF</string>

@@ -60,7 +60,7 @@ export class NotificationsService {
 
     this.initialize();
 
-    const message = `Edu-Cash Tchad - Paiement reçu pour ${payload.studentName}. Montant: ${amountFormatted} XAF. Reçu n°: ${payload.receiptNumber}. Merci pour votre confiance.`;
+    const message = `ScolaPay Tchad - Paiement reçu pour ${payload.studentName}. Montant: ${amountFormatted} XAF. Reçu n°: ${payload.receiptNumber}. Merci pour votre confiance.`;
 
     // Si Africa's Talking est configuré, envoyer un vrai SMS
     if (this.africastalking && payload.guardianPhone) {

@@ -3,7 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
 
-describe('Edu-Cash E2E Tests', () => {
+describe('ScolaPay E2E Tests', () => {
   let app: INestApplication;
 
   beforeAll(async () => {

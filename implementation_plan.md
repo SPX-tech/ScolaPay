@@ -1,4 +1,4 @@
-# 📋 ÉTAT DU PROJET — EDU-CASH TCHAD (SaaS B2B2C)
+# 📋 ÉTAT DU PROJET — SCOLAPAY TCHAD (SaaS B2B2C)
 
 > **Mission :** Système SaaS de gestion financière 100 % cash pour écoles et universités au Tchad
 > **Architecture :** Multi-Tenant (isolation par `tenantId`) | Numérisation du Cash
@@ -161,7 +161,7 @@ solde (l'invariant `disponible ≥ 0` serait violé).
 ## 🏛️ STRUCTURE DES DOSSIERS
 
 ```
-edu-cash/
+scolapay/
 ├── backend/                    # API NestJS + Prisma + PostgreSQL
 │   ├── prisma/                 # schema.prisma, migrations, seed.ts
 │   └── src/
@@ -185,7 +185,7 @@ edu-cash/
 │   └── src/{app,components,lib,hooks}/
 │
 ├── android/                    # App Android Kotlin / Jetpack Compose
-│   └── app/src/main/java/com/educash/mobile/{data,di,ui,util}/
+│   └── app/src/main/java/com/scolapay/mobile/{data,di,ui,util}/
 │
 ├── nginx/                      # reverse proxy
 ├── docker-compose.yml

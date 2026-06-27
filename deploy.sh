@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# EduCash — Déploiement production (stack docker-compose)
+# ScolaPay — Déploiement production (stack docker-compose)
 # Usage : ./deploy.sh
 # Pré-requis : .env présent à la racine, Docker + Docker Compose installés.
 # ============================================================

@@ -14,7 +14,7 @@
 -keepattributes *Annotation*
 -dontwarn sun.misc.**
 -keep class com.google.gson.** { *; }
--keep class com.educash.mobile.data.model.** { *; }
+-keep class com.scolapay.mobile.data.model.** { *; }
 
 # OkHttp
 -dontwarn okhttp3.**

@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.educash.mobile"
+    namespace = "com.scolapay.mobile"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.educash.mobile"
+        applicationId = "com.scolapay.mobile"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

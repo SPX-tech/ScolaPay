@@ -1,4 +1,4 @@
-# EDU-CASH Backend (NestJS + Prisma)
+# SCOLAPAY Backend (NestJS + Prisma)
 
 Backend API multi-tenant pour la numérisation et le suivi des paiements cash scolaires.
 

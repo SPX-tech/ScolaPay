@@ -17,5 +17,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "EduCash"
+rootProject.name = "ScolaPay"
 include(":app")

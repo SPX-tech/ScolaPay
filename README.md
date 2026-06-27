@@ -1,6 +1,6 @@
-# EduCash
+# ScolaPay
 
-EduCash est une application de gestion des paiements scolaires cash.
+ScolaPay est une application de gestion des paiements scolaires cash.
 
 Le projet est organise autour de trois parties:
 
@@ -101,7 +101,7 @@ Ouvrir le dossier `android/` dans Android Studio.
 Avant de lancer l'app sur emulateur, verifier l'URL API dans:
 
 ```text
-android/app/src/main/java/com/educash/mobile/util/Constants.kt
+android/app/src/main/java/com/scolapay/mobile/util/Constants.kt
 ```
 
 Pour un emulateur Android, l'API locale de la machine hote se rejoint en general avec:
@@ -168,8 +168,8 @@ le désactiver avec `OUTBOX_POLLING_ENABLED=false`.
 
 ```bash
 # Cloner le dépôt sur le serveur
-git clone https://github.com/willyldx/edu-cash.git
-cd edu-cash
+git clone https://github.com/willyldx/scolapay.git
+cd scolapay
 
 # Créer et renseigner le fichier .env (voir section 2)
 cp .env.example .env

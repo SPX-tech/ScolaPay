@@ -8,7 +8,7 @@ export class HealthController {
   getHealth() {
     return {
       status: 'ok',
-      service: 'edu-cash-backend',
+      service: 'scolapay-backend',
       timestamp: new Date().toISOString(),
     };
   }

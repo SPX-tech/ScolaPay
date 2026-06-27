@@ -4,7 +4,7 @@ services:
   # ============================================================
   postgres:
     image: postgres:16-alpine
-    container_name: edu-cash-db
+    container_name: scolapay-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -27,7 +27,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: edu-cash-api
+    container_name: scolapay-api
     restart: unless-stopped
     expose:
       - "3000"
@@ -54,7 +54,7 @@ services:
     build:
       context: ./web
       dockerfile: Dockerfile
-    container_name: edu-cash-web
+    container_name: scolapay-web
     restart: unless-stopped
     expose:
       - "3000"
@@ -69,7 +69,7 @@ services:
   # ============================================================
   nginx:
     image: nginx:alpine
-    container_name: edu-cash-nginx
+    container_name: scolapay-nginx
     restart: unless-stopped
     ports:
       - "${NGINX_PORT:-8080}:8080"
