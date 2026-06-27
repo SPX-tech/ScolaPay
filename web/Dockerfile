@@ -19,6 +19,12 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# NEXT_PUBLIC_* variables are inlined by Next.js at BUILD time, not runtime.
+# It must therefore be provided as a build arg (wired in docker-compose) so the
+# client bundle calls the right API host instead of the localhost fallback.
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 # Build Next.js (output: standalone)
 RUN npm run build
 

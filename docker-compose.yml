@@ -57,6 +57,10 @@ services:
     build:
       context: ./web
       dockerfile: Dockerfile
+      # NEXT_PUBLIC_API_URL doit être injecté au build (inliné par Next.js),
+      # pas seulement au runtime, sinon le bundle client garde le fallback.
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
     container_name: scolapay-web
     restart: unless-stopped
     expose:
