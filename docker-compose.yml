@@ -10,8 +10,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-edu_cash}
+    # Exposé uniquement sur la loopback de l'hôte (jamais publiquement) et port
+    # configurable pour cohabiter avec d'autres PostgreSQL sur la machine.
+    # Le backend joint la base via le réseau Docker interne (postgres:5432).
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
