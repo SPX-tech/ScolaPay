@@ -194,6 +194,85 @@ scolapay/
 
 ---
 
+## 🗺️ FEUILLE DE ROUTE OFFICIELLE (post-MVP Cash)
+
+> Étapes pour activer les fonctionnalités mises de côté (Kadryza Pay, retraits réels).
+> Chaque phase débloque la suivante. **Règle d'or : ne jamais brancher un flux d'argent réel
+> (Phases 2-3) tant que les verrous SQL et le ledger immuable de la Phase 0 ne sont pas en place.**
+
+### Chemin critique
+
+```
+Phase 0 (durcissement + ledger + CI)
+        └─► Phase 1 (cycle retrait local)
+                    ├─► Phase 2 (collecte Kadryza)  ──┐
+                    │                                  ├─► Phase 3 (payouts réels)
+                    └──────────────────────────────────┘
+                                                        └─► Phase 4 (conformité, reporting, mobile)
+```
+
+### Phase 0 — Durcissement (⚠️ prérequis avant tout argent réel)
+Activer des mouvements d'argent réels sur une base sujette aux *race conditions* = risque de
+double-retrait. À faire **avant** d'intégrer Kadryza.
+
+- [ ] **Verrou anti-double-retrait** : `SELECT * FROM virtual_accounts WHERE "tenantId" = $1 FOR UPDATE`
+  dans la transaction de `reserveForWithdrawal` (cf. dette technique n°2).
+- [ ] **Verrou outbox multi-instance** : `FOR UPDATE SKIP LOCKED` (cf. dette technique n°1).
+- [ ] **CI/CD GitHub Actions** : lint + build + `jest` obligatoires sur chaque PR.
+- [ ] **Ledger immuable `AccountEntry`** : table de mouvements (+/− avec motif, ref transaction).
+  Aujourd'hui `balanceCents` est muté en place sans journal ; un système financier doit pouvoir
+  reconstituer et auditer chaque variation de solde.
+
+_Done quand :_ retraits concurrents sérialisés, CI verte obligatoire, chaque variation de solde traçable.
+
+### Phase 1 — Compléter le cycle de retrait *en local* (sans provider)
+Finir la machine à états **avant** d'y brancher un réseau externe ; testable à 100 % en local.
+
+- [ ] **Machine à états** `WithdrawalRequest` : `PENDING → PROCESSING → COMPLETED | FAILED`, avec
+  transitions appelant `completeWithdrawal()` (débit définitif) ou `releaseWithdrawal()` (relâche).
+- [ ] **Transaction `WITHDRAWAL`** créée à la complétion (l'enum existe, rien ne la produit encore).
+- [ ] **Audit** sur chaque transition (`AuditService` déjà en place).
+- [ ] **Endpoints + UI** : `GET /schools/withdrawals` (liste/détail), écran web de suivi, SMS au
+  demandeur sur changement d'état (via outbox).
+- [ ] **Tests** de la machine à états (succès, échec→release, idempotence).
+
+_Done quand :_ un admin pilote un retrait de bout en bout manuellement, soldes et journal cohérents.
+
+### Phase 2 — Encaissements numériques (`MOBILE_PAYMENT`) via Kadryza
+Collecter alimente le `VirtualAccount` : il faut un solde réel **avant** de retirer pour de vrai.
+
+- [ ] **Abstraction provider** : interface `PaymentProvider` (collect, payout, verifyWebhook) +
+  implémentation **mock/sandbox** pour le dev.
+- [ ] **Intégration Kadryza — collecte** : initier un paiement, recevoir le **webhook** de confirmation.
+- [ ] **Branchement du crédit** : à la confirmation, dans **une seule transaction ACID** → créer la
+  transaction `MOBILE_PAYMENT` + appeler `creditFromPayment()` (enfin branché) + event outbox.
+- [ ] **Sécurité** : vérification de **signature webhook** + **idempotence** sur la référence provider
+  (rejouer un webhook ne doit jamais créditer deux fois).
+
+_Done quand :_ un paiement mobile money confirmé crédite le compte virtuel, génère un reçu et notifie.
+
+### Phase 3 — Retraits réels (payouts) via Kadryza / banque
+Dépend d'un solde réel (Phase 2) et de la machine à états (Phase 1).
+
+- [ ] **Payout provider** : sur `PROCESSING`, appeler l'API de virement (mobile money / `BANK_TRANSFER`).
+- [ ] **Confirmation asynchrone** : webhook/polling → `COMPLETED` (`completeWithdrawal`) ou `FAILED`
+  (`releaseWithdrawal`), avec **retry via outbox**.
+- [ ] **Réconciliation** par `reference` (déjà unique global — conçue pour ça).
+- [ ] **Garde-fous métier** : plafonds, validation de la destination (RIB/numéro), éventuel
+  **workflow d'approbation à deux** pour gros montants.
+
+_Done quand :_ un retrait part réellement vers une banque/mobile money, statut final fiable et réconcilié.
+
+### Phase 4 — Conformité, reporting & parité mobile
+- [ ] **Reporting financier** : relevés de compte virtuel, exports (CSV/Excel/PDF), rapprochement
+  encaissements ↔ retraits.
+- [ ] **Conformité CEMAC/Tchad** : KYC école, plafonds réglementaires, rétention/audit (zone
+  BEAC-COBAC) — **à cadrer juridiquement tôt**, car cela peut contraindre l'architecture.
+- [ ] **App Android** : écrans solde + demande de retrait (parité web), notifications push de statut.
+- [ ] **Ops** : backups Postgres automatisés, monitoring/alerting, HTTPS.
+
+---
+
 ## 🔒 PRINCIPES À RESPECTER
 
 - **Multi-tenant** : toute table métier porte `tenantId` ; `TenantGuard` valide le contexte ;
