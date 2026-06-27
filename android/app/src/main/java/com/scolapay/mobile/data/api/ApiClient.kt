@@ -13,7 +13,7 @@ object ApiClient {
     private var apiService: ApiService? = null
     private var authInterceptor: AuthInterceptor? = null
 
-    fun initialize(context: Context, baseUrl: String = Constants.defaultApiUrl) {
+    fun initialize(context: Context, baseUrl: String = Constants.DEFAULT_API_URL) {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }

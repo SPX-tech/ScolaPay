@@ -6,7 +6,7 @@ object Constants {
     const val COUNTRY = "Tchad"
     const val DEFAULT_CURRENCY = "XAF"
 
-    const val DEFAULT_API_URL = "http://13.48.43.198:8080/api/v1"
+    const val DEFAULT_API_URL = "http://161.97.119.233:8090/api/v1"
 
     const val DEFAULT_PAGE_SIZE = 20
     const val MAX_PAGE_SIZE = 100
