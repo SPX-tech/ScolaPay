@@ -63,6 +63,13 @@ enum OutboxStatus {
   FAILED
 }
 
+enum LedgerEntryType {
+  PAYMENT
+  WITHDRAWAL
+  FEE
+  ADJUSTMENT
+}
+
 model Tenant {
   id        String   @id @default(cuid())
   code      String   @unique
@@ -81,6 +88,7 @@ model Tenant {
   auditLogs          AuditLog[]
   virtualAccount     VirtualAccount?
   withdrawalRequests WithdrawalRequest[]
+  ledgerEntries      LedgerEntry[]
 
   @@map("tenants")
 }
@@ -161,6 +169,8 @@ model Transaction {
   tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   student    Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
   recordedBy User    @relation("RecordedByUser", fields: [recordedByUserId], references: [id], onDelete: Restrict)
+
+  ledgerEntries LedgerEntry[]
 
   @@unique([tenantId, receiptNumber])
   @@unique([tenantId, idempotencyKey])
@@ -244,6 +254,8 @@ model VirtualAccount {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
+  ledgerEntries LedgerEntry[]
+
   @@map("virtual_accounts")
 }
 
@@ -262,6 +274,40 @@ model WithdrawalRequest {
   tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   requestedBy User   @relation("RequestedWithdrawals", fields: [requestedById], references: [id], onDelete: Restrict)
 
+  ledgerEntries LedgerEntry[]
+
   @@index([tenantId, status, createdAt])
   @@map("withdrawal_requests")
+}
+
+/// Grand livre immuable des mouvements réels du compte virtuel (VirtualAccount).
+/// Source de vérité comptable : balanceCents sur VirtualAccount n'est qu'une
+/// projection dénormalisée, recalculable en sommant amountCents de ces lignes.
+/// Les lignes ne sont JAMAIS modifiées ni supprimées après création (voir le
+/// trigger Postgres ledger_entries_immutable ajouté en migration).
+model LedgerEntry {
+  id                   String          @id @default(cuid())
+  tenantId             String
+  virtualAccountId     String
+  /// Signé : positif = crédit, négatif = débit.
+  amountCents          BigInt
+  /// Solde du compte immédiatement après application de cette ligne.
+  balanceAfterCents    BigInt
+  type                 LedgerEntryType
+  /// Clé d'idempotence : une même reference ne peut être postée deux fois.
+  reference            String          @unique
+  relatedTransactionId String?
+  relatedWithdrawalId  String?
+  metadata             Json?
+  createdAt            DateTime        @default(now())
+
+  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  virtualAccount     VirtualAccount     @relation(fields: [virtualAccountId], references: [id], onDelete: Restrict)
+  relatedTransaction Transaction?       @relation(fields: [relatedTransactionId], references: [id], onDelete: Restrict)
+  relatedWithdrawal  WithdrawalRequest? @relation(fields: [relatedWithdrawalId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, createdAt])
+  @@index([virtualAccountId, createdAt])
+  @@index([tenantId, type, createdAt])
+  @@map("ledger_entries")
 }
