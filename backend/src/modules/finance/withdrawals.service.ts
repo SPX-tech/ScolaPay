@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, WithdrawalStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { VirtualAccountService } from './virtual-account.service';
@@ -8,10 +14,15 @@ import { OutboxService } from '../outbox/outbox.service';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
 import { CompleteWithdrawalDto } from './dto/complete-withdrawal.dto';
 import { FailWithdrawalDto } from './dto/fail-withdrawal.dto';
+import { PAYMENT_PROVIDER } from '../payment/payment-provider.interface';
+import type { PaymentProvider } from '../payment/payment-provider.interface';
 
 type WithdrawalWithRequester = Prisma.WithdrawalRequestGetPayload<{
   include: { requestedBy: { select: { id: true; fullName: true; phone: true } } };
 }>;
+
+/** Résultat d'une confirmation webhook, distingué pour un logging/monitoring clair. */
+type ConfirmPayoutOutcome = 'completed' | 'failed' | 'already_processed' | 'not_found';
 
 @Injectable()
 export class WithdrawalsService {
@@ -20,6 +31,7 @@ export class WithdrawalsService {
     private readonly virtualAccount: VirtualAccountService,
     private readonly auditService: AuditService,
     private readonly outboxService: OutboxService,
+    @Inject(PAYMENT_PROVIDER) private readonly paymentProvider: PaymentProvider,
   ) {}
 
   /**
@@ -54,12 +66,20 @@ export class WithdrawalsService {
 
   /**
    * Fait passer la demande de PENDING à PROCESSING (prise en charge par un
-   * opérateur). Aucun mouvement de fonds à cette étape : le blocage posé par
-   * `initiate` reste inchangé.
+   * opérateur), puis déclenche le virement sortant côté prestataire. Aucun
+   * mouvement de fonds supplémentaire à l'étape PENDING->PROCESSING : le
+   * blocage posé par `initiate` reste inchangé.
+   *
+   * L'appel au prestataire est volontairement hors de toute transaction
+   * Prisma (latence réseau non bornée), et n'a lieu qu'une fois la
+   * transition PROCESSING commitée en base. S'il échoue (synchrone ou
+   * `status: FAILED`), on réutilise directement `fail()` : il fait déjà
+   * exactement ce qu'il faut (libération du blocage, audit, notification),
+   * sans dupliquer cette logique ici.
    */
   async process(tenantId: string, userId: string, id: string): Promise<WithdrawalWithRequester> {
-    return this.prisma.$transaction(async (tx) => {
-      const withdrawal = await this.transitionOrThrow(tx, {
+    const withdrawal = await this.prisma.$transaction(async (tx) => {
+      const w = await this.transitionOrThrow(tx, {
         id,
         tenantId,
         from: WithdrawalStatus.PENDING,
@@ -79,8 +99,33 @@ export class WithdrawalsService {
         tx,
       );
 
-      return withdrawal;
+      return w;
     });
+
+    let payoutResult;
+    try {
+      payoutResult = await this.paymentProvider.payout({
+        amountCents: withdrawal.amountCents,
+        destination: withdrawal.destination,
+        method: withdrawal.method,
+        reference: withdrawal.reference,
+      });
+    } catch (error) {
+      await this.fail(tenantId, userId, id, {
+        reason: `Payout initiation failed: ${(error as Error).message}`,
+      });
+      throw new BadRequestException(
+        `Payout could not be initiated: ${(error as Error).message}`,
+      );
+    }
+
+    if (payoutResult.status === 'FAILED') {
+      const reason = payoutResult.failureReason ?? 'Provider rejected the payout request.';
+      await this.fail(tenantId, userId, id, { reason });
+      throw new BadRequestException(reason);
+    }
+
+    return withdrawal;
   }
 
   /**
@@ -188,6 +233,57 @@ export class WithdrawalsService {
 
       return withdrawal;
     });
+  }
+
+  /**
+   * Confirme (ou échoue) un virement sortant suite au webhook du
+   * prestataire. Ne prend pas de tenantId en entrée : c'est un webhook
+   * public, sans contexte tenant (voir PaymentsWebhookController). La
+   * demande est retrouvée via `reference`, unique globalement pour cette
+   * raison précise.
+   *
+   * Délègue à `complete()`/`fail()`, qui embarquent déjà la garde
+   * d'idempotence (`transitionOrThrow` gardé par le statut PROCESSING) :
+   * un rejeu concurrent du webhook lève un ConflictException, capturé ici
+   * et traduit en `already_processed` plutôt que remonté comme erreur.
+   */
+  async confirmPayout(input: {
+    reference: string;
+    status: 'SUCCESS' | 'FAILED';
+    providerTransactionId?: string;
+    failureReason?: string;
+  }): Promise<{ outcome: ConfirmPayoutOutcome }> {
+    const withdrawal = await this.prisma.withdrawalRequest.findUnique({
+      where: { reference: input.reference },
+    });
+
+    if (!withdrawal) {
+      return { outcome: 'not_found' };
+    }
+
+    if (withdrawal.status !== WithdrawalStatus.PROCESSING) {
+      return { outcome: 'already_processed' };
+    }
+
+    try {
+      if (input.status === 'FAILED') {
+        await this.fail(withdrawal.tenantId, withdrawal.requestedById, withdrawal.id, {
+          reason: input.failureReason ?? 'Payout declined by provider.',
+        });
+        return { outcome: 'failed' };
+      }
+
+      await this.complete(withdrawal.tenantId, withdrawal.requestedById, withdrawal.id, {
+        externalReference: input.providerTransactionId ?? withdrawal.reference,
+      });
+      return { outcome: 'completed' };
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        // Rejeu concurrent : déjà traité par un autre appel entre-temps.
+        return { outcome: 'already_processed' };
+      }
+      throw error;
+    }
   }
 
   /**

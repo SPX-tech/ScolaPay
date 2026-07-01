@@ -1,11 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { WithdrawalStatus } from '@prisma/client';
 import { WithdrawalsService } from './withdrawals.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { VirtualAccountService } from './virtual-account.service';
 import { AuditService } from '../audit/audit.service';
 import { OutboxService } from '../outbox/outbox.service';
+import { PAYMENT_PROVIDER } from '../payment/payment-provider.interface';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
 
 describe('WithdrawalsService', () => {
@@ -24,7 +25,7 @@ describe('WithdrawalsService', () => {
       findFirstOrThrow: jest.Mock;
     };
   };
-  let mockPrisma: { $transaction: jest.Mock };
+  let mockPrisma: { $transaction: jest.Mock; withdrawalRequest: { findUnique: jest.Mock } };
   let mockVirtualAccount: {
     reserveForWithdrawal: jest.Mock;
     completeWithdrawal: jest.Mock;
@@ -32,6 +33,11 @@ describe('WithdrawalsService', () => {
   };
   let mockAuditService: { record: jest.Mock };
   let mockOutboxService: { createEvent: jest.Mock };
+  let mockPaymentProvider: {
+    collect: jest.Mock;
+    payout: jest.Mock;
+    verifyWebhookSignature: jest.Mock;
+  };
 
   const requester = { id: USER, fullName: 'Jean Testeur', phone: '+23566000000' };
 
@@ -61,7 +67,7 @@ describe('WithdrawalsService', () => {
         findFirstOrThrow: jest.fn(),
       },
     };
-    mockPrisma = { $transaction: jest.fn() };
+    mockPrisma = { $transaction: jest.fn(), withdrawalRequest: { findUnique: jest.fn() } };
     mockVirtualAccount = {
       reserveForWithdrawal: jest.fn(),
       completeWithdrawal: jest.fn(),
@@ -69,6 +75,7 @@ describe('WithdrawalsService', () => {
     };
     mockAuditService = { record: jest.fn() };
     mockOutboxService = { createEvent: jest.fn() };
+    mockPaymentProvider = { collect: jest.fn(), payout: jest.fn(), verifyWebhookSignature: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -77,6 +84,7 @@ describe('WithdrawalsService', () => {
         { provide: VirtualAccountService, useValue: mockVirtualAccount },
         { provide: AuditService, useValue: mockAuditService },
         { provide: OutboxService, useValue: mockOutboxService },
+        { provide: PAYMENT_PROVIDER, useValue: mockPaymentProvider },
       ],
     }).compile();
 
@@ -123,11 +131,15 @@ describe('WithdrawalsService', () => {
   });
 
   describe('process (PENDING -> PROCESSING)', () => {
-    it('transitionne et journalise l’audit dans la même transaction, sans toucher au compte virtuel', async () => {
+    it('transitionne, journalise l’audit, puis déclenche le virement hors transaction', async () => {
       mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 1 });
       mockTx.withdrawalRequest.findFirstOrThrow.mockResolvedValue(
         withdrawalRow({ status: WithdrawalStatus.PROCESSING }),
       );
+      mockPaymentProvider.payout.mockResolvedValue({
+        status: 'PROCESSING',
+        providerTransactionId: 'MOCK-PAYOUT-1',
+      });
 
       const result = await service.process(TENANT, USER, WITHDRAWAL_ID);
 
@@ -145,6 +157,17 @@ describe('WithdrawalsService', () => {
         }),
         mockTx,
       );
+      expect(mockPaymentProvider.payout).toHaveBeenCalledWith({
+        amountCents: 5_000n,
+        destination: '+23566000000',
+        method: 'MOBILE_MONEY',
+        reference: 'WD-abc',
+      });
+      // Le virement est déclenché après que la transition PROCESSING a commité.
+      const updateManyOrder = mockTx.withdrawalRequest.updateMany.mock.invocationCallOrder[0];
+      const payoutOrder = mockPaymentProvider.payout.mock.invocationCallOrder[0];
+      expect(updateManyOrder).toBeLessThan(payoutOrder);
+
       expect(mockVirtualAccount.reserveForWithdrawal).not.toHaveBeenCalled();
       expect(mockVirtualAccount.completeWithdrawal).not.toHaveBeenCalled();
       expect(mockVirtualAccount.releaseWithdrawal).not.toHaveBeenCalled();
@@ -152,7 +175,7 @@ describe('WithdrawalsService', () => {
       expect(result.status).toBe(WithdrawalStatus.PROCESSING);
     });
 
-    it('rejette (Conflict) et ne journalise rien si la demande n’est plus PENDING (idempotence)', async () => {
+    it('rejette (Conflict) et ne tente jamais le virement si la demande n’est plus PENDING (idempotence)', async () => {
       mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 0 });
       mockTx.withdrawalRequest.findFirst.mockResolvedValue({ status: WithdrawalStatus.PROCESSING });
 
@@ -160,6 +183,7 @@ describe('WithdrawalsService', () => {
         ConflictException,
       );
       expect(mockAuditService.record).not.toHaveBeenCalled();
+      expect(mockPaymentProvider.payout).not.toHaveBeenCalled();
     });
 
     it('rejette (NotFound) si la demande n’existe pas', async () => {
@@ -169,6 +193,7 @@ describe('WithdrawalsService', () => {
       await expect(service.process(TENANT, USER, WITHDRAWAL_ID)).rejects.toBeInstanceOf(
         NotFoundException,
       );
+      expect(mockPaymentProvider.payout).not.toHaveBeenCalled();
     });
 
     it("rejette (NotFound) si la demande appartient à un autre tenant (isolation multi-tenant)", async () => {
@@ -182,6 +207,58 @@ describe('WithdrawalsService', () => {
         where: { id: WITHDRAWAL_ID, tenantId: OTHER_TENANT, status: WithdrawalStatus.PENDING },
         data: { status: WithdrawalStatus.PROCESSING },
       });
+    });
+
+    it('bascule en FAILED et restitue les fonds si le prestataire lève une exception (rollback synchrone)', async () => {
+      mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 1 });
+      mockTx.withdrawalRequest.findFirstOrThrow.mockResolvedValue(
+        withdrawalRow({ status: WithdrawalStatus.PROCESSING }),
+      );
+      mockPaymentProvider.payout.mockRejectedValue(new Error('network down'));
+      mockVirtualAccount.releaseWithdrawal.mockResolvedValue({});
+
+      await expect(service.process(TENANT, USER, WITHDRAWAL_ID)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+
+      // Le rollback réutilise fail() : même garde de transition, mêmes effets.
+      expect(mockTx.withdrawalRequest.updateMany).toHaveBeenCalledWith({
+        where: { id: WITHDRAWAL_ID, tenantId: TENANT, status: WithdrawalStatus.PROCESSING },
+        data: { status: WithdrawalStatus.FAILED, failureReason: expect.stringContaining('network down') },
+      });
+      expect(mockVirtualAccount.releaseWithdrawal).toHaveBeenCalledWith(TENANT, 5_000n, mockTx);
+      expect(mockOutboxService.createEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: 'withdrawal.failed' }),
+      );
+      expect(mockAuditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'withdrawal.fail' }),
+        mockTx,
+      );
+    });
+
+    it('bascule en FAILED et restitue les fonds si le prestataire refuse le virement (status FAILED)', async () => {
+      mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 1 });
+      mockTx.withdrawalRequest.findFirstOrThrow.mockResolvedValue(
+        withdrawalRow({ status: WithdrawalStatus.PROCESSING }),
+      );
+      mockPaymentProvider.payout.mockResolvedValue({
+        status: 'FAILED',
+        failureReason: 'RIB invalide',
+      });
+      mockVirtualAccount.releaseWithdrawal.mockResolvedValue({});
+
+      await expect(service.process(TENANT, USER, WITHDRAWAL_ID)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+
+      expect(mockTx.withdrawalRequest.updateMany).toHaveBeenCalledWith({
+        where: { id: WITHDRAWAL_ID, tenantId: TENANT, status: WithdrawalStatus.PROCESSING },
+        data: { status: WithdrawalStatus.FAILED, failureReason: 'RIB invalide' },
+      });
+      expect(mockVirtualAccount.releaseWithdrawal).toHaveBeenCalledWith(TENANT, 5_000n, mockTx);
+      expect(mockOutboxService.createEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: 'withdrawal.failed' }),
+      );
     });
   });
 
@@ -349,6 +426,107 @@ describe('WithdrawalsService', () => {
       await expect(service.fail(TENANT, USER, WITHDRAWAL_ID, dto)).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('confirmPayout (webhook du prestataire)', () => {
+    it('retourne not_found si aucune demande ne correspond à la référence', async () => {
+      mockPrisma.withdrawalRequest.findUnique.mockResolvedValue(null);
+
+      const result = await service.confirmPayout({ reference: 'WD-unknown', status: 'SUCCESS' });
+
+      expect(result).toEqual({ outcome: 'not_found' });
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('est idempotent : ne retente rien si la demande n’est déjà plus PROCESSING', async () => {
+      mockPrisma.withdrawalRequest.findUnique.mockResolvedValue(
+        withdrawalRow({ status: WithdrawalStatus.COMPLETED }),
+      );
+
+      const result = await service.confirmPayout({ reference: 'WD-abc', status: 'SUCCESS' });
+
+      expect(result).toEqual({ outcome: 'already_processed' });
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('confirme un virement réussi : délègue à complete(), crédite et notifie', async () => {
+      mockPrisma.withdrawalRequest.findUnique.mockResolvedValue(
+        withdrawalRow({ status: WithdrawalStatus.PROCESSING }),
+      );
+      mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 1 });
+      mockTx.withdrawalRequest.findFirstOrThrow.mockResolvedValue(
+        withdrawalRow({ status: WithdrawalStatus.COMPLETED, externalReference: 'KZ-PAYOUT-1' }),
+      );
+      mockVirtualAccount.completeWithdrawal.mockResolvedValue({});
+
+      const result = await service.confirmPayout({
+        reference: 'WD-abc',
+        status: 'SUCCESS',
+        providerTransactionId: 'KZ-PAYOUT-1',
+      });
+
+      expect(mockTx.withdrawalRequest.updateMany).toHaveBeenCalledWith({
+        where: { id: WITHDRAWAL_ID, tenantId: TENANT, status: WithdrawalStatus.PROCESSING },
+        data: { status: WithdrawalStatus.COMPLETED, externalReference: 'KZ-PAYOUT-1' },
+      });
+      expect(mockVirtualAccount.completeWithdrawal).toHaveBeenCalledWith(
+        TENANT,
+        5_000n,
+        'WD-abc',
+        mockTx,
+        { relatedWithdrawalId: WITHDRAWAL_ID },
+      );
+      expect(mockOutboxService.createEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: 'withdrawal.completed' }),
+      );
+      expect(result).toEqual({ outcome: 'completed' });
+    });
+
+    it('confirme un virement refusé : délègue à fail(), libère les fonds et notifie', async () => {
+      mockPrisma.withdrawalRequest.findUnique.mockResolvedValue(
+        withdrawalRow({ status: WithdrawalStatus.PROCESSING }),
+      );
+      mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 1 });
+      mockTx.withdrawalRequest.findFirstOrThrow.mockResolvedValue(
+        withdrawalRow({ status: WithdrawalStatus.FAILED, failureReason: 'Compte bancaire clôturé' }),
+      );
+      mockVirtualAccount.releaseWithdrawal.mockResolvedValue({});
+
+      const result = await service.confirmPayout({
+        reference: 'WD-abc',
+        status: 'FAILED',
+        failureReason: 'Compte bancaire clôturé',
+      });
+
+      expect(mockTx.withdrawalRequest.updateMany).toHaveBeenCalledWith({
+        where: { id: WITHDRAWAL_ID, tenantId: TENANT, status: WithdrawalStatus.PROCESSING },
+        data: { status: WithdrawalStatus.FAILED, failureReason: 'Compte bancaire clôturé' },
+      });
+      expect(mockVirtualAccount.releaseWithdrawal).toHaveBeenCalledWith(TENANT, 5_000n, mockTx);
+      expect(mockVirtualAccount.completeWithdrawal).not.toHaveBeenCalled();
+      expect(mockOutboxService.createEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: 'withdrawal.failed' }),
+      );
+      expect(result).toEqual({ outcome: 'failed' });
+    });
+
+    it('absorbe un rejeu concurrent (ConflictException de complete()) en already_processed', async () => {
+      mockPrisma.withdrawalRequest.findUnique.mockResolvedValue(
+        withdrawalRow({ status: WithdrawalStatus.PROCESSING }),
+      );
+      // Un autre appel a déjà gagné la course entre la pré-vérification et
+      // la transition atomique : le updateMany gardé par statut ne matche
+      // plus rien, et le diagnostic interne de transitionOrThrow constate
+      // que la demande est déjà COMPLETED.
+      mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 0 });
+      mockTx.withdrawalRequest.findFirst.mockResolvedValue({ status: WithdrawalStatus.COMPLETED });
+
+      const result = await service.confirmPayout({ reference: 'WD-abc', status: 'SUCCESS' });
+
+      expect(result).toEqual({ outcome: 'already_processed' });
+      expect(mockVirtualAccount.completeWithdrawal).not.toHaveBeenCalled();
+      expect(mockOutboxService.createEvent).not.toHaveBeenCalled();
     });
   });
 });

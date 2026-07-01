@@ -15,6 +15,21 @@ export type CollectPaymentResult = {
   failureReason?: string;
 };
 
+export type PayoutInput = {
+  amountCents: bigint;
+  destination: string;
+  method: string;
+  /** Référence locale (WithdrawalRequest.reference), transmise au prestataire pour réconciliation. */
+  reference: string;
+};
+
+export type PayoutResult = {
+  /** PROCESSING = accepté par le prestataire, confirmation asynchrone à venir (webhook). */
+  status: 'PROCESSING' | 'FAILED';
+  providerTransactionId?: string;
+  failureReason?: string;
+};
+
 export interface PaymentProvider {
   /**
    * Déclenche la collecte (ex: push USSD). Ne doit jamais être appelé à
@@ -22,6 +37,12 @@ export interface PaymentProvider {
    * de latence non bornée.
    */
   collect(input: CollectPaymentInput): Promise<CollectPaymentResult>;
+
+  /**
+   * Déclenche un virement sortant (retrait). Mêmes contraintes que
+   * `collect()` : jamais à l'intérieur d'une transaction Prisma.
+   */
+  payout(input: PayoutInput): Promise<PayoutResult>;
 
   /**
    * Vérifie l'authenticité d'un appel webhook entrant avant de faire
