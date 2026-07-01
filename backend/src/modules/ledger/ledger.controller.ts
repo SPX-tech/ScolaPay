@@ -5,6 +5,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { LedgerService } from './ledger.service';
 import { ReceiptService } from './receipt.service';
 import { RecordCashPaymentDto } from './dto/record-cash-payment.dto';
+import { InitializeMobilePaymentDto } from './dto/initialize-mobile-payment.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Controller('ledger')
@@ -29,6 +30,21 @@ export class LedgerController {
     );
   }
 
+  /** Initie un encaissement numérique (push USSD) : la transaction reste PENDING jusqu'au webhook. */
+  @Roles('TENANT_ADMIN', 'CASHIER', 'ACCOUNTANT')
+  @Post('initialize-mobile-payment')
+  initializeMobilePayment(
+    @ReqContext() context: RequestContext,
+    @Body() dto: InitializeMobilePaymentDto,
+  ) {
+    return this.ledgerService.initializeMobilePayment(
+      context.tenantId,
+      context.userId,
+      context.userRole,
+      dto,
+    );
+  }
+
   @Get('receipts/:transactionId')
   async getReceipt(
     @ReqContext() context: RequestContext,
@@ -46,8 +62,16 @@ export class LedgerController {
       throw new NotFoundException('Transaction not found.');
     }
 
+    if (!transaction.receiptNumber || !transaction.receiptHash) {
+      throw new NotFoundException('Receipt not available: payment not yet confirmed.');
+    }
+
     // Generate QR code image (async - on-the-fly)
-    const qrPayload = this.receiptService.generateReceiptQRPayload(transaction);
+    const qrPayload = this.receiptService.generateReceiptQRPayload({
+      ...transaction,
+      receiptNumber: transaction.receiptNumber,
+      receiptHash: transaction.receiptHash,
+    });
     const qrImage = await this.receiptService.generateQRCodeImage(qrPayload);
 
     return {

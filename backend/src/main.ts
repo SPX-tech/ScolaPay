@@ -8,7 +8,10 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { BigIntSerializerInterceptor } from './common/interceptors/bigint-serializer.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true expose request.rawBody (Buffer) pour la vérification de
+  // signature des webhooks entrants (ex. Kadryza), qui doit s'effectuer sur
+  // les octets exacts reçus, pas sur le JSON reparsé.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const reflector = app.get(Reflector);
 
   app.useGlobalPipes(

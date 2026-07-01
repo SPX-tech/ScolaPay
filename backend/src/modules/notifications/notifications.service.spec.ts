@@ -252,4 +252,139 @@ describe('NotificationsService', () => {
       expect(result.provider).toBe('mock-sms');
     });
   });
+
+  describe('queueMobilePaymentConfirmedNotification', () => {
+    const mobilePaymentConfirmedPayload = {
+      transactionId: 'txn_1',
+      tenantId: 'tenant_1',
+      amountCents: '400000',
+      payerPhone: '+23566000000',
+      studentName: 'Jean Dupont',
+      receiptNumber: 'RCP-ECOLE1-20260701-ABCD1234',
+    };
+
+    it('simule le SMS en mode mock', async () => {
+      const service = new NotificationsService();
+
+      const result = await service.queueMobilePaymentConfirmedNotification(
+        mobilePaymentConfirmedPayload,
+      );
+
+      expect(result.status).toBe('queued');
+      expect(result.provider).toBe('mock-sms');
+      expect(mockFactory).not.toHaveBeenCalled();
+      expect(mockSend).not.toHaveBeenCalled();
+    });
+
+    it('envoie un vrai SMS au payeur en mode réel', async () => {
+      process.env.AT_API_KEY = 'test-api-key';
+      mockSend.mockResolvedValue({
+        SMSMessageData: { Recipients: [{ messageId: 'msg_321' }] },
+      });
+      const service = new NotificationsService();
+
+      const result = await service.queueMobilePaymentConfirmedNotification(
+        mobilePaymentConfirmedPayload,
+      );
+
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({ to: [mobilePaymentConfirmedPayload.payerPhone] }),
+      );
+      expect(result.status).toBe('sent');
+      expect(result.provider).toBe('africastalking');
+    });
+
+    it("retourne un statut failed si l'envoi échoue", async () => {
+      process.env.AT_API_KEY = 'test-api-key';
+      mockSend.mockRejectedValue(new Error('network down'));
+      const service = new NotificationsService();
+
+      const result = await service.queueMobilePaymentConfirmedNotification(
+        mobilePaymentConfirmedPayload,
+      );
+
+      expect(result.status).toBe('failed');
+      expect(result.provider).toBe('africastalking');
+    });
+
+    it("retombe sur le mock si le payeur n'a pas de téléphone", async () => {
+      process.env.AT_API_KEY = 'test-api-key';
+      const service = new NotificationsService();
+
+      const result = await service.queueMobilePaymentConfirmedNotification({
+        ...mobilePaymentConfirmedPayload,
+        payerPhone: null,
+      });
+
+      expect(mockSend).not.toHaveBeenCalled();
+      expect(result.provider).toBe('mock-sms');
+    });
+  });
+
+  describe('queueMobilePaymentFailedNotification', () => {
+    const mobilePaymentFailedPayload = {
+      transactionId: 'txn_2',
+      tenantId: 'tenant_1',
+      amountCents: '150000',
+      payerPhone: '+23566000000',
+      reason: 'Solde mobile money insuffisant',
+    };
+
+    it('simule le SMS en mode mock', async () => {
+      const service = new NotificationsService();
+
+      const result = await service.queueMobilePaymentFailedNotification(
+        mobilePaymentFailedPayload,
+      );
+
+      expect(result.status).toBe('queued');
+      expect(result.provider).toBe('mock-sms');
+      expect(mockFactory).not.toHaveBeenCalled();
+      expect(mockSend).not.toHaveBeenCalled();
+    });
+
+    it('envoie un vrai SMS au payeur en mode réel', async () => {
+      process.env.AT_API_KEY = 'test-api-key';
+      mockSend.mockResolvedValue({
+        SMSMessageData: { Recipients: [{ messageId: 'msg_654' }] },
+      });
+      const service = new NotificationsService();
+
+      const result = await service.queueMobilePaymentFailedNotification(
+        mobilePaymentFailedPayload,
+      );
+
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({ to: [mobilePaymentFailedPayload.payerPhone] }),
+      );
+      expect(result.status).toBe('sent');
+      expect(result.provider).toBe('africastalking');
+    });
+
+    it("retourne un statut failed si l'envoi échoue", async () => {
+      process.env.AT_API_KEY = 'test-api-key';
+      mockSend.mockRejectedValue(new Error('network down'));
+      const service = new NotificationsService();
+
+      const result = await service.queueMobilePaymentFailedNotification(
+        mobilePaymentFailedPayload,
+      );
+
+      expect(result.status).toBe('failed');
+      expect(result.provider).toBe('africastalking');
+    });
+
+    it("retombe sur le mock si le payeur n'a pas de téléphone", async () => {
+      process.env.AT_API_KEY = 'test-api-key';
+      const service = new NotificationsService();
+
+      const result = await service.queueMobilePaymentFailedNotification({
+        ...mobilePaymentFailedPayload,
+        payerPhone: null,
+      });
+
+      expect(mockSend).not.toHaveBeenCalled();
+      expect(result.provider).toBe('mock-sms');
+    });
+  });
 });

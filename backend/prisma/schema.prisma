@@ -52,7 +52,9 @@ enum WithdrawalStatus {
 }
 
 enum TransactionStatus {
+  PENDING
   POSTED
+  FAILED
   VOIDED
 }
 
@@ -154,12 +156,22 @@ model Transaction {
   previousDebtCents BigInt
   newDebtCents      BigInt
   currency          String            @default("XAF")
-  receiptNumber     String
-  receiptHash       String            @db.VarChar(64)
+  /// Nul tant que la transaction n'est pas POSTED : un paiement PENDING n'a
+  /// encore rien à prouver. Généré à la confirmation (webhook).
+  receiptNumber     String?
+  receiptHash       String?           @db.VarChar(64)
   qrCodeData        String?
   idempotencyKey    String?
   note              String?
   metadata          Json?
+  /// Référence marchande générée par nous à l'initiation d'un paiement
+  /// numérique (MOBILE_PAYMENT) et transmise au prestataire : unique
+  /// globalement (pas seulement par tenant) pour que le webhook public,
+  /// qui n'a aucun contexte tenant, puisse retrouver la transaction.
+  providerReference String?           @unique
+  /// Numéro effectivement débité lors d'un paiement numérique (peut
+  /// différer du guardianPhone de la fiche élève).
+  payerPhone        String?
   recordedAt        DateTime          @default(now())
   voidedAt          DateTime?
   voidReason        String?

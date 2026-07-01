@@ -60,6 +60,14 @@ export class OutboxWorkerService {
             await this.notificationsService.queueWithdrawalFailedNotification(
               event.payload as Record<string, unknown>,
             );
+          } else if (event.eventType === 'mobile-payment.confirmed') {
+            await this.notificationsService.queueMobilePaymentConfirmedNotification(
+              event.payload as Record<string, unknown>,
+            );
+          } else if (event.eventType === 'mobile-payment.failed') {
+            await this.notificationsService.queueMobilePaymentFailedNotification(
+              event.payload as Record<string, unknown>,
+            );
           }
 
           await this.prisma.outboxEvent.update({

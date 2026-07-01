@@ -36,6 +36,22 @@ type WithdrawalFailedPayload = WithdrawalNotificationPayload & {
   reason: string;
 };
 
+type MobilePaymentNotificationPayload = {
+  transactionId: string;
+  tenantId: string;
+  amountCents: string;
+  payerPhone?: string | null;
+};
+
+type MobilePaymentConfirmedPayload = MobilePaymentNotificationPayload & {
+  studentName: string;
+  receiptNumber: string;
+};
+
+type MobilePaymentFailedPayload = MobilePaymentNotificationPayload & {
+  reason: string;
+};
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -151,7 +167,7 @@ export class NotificationsService {
 
     const message = `ScolaPay Tchad - Votre retrait de ${amountFormatted} XAF a été effectué avec succès vers ${payload.destination}. Référence : ${payload.externalReference}. Merci pour votre confiance.`;
 
-    return this.dispatchWithdrawalSms(payload, message, [
+    return this.dispatchSms(payload.requesterPhone, message, payload, [
       '📱 [MOCK SMS] Notification de retrait complété',
       `   Demandeur    : ${payload.requesterName}`,
       `   Montant      : ${amountFormatted} XAF`,
@@ -174,7 +190,7 @@ export class NotificationsService {
 
     const message = `ScolaPay Tchad - Votre retrait de ${amountFormatted} XAF n'a pas abouti (${payload.reason}). Les fonds ont été remis à disposition sur votre compte.`;
 
-    return this.dispatchWithdrawalSms(payload, message, [
+    return this.dispatchSms(payload.requesterPhone, message, payload, [
       '📱 [MOCK SMS] Notification de retrait échoué',
       `   Demandeur   : ${payload.requesterName}`,
       `   Montant     : ${amountFormatted} XAF`,
@@ -182,22 +198,66 @@ export class NotificationsService {
     ]);
   }
 
-  /** Chemin d'envoi partagé (Africa's Talking réel ou mock) pour les notifications de retrait. */
-  private async dispatchWithdrawalSms(
-    payload: WithdrawalNotificationPayload,
+  async queueMobilePaymentConfirmedNotification(eventPayload: unknown): Promise<{
+    status: string;
+    provider: string;
+    payload: unknown;
+  }> {
+    const payload = eventPayload as MobilePaymentConfirmedPayload;
+    const amountFormatted = Number(payload.amountCents)
+      ? (Number(payload.amountCents) / 100).toLocaleString('fr-FR')
+      : '0';
+
+    this.initialize();
+
+    const message = `ScolaPay Tchad - Paiement mobile de ${amountFormatted} XAF reçu pour ${payload.studentName}. Reçu n° : ${payload.receiptNumber}. Merci pour votre confiance.`;
+
+    return this.dispatchSms(payload.payerPhone, message, payload, [
+      '📱 [MOCK SMS] Notification de paiement mobile confirmé',
+      `   Élève     : ${payload.studentName}`,
+      `   Montant   : ${amountFormatted} XAF`,
+      `   Reçu n°   : ${payload.receiptNumber}`,
+    ]);
+  }
+
+  async queueMobilePaymentFailedNotification(eventPayload: unknown): Promise<{
+    status: string;
+    provider: string;
+    payload: unknown;
+  }> {
+    const payload = eventPayload as MobilePaymentFailedPayload;
+    const amountFormatted = Number(payload.amountCents)
+      ? (Number(payload.amountCents) / 100).toLocaleString('fr-FR')
+      : '0';
+
+    this.initialize();
+
+    const message = `ScolaPay Tchad - Votre paiement mobile de ${amountFormatted} XAF n'a pas abouti (${payload.reason}). Veuillez réessayer ou contacter l'école.`;
+
+    return this.dispatchSms(payload.payerPhone, message, payload, [
+      '📱 [MOCK SMS] Notification de paiement mobile échoué',
+      `   Montant : ${amountFormatted} XAF`,
+      `   Motif   : ${payload.reason}`,
+    ]);
+  }
+
+  /** Chemin d'envoi partagé (Africa's Talking réel ou mock) pour toutes les notifications SMS transactionnelles. */
+  private async dispatchSms(
+    phone: string | null | undefined,
     message: string,
+    payload: unknown,
     mockDetailLines: string[],
   ): Promise<{ status: string; provider: string; payload: unknown }> {
-    if (this.africastalking && payload.requesterPhone) {
+    if (this.africastalking && phone) {
       try {
         const result = await this.africastalking.SMS.send({
-          to: [payload.requesterPhone],
+          to: [phone],
           message,
           from: process.env.AT_SENDER_ID || undefined,
         });
 
         this.logger.log(
-          `📱 SMS envoyé via Africa's Talking à ${payload.requesterPhone} (SMS ID: ${result?.SMSMessageData?.Recipients?.[0]?.messageId || 'N/A'})`,
+          `📱 SMS envoyé via Africa's Talking à ${phone} (SMS ID: ${result?.SMSMessageData?.Recipients?.[0]?.messageId || 'N/A'})`,
         );
 
         return { status: 'sent', provider: 'africastalking', payload };
@@ -216,8 +276,8 @@ export class NotificationsService {
     }
     this.logger.log('───────────────────────────────────────────');
 
-    if (payload.requesterPhone) {
-      this.logger.log(`   📞 SMS à envoyer à : ${payload.requesterPhone}`);
+    if (phone) {
+      this.logger.log(`   📞 SMS à envoyer à : ${phone}`);
       this.logger.log(`   📄 Message : "${message}"`);
     }
 
