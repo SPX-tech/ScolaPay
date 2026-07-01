@@ -52,6 +52,14 @@ export class OutboxWorkerService {
             await this.notificationsService.queueCashPaymentNotification(
               event.payload as Record<string, unknown>,
             );
+          } else if (event.eventType === 'withdrawal.completed') {
+            await this.notificationsService.queueWithdrawalCompletedNotification(
+              event.payload as Record<string, unknown>,
+            );
+          } else if (event.eventType === 'withdrawal.failed') {
+            await this.notificationsService.queueWithdrawalFailedNotification(
+              event.payload as Record<string, unknown>,
+            );
           }
 
           await this.prisma.outboxEvent.update({

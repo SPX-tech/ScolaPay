@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
-type AuditTarget = 'user' | 'student' | 'transaction' | 'class' | 'outbox';
+type AuditTarget = 'user' | 'student' | 'transaction' | 'class' | 'outbox' | 'withdrawal';
+
+type PrismaClientLike = PrismaService | Prisma.TransactionClient;
 
 type AuditInput = {
   tenantId: string;
@@ -18,8 +21,14 @@ type AuditInput = {
 export class AuditService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async record(input: AuditInput): Promise<void> {
-    await this.prisma.auditLog.create({
+  /**
+   * `tx` optionnel : si fourni, l'écriture d'audit participe à la même
+   * transaction ACID que le changement qu'elle documente (ex. un retrait
+   * finalisé ne peut jamais exister sans sa ligne d'audit correspondante).
+   */
+  async record(input: AuditInput, tx?: PrismaClientLike): Promise<void> {
+    const db = tx ?? this.prisma;
+    await db.auditLog.create({
       data: {
         tenantId: input.tenantId,
         actorUserId: input.actorUserId,

@@ -1,10 +1,12 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { ReqContext } from '../../common/decorators/request-context.decorator';
 import type { RequestContext } from '../../common/types/request-context.type';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { VirtualAccountService } from './virtual-account.service';
 import { WithdrawalsService } from './withdrawals.service';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
+import { CompleteWithdrawalDto } from './dto/complete-withdrawal.dto';
+import { FailWithdrawalDto } from './dto/fail-withdrawal.dto';
 
 @Controller('schools')
 export class SchoolsController {
@@ -28,5 +30,37 @@ export class SchoolsController {
     @Body() dto: CreateWithdrawalDto,
   ) {
     return this.withdrawals.initiate(context.tenantId, context.userId, dto);
+  }
+
+  /** Fait passer un retrait de PENDING à PROCESSING (prise en charge). */
+  @Roles('TENANT_ADMIN', 'ACCOUNTANT')
+  @Post('withdrawals/:id/process')
+  processWithdrawal(
+    @ReqContext() context: RequestContext,
+    @Param('id') id: string,
+  ) {
+    return this.withdrawals.process(context.tenantId, context.userId, id);
+  }
+
+  /** Fait passer un retrait de PROCESSING à COMPLETED (débit définitif). */
+  @Roles('TENANT_ADMIN', 'ACCOUNTANT')
+  @Post('withdrawals/:id/complete')
+  completeWithdrawal(
+    @ReqContext() context: RequestContext,
+    @Param('id') id: string,
+    @Body() dto: CompleteWithdrawalDto,
+  ) {
+    return this.withdrawals.complete(context.tenantId, context.userId, id, dto);
+  }
+
+  /** Fait passer un retrait de PROCESSING à FAILED (libération du blocage). */
+  @Roles('TENANT_ADMIN', 'ACCOUNTANT')
+  @Post('withdrawals/:id/fail')
+  failWithdrawal(
+    @ReqContext() context: RequestContext,
+    @Param('id') id: string,
+    @Body() dto: FailWithdrawalDto,
+  ) {
+    return this.withdrawals.fail(context.tenantId, context.userId, id, dto);
   }
 }

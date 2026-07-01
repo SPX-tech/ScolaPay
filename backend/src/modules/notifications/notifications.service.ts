@@ -16,6 +16,26 @@ type CashPaymentPayload = {
   recordedAt: string;
 };
 
+type WithdrawalNotificationPayload = {
+  withdrawalId: string;
+  tenantId: string;
+  amountCents: string;
+  method: string;
+  destination: string;
+  reference: string;
+  requesterId: string;
+  requesterName: string;
+  requesterPhone?: string | null;
+};
+
+type WithdrawalCompletedPayload = WithdrawalNotificationPayload & {
+  externalReference: string;
+};
+
+type WithdrawalFailedPayload = WithdrawalNotificationPayload & {
+  reason: string;
+};
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -115,5 +135,94 @@ export class NotificationsService {
       provider: 'mock-sms',
       payload,
     };
+  }
+
+  async queueWithdrawalCompletedNotification(eventPayload: unknown): Promise<{
+    status: string;
+    provider: string;
+    payload: unknown;
+  }> {
+    const payload = eventPayload as WithdrawalCompletedPayload;
+    const amountFormatted = Number(payload.amountCents)
+      ? (Number(payload.amountCents) / 100).toLocaleString('fr-FR')
+      : '0';
+
+    this.initialize();
+
+    const message = `ScolaPay Tchad - Votre retrait de ${amountFormatted} XAF a été effectué avec succès vers ${payload.destination}. Référence : ${payload.externalReference}. Merci pour votre confiance.`;
+
+    return this.dispatchWithdrawalSms(payload, message, [
+      '📱 [MOCK SMS] Notification de retrait complété',
+      `   Demandeur    : ${payload.requesterName}`,
+      `   Montant      : ${amountFormatted} XAF`,
+      `   Destination  : ${payload.destination}`,
+      `   Référence ext.: ${payload.externalReference}`,
+    ]);
+  }
+
+  async queueWithdrawalFailedNotification(eventPayload: unknown): Promise<{
+    status: string;
+    provider: string;
+    payload: unknown;
+  }> {
+    const payload = eventPayload as WithdrawalFailedPayload;
+    const amountFormatted = Number(payload.amountCents)
+      ? (Number(payload.amountCents) / 100).toLocaleString('fr-FR')
+      : '0';
+
+    this.initialize();
+
+    const message = `ScolaPay Tchad - Votre retrait de ${amountFormatted} XAF n'a pas abouti (${payload.reason}). Les fonds ont été remis à disposition sur votre compte.`;
+
+    return this.dispatchWithdrawalSms(payload, message, [
+      '📱 [MOCK SMS] Notification de retrait échoué',
+      `   Demandeur   : ${payload.requesterName}`,
+      `   Montant     : ${amountFormatted} XAF`,
+      `   Motif       : ${payload.reason}`,
+    ]);
+  }
+
+  /** Chemin d'envoi partagé (Africa's Talking réel ou mock) pour les notifications de retrait. */
+  private async dispatchWithdrawalSms(
+    payload: WithdrawalNotificationPayload,
+    message: string,
+    mockDetailLines: string[],
+  ): Promise<{ status: string; provider: string; payload: unknown }> {
+    if (this.africastalking && payload.requesterPhone) {
+      try {
+        const result = await this.africastalking.SMS.send({
+          to: [payload.requesterPhone],
+          message,
+          from: process.env.AT_SENDER_ID || undefined,
+        });
+
+        this.logger.log(
+          `📱 SMS envoyé via Africa's Talking à ${payload.requesterPhone} (SMS ID: ${result?.SMSMessageData?.Recipients?.[0]?.messageId || 'N/A'})`,
+        );
+
+        return { status: 'sent', provider: 'africastalking', payload };
+      } catch (error) {
+        this.logger.error(
+          `Erreur d'envoi SMS Africa's Talking: ${(error as Error).message}`,
+        );
+
+        return { status: 'failed', provider: 'africastalking', payload };
+      }
+    }
+
+    this.logger.log('═══════════════════════════════════════════');
+    for (const line of mockDetailLines) {
+      this.logger.log(line);
+    }
+    this.logger.log('───────────────────────────────────────────');
+
+    if (payload.requesterPhone) {
+      this.logger.log(`   📞 SMS à envoyer à : ${payload.requesterPhone}`);
+      this.logger.log(`   📄 Message : "${message}"`);
+    }
+
+    this.logger.log('═══════════════════════════════════════════\n');
+
+    return { status: 'queued', provider: 'mock-sms', payload };
   }
 }

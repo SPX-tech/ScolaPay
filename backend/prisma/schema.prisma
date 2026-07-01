@@ -260,16 +260,21 @@ model VirtualAccount {
 }
 
 model WithdrawalRequest {
-  id            String           @id @default(cuid())
-  tenantId      String
-  amountCents   BigInt
-  method        WithdrawalMethod
-  destination   String
-  status        WithdrawalStatus @default(PENDING)
-  reference     String           @unique
-  requestedById String
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id                String           @id @default(cuid())
+  tenantId          String
+  amountCents       BigInt
+  method            WithdrawalMethod
+  destination       String
+  status            WithdrawalStatus @default(PENDING)
+  reference         String           @unique
+  /// Référence du prestataire mobile money/bancaire, saisie manuellement
+  /// lors de la finalisation (Phase 1 : pas d'intégration provider).
+  externalReference String?
+  /// Motif renseigné lors d'un passage en FAILED.
+  failureReason     String?
+  requestedById     String
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   requestedBy User   @relation("RequestedWithdrawals", fields: [requestedById], references: [id], onDelete: Restrict)
