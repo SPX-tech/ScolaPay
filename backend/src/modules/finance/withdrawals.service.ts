@@ -14,6 +14,7 @@ import { OutboxService } from '../outbox/outbox.service';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
 import { CompleteWithdrawalDto } from './dto/complete-withdrawal.dto';
 import { FailWithdrawalDto } from './dto/fail-withdrawal.dto';
+import { PaginationQueryDto } from './dto/pagination-query.dto';
 import { PAYMENT_PROVIDER } from '../payment/payment-provider.interface';
 import type { PaymentProvider } from '../payment/payment-provider.interface';
 
@@ -62,6 +63,31 @@ export class WithdrawalsService {
         },
       });
     });
+  }
+
+  /** Liste paginée des demandes de retrait du tenant, plus récentes en premier. */
+  async list(tenantId: string, query: PaginationQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 50;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.prisma.withdrawalRequest.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          requestedBy: { select: { id: true, fullName: true, phone: true } },
+        },
+      }),
+      this.prisma.withdrawalRequest.count({ where: { tenantId } }),
+    ]);
+
+    return {
+      data,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   /**

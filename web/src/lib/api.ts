@@ -102,3 +102,14 @@ export const reportsApi = {
 export const tenantApi = {
   getMe: () => api.get('/tenants/me'),
 };
+
+// Finance API (trésorerie : solde, retraits, grand livre)
+export const financeApi = {
+  getBalance: () => api.get('/schools/balance'),
+  listWithdrawals: (params?: { page?: number; limit?: number }) =>
+    api.get('/schools/withdrawals', { params }),
+  listLedgerEntries: (params?: { page?: number; limit?: number }) =>
+    api.get('/schools/ledger', { params }),
+  requestWithdrawal: (data: { amountCents: number; method: string; destination: string }) =>
+    api.post('/schools/withdraw', data),
+};

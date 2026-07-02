@@ -6,7 +6,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
 import {
-  BarChart3,
   BookOpen,
   ChevronLeft,
   ChevronRight,
@@ -19,6 +18,7 @@ import {
   Receipt,
   Settings,
   Users,
+  Wallet,
   X,
 } from 'lucide-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -26,11 +26,21 @@ import { ToastProvider } from '@/hooks/use-toast';
 
 const queryClient = new QueryClient();
 
-const sidebarLinks = [
+/**
+ * `roles` optionnel : absent = visible par tous les rôles connectés
+ * (comportement historique inchangé pour les liens existants).
+ */
+const sidebarLinks: { href: string; label: string; icon: typeof LayoutDashboard; roles?: string[] }[] = [
   { href: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/dashboard/students', label: 'Étudiants', icon: BookOpen },
   { href: '/dashboard/ledger', label: 'Encaissement', icon: DollarSign },
   { href: '/dashboard/transactions', label: 'Transactions', icon: Receipt },
+  {
+    href: '/dashboard/finance',
+    label: 'Trésorerie',
+    icon: Wallet,
+    roles: ['TENANT_ADMIN', 'ACCOUNTANT', 'AUDITOR'],
+  },
   { href: '/dashboard/reports', label: 'Rapports', icon: FileText },
   { href: '/dashboard/users', label: 'Utilisateurs', icon: Users },
   { href: '/dashboard/settings', label: 'Paramètres', icon: Settings },
@@ -101,7 +111,9 @@ export default function DashboardLayout({
 
           {/* Navigation */}
           <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
-            {sidebarLinks.map((link) => {
+            {sidebarLinks
+              .filter((link) => !link.roles || (user && link.roles.includes(user.role)))
+              .map((link) => {
               const isActive = pathname === link.href;
               return (
                 <Link

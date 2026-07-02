@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ReqContext } from '../../common/decorators/request-context.decorator';
 import type { RequestContext } from '../../common/types/request-context.type';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -7,6 +7,7 @@ import { WithdrawalsService } from './withdrawals.service';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
 import { CompleteWithdrawalDto } from './dto/complete-withdrawal.dto';
 import { FailWithdrawalDto } from './dto/fail-withdrawal.dto';
+import { PaginationQueryDto } from './dto/pagination-query.dto';
 
 @Controller('schools')
 export class SchoolsController {
@@ -20,6 +21,26 @@ export class SchoolsController {
   @Get('balance')
   getBalance(@ReqContext() context: RequestContext) {
     return this.virtualAccount.getBalance(context.tenantId);
+  }
+
+  /** Historique paginé des demandes de retrait du tenant. */
+  @Roles('TENANT_ADMIN', 'ACCOUNTANT', 'AUDITOR')
+  @Get('withdrawals')
+  listWithdrawals(
+    @ReqContext() context: RequestContext,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.withdrawals.list(context.tenantId, query);
+  }
+
+  /** Historique paginé du grand livre (LedgerEntry) du tenant. */
+  @Roles('TENANT_ADMIN', 'ACCOUNTANT', 'AUDITOR')
+  @Get('ledger')
+  listLedgerEntries(
+    @ReqContext() context: RequestContext,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.virtualAccount.listLedgerEntries(context.tenantId, query);
   }
 
   /** Initie une demande de retrait (PENDING + blocage des fonds). */

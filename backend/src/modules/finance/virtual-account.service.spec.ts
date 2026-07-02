@@ -12,7 +12,10 @@ describe('VirtualAccountService', () => {
     $queryRaw: jest.Mock;
     $executeRaw: jest.Mock;
   };
-  let mockPrisma: typeof mockTx & { $transaction: jest.Mock };
+  let mockPrisma: typeof mockTx & {
+    $transaction: jest.Mock;
+    ledgerEntry: { findMany: jest.Mock; count: jest.Mock };
+  };
 
   const TENANT = 'tenant_1';
 
@@ -43,6 +46,11 @@ describe('VirtualAccountService', () => {
     };
     mockPrisma = {
       ...mockTx,
+      ledgerEntry: {
+        ...mockTx.ledgerEntry,
+        findMany: jest.fn(),
+        count: jest.fn(),
+      },
       $transaction: jest.fn(),
     };
 
@@ -74,6 +82,66 @@ describe('VirtualAccountService', () => {
         availableCents: 7_000n,
         currency: 'XAF',
       });
+    });
+  });
+
+  describe('listLedgerEntries', () => {
+    const entry = (overrides: Record<string, unknown> = {}) => ({
+      id: 'le_1',
+      tenantId: TENANT,
+      virtualAccountId: 'va_1',
+      amountCents: 5_000n,
+      balanceAfterCents: 5_000n,
+      type: LedgerEntryType.PAYMENT,
+      reference: 'PAY-1',
+      relatedTransactionId: null,
+      relatedWithdrawalId: null,
+      metadata: null,
+      createdAt: new Date(),
+      ...overrides,
+    });
+
+    it('retourne les écritures paginées, plus récentes en premier, scopées au tenant', async () => {
+      const row = entry();
+      mockPrisma.ledgerEntry.findMany.mockResolvedValue([row]);
+      mockPrisma.ledgerEntry.count.mockResolvedValue(1);
+
+      const result = await service.listLedgerEntries(TENANT, { page: 1, limit: 20 });
+
+      expect(mockPrisma.ledgerEntry.findMany).toHaveBeenCalledWith({
+        where: { tenantId: TENANT },
+        orderBy: { createdAt: 'desc' },
+        skip: 0,
+        take: 20,
+      });
+      expect(mockPrisma.ledgerEntry.count).toHaveBeenCalledWith({ where: { tenantId: TENANT } });
+      expect(result).toEqual({
+        data: [row],
+        meta: { total: 1, page: 1, limit: 20, totalPages: 1 },
+      });
+    });
+
+    it('calcule skip/totalPages pour une page suivante', async () => {
+      mockPrisma.ledgerEntry.findMany.mockResolvedValue([]);
+      mockPrisma.ledgerEntry.count.mockResolvedValue(45);
+
+      const result = await service.listLedgerEntries(TENANT, { page: 3, limit: 20 });
+
+      expect(mockPrisma.ledgerEntry.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 40, take: 20 }),
+      );
+      expect(result.meta).toEqual({ total: 45, page: 3, limit: 20, totalPages: 3 });
+    });
+
+    it('applique les valeurs par défaut page=1/limit=50 si omises', async () => {
+      mockPrisma.ledgerEntry.findMany.mockResolvedValue([]);
+      mockPrisma.ledgerEntry.count.mockResolvedValue(0);
+
+      await service.listLedgerEntries(TENANT, {});
+
+      expect(mockPrisma.ledgerEntry.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 0, take: 50 }),
+      );
     });
   });
 

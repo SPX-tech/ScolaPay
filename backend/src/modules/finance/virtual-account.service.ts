@@ -78,6 +78,28 @@ export class VirtualAccountService {
     };
   }
 
+  /** Liste paginée du grand livre du tenant, plus récent en premier. */
+  async listLedgerEntries(tenantId: string, query: { page?: number; limit?: number }) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 50;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.prisma.ledgerEntry.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.ledgerEntry.count({ where: { tenantId } }),
+    ]);
+
+    return {
+      data,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
   /**
    * Verrouille la ligne du compte (`SELECT ... FOR UPDATE`) au sein de la
    * transaction `tx`. Doit toujours être appelé depuis l'intérieur d'une

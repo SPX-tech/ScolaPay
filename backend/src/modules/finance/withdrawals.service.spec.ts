@@ -25,7 +25,10 @@ describe('WithdrawalsService', () => {
       findFirstOrThrow: jest.Mock;
     };
   };
-  let mockPrisma: { $transaction: jest.Mock; withdrawalRequest: { findUnique: jest.Mock } };
+  let mockPrisma: {
+    $transaction: jest.Mock;
+    withdrawalRequest: { findUnique: jest.Mock; findMany: jest.Mock; count: jest.Mock };
+  };
   let mockVirtualAccount: {
     reserveForWithdrawal: jest.Mock;
     completeWithdrawal: jest.Mock;
@@ -67,7 +70,10 @@ describe('WithdrawalsService', () => {
         findFirstOrThrow: jest.fn(),
       },
     };
-    mockPrisma = { $transaction: jest.fn(), withdrawalRequest: { findUnique: jest.fn() } };
+    mockPrisma = {
+      $transaction: jest.fn(),
+      withdrawalRequest: { findUnique: jest.fn(), findMany: jest.fn(), count: jest.fn() },
+    };
     mockVirtualAccount = {
       reserveForWithdrawal: jest.fn(),
       completeWithdrawal: jest.fn(),
@@ -127,6 +133,52 @@ describe('WithdrawalsService', () => {
 
       await expect(service.initiate(TENANT, USER, dto)).rejects.toThrow('Solde insuffisant');
       expect(mockTx.withdrawalRequest.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('list', () => {
+    it('retourne les demandes paginées, plus récentes en premier, scopées au tenant', async () => {
+      const row = withdrawalRow();
+      mockPrisma.withdrawalRequest.findMany.mockResolvedValue([row]);
+      mockPrisma.withdrawalRequest.count.mockResolvedValue(1);
+
+      const result = await service.list(TENANT, { page: 1, limit: 20 });
+
+      expect(mockPrisma.withdrawalRequest.findMany).toHaveBeenCalledWith({
+        where: { tenantId: TENANT },
+        orderBy: { createdAt: 'desc' },
+        skip: 0,
+        take: 20,
+        include: { requestedBy: { select: { id: true, fullName: true, phone: true } } },
+      });
+      expect(mockPrisma.withdrawalRequest.count).toHaveBeenCalledWith({ where: { tenantId: TENANT } });
+      expect(result).toEqual({
+        data: [row],
+        meta: { total: 1, page: 1, limit: 20, totalPages: 1 },
+      });
+    });
+
+    it('calcule skip/totalPages pour une page suivante', async () => {
+      mockPrisma.withdrawalRequest.findMany.mockResolvedValue([]);
+      mockPrisma.withdrawalRequest.count.mockResolvedValue(45);
+
+      const result = await service.list(TENANT, { page: 3, limit: 20 });
+
+      expect(mockPrisma.withdrawalRequest.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 40, take: 20 }),
+      );
+      expect(result.meta).toEqual({ total: 45, page: 3, limit: 20, totalPages: 3 });
+    });
+
+    it('applique les valeurs par défaut page=1/limit=50 si omises', async () => {
+      mockPrisma.withdrawalRequest.findMany.mockResolvedValue([]);
+      mockPrisma.withdrawalRequest.count.mockResolvedValue(0);
+
+      await service.list(TENANT, {});
+
+      expect(mockPrisma.withdrawalRequest.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 0, take: 50 }),
+      );
     });
   });
 
