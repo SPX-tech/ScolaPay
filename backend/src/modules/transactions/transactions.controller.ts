@@ -6,6 +6,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ReqContext } from '../../common/decorators/request-context.decorator';
 import type { RequestContext } from '../../common/types/request-context.type';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -50,6 +51,8 @@ export class TransactionsController {
   }
 
   @Roles('TENANT_ADMIN', 'ACCOUNTANT')
+  // Endpoint financier sensible (réversal comptable) : 10 req / min / IP.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post(':transactionId/void')
   voidTransaction(
     @ReqContext() context: RequestContext,

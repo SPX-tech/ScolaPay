@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { HealthModule } from './modules/health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -16,6 +18,9 @@ import { FinanceModule } from './modules/finance/finance.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
+    // Rate-limiting global par IP (défaut souple : 120 req/min). Les routes
+    // sensibles resserrent via @Throttle, les webhooks/health via @SkipThrottle.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     PrismaModule,
     HealthModule,
     AuthModule,
@@ -30,6 +35,10 @@ import { FinanceModule } from './modules/finance/finance.module';
     FinanceModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    // ThrottlerGuard en APP_GUARD (résolu par DI) : coexiste avec les guards
+    // Auth/Tenant/Roles enregistrés dans main.ts.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

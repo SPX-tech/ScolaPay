@@ -1,10 +1,14 @@
 import { PrismaClient } from '@prisma/client';
 import { createHash, randomBytes } from 'node:crypto';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-function hashPassword(password: string): string {
-  return createHash('sha256').update(password).digest('hex');
+async function hashPassword(password: string): Promise<string> {
+  // Aligné sur le backend (common/security/password.util) : bcrypt, coût 12.
+  // Les comptes seed sont ainsi directement au schéma courant (pas de
+  // migration au premier login).
+  return bcrypt.hash(password, 12);
 }
 
 function generateReceiptNumber(tenantCode: string): string {
@@ -51,7 +55,7 @@ async function main() {
       tenantId: tenant.id,
       email: 'admin@demo.td',
       fullName: 'Admin Démo',
-      passwordHash: hashPassword('admin123'),
+      passwordHash: await hashPassword('admin123'),
       role: 'TENANT_ADMIN',
       phone: '+23599112233',
     },
@@ -65,7 +69,7 @@ async function main() {
       tenantId: tenant.id,
       email: 'caissier@demo.td',
       fullName: 'Caissier Démo',
-      passwordHash: hashPassword('caissier123'),
+      passwordHash: await hashPassword('caissier123'),
       role: 'CASHIER',
       phone: '+23599112244',
     },
@@ -79,7 +83,7 @@ async function main() {
       tenantId: tenant.id,
       email: 'comptable@demo.td',
       fullName: 'Comptable Démo',
-      passwordHash: hashPassword('compta123'),
+      passwordHash: await hashPassword('compta123'),
       role: 'ACCOUNTANT',
       phone: '+23599112255',
     },

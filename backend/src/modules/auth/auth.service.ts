@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { signAccessToken } from '../../common/security/access-token.util';
-import { hashPassword, verifyPassword } from '../../common/security/password.util';
+import { hashPassword, needsRehash, verifyPassword } from '../../common/security/password.util';
 
 @Injectable()
 export class AuthService {
@@ -31,11 +31,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials.');
     }
 
-    if (!verifyPassword(dto.password, user.passwordHash)) {
+    if (!(await verifyPassword(dto.password, user.passwordHash))) {
       throw new UnauthorizedException('Invalid credentials.');
     }
 
-    const isLegacyPasswordHash = !user.passwordHash.startsWith('scrypt$');
+    // Migration transparente : si le hash stocké n'est pas encore en bcrypt
+    // (ancien scrypt/SHA-256), on le re-hache en bcrypt à ce login réussi.
+    const shouldRehash = needsRehash(user.passwordHash);
 
     const secret = process.env.ACCESS_TOKEN_SECRET;
     if (!secret) {
@@ -57,7 +59,7 @@ export class AuthService {
       where: { id: user.id },
       data: {
         lastLoginAt: new Date(),
-        ...(isLegacyPasswordHash ? { passwordHash: hashPassword(dto.password) } : {}),
+        ...(shouldRehash ? { passwordHash: await hashPassword(dto.password) } : {}),
       },
     });
 

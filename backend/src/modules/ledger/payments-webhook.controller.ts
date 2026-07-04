@@ -1,5 +1,6 @@
 import { Controller, Inject, Post, Req, UnauthorizedException } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { Public } from '../../common/decorators/public.decorator';
 import { LedgerService } from './ledger.service';
@@ -29,6 +30,9 @@ type KadryzaWebhookPayload = {
  * `WithdrawalRequest.reference`). Voir LedgerService.confirmMobilePayment()
  * et WithdrawalsService.confirmPayout().
  */
+// Webhook prestataire : jamais rate-limité (les retries légitimes du
+// prestataire ne doivent pas être rejetés en 429).
+@SkipThrottle()
 @Controller('payments')
 export class PaymentsWebhookController {
   constructor(

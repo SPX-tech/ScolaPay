@@ -45,7 +45,7 @@ export class UsersService {
           email: dto.email.trim().toLowerCase(),
           fullName: dto.fullName.trim(),
           role: dto.role,
-          passwordHash: hashPassword(dto.password),
+          passwordHash: await hashPassword(dto.password),
           phone: dto.phone?.trim(),
           status: 'ACTIVE',
         },
@@ -82,7 +82,7 @@ export class UsersService {
       if (dto.phone !== undefined) data.phone = dto.phone?.trim();
       if (dto.role) data.role = dto.role;
       if (dto.status) data.status = dto.status;
-      if (dto.password) data.passwordHash = hashPassword(dto.password);
+      if (dto.password) data.passwordHash = await hashPassword(dto.password);
 
       const user = await this.prisma.user.update({
         where: { id: userId },

@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ReqContext } from '../../common/decorators/request-context.decorator';
 import type { RequestContext } from '../../common/types/request-context.type';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -45,6 +46,8 @@ export class SchoolsController {
 
   /** Initie une demande de retrait (PENDING + blocage des fonds). */
   @Roles('TENANT_ADMIN', 'ACCOUNTANT')
+  // Endpoint financier sensible (sortie d'argent) : 10 req / min / IP.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('withdraw')
   requestWithdrawal(
     @ReqContext() context: RequestContext,
