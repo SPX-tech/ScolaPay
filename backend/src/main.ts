@@ -7,14 +7,27 @@ import { AuthGuard } from './common/guards/auth.guard';
 import { TenantGuard } from './common/guards/tenant.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { BigIntSerializerInterceptor } from './common/interceptors/bigint-serializer.interceptor';
+import { AppLogger } from './common/logging/app-logger.service';
+import { requestIdMiddleware } from './common/middleware/request-id.middleware';
 
 async function bootstrap() {
   // rawBody: true expose request.rawBody (Buffer) pour la vérification de
   // signature des webhooks entrants (ex. Kadryza), qui doit s'effectuer sur
   // les octets exacts reçus, pas sur le JSON reparsé.
+  // bufferLogs: true retient les logs de démarrage jusqu'à useLogger(), afin
+  // qu'ils passent eux aussi par AppLogger.
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
+    bufferLogs: true,
   });
+
+  app.useLogger(app.get(AppLogger));
+
+  // Tout premier maillon de la chaîne : le header X-Request-ID est ainsi présent
+  // même sur les réponses émises avant les contrôleurs (401 des guards, 429 du
+  // throttler, 404 de routage), et l'identifiant est disponible dans le store
+  // asynchrone pour l'intégralité des logs de la requête.
+  app.use(requestIdMiddleware);
 
   // Derrière nginx (docker-compose) : faire confiance au premier proxy pour
   // que req.ip et X-Forwarded-For reflètent l'IP réelle du client. Sans cela,

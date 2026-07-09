@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { AppLogger } from './common/logging/app-logger.service';
 import { HealthModule } from './modules/health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -36,9 +38,13 @@ import { FinanceModule } from './modules/finance/finance.module';
   ],
   controllers: [],
   providers: [
+    AppLogger,
     // ThrottlerGuard en APP_GUARD (résolu par DI) : coexiste avec les guards
     // Auth/Tenant/Roles enregistrés dans main.ts.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // Filet de sécurité unique : toute exception non rattrapée (y compris
+    // Prisma) sort au format standardisé, sans fuite d'information interne.
+    { provide: APP_FILTER, useClass: GlobalExceptionFilter },
   ],
 })
 export class AppModule {}

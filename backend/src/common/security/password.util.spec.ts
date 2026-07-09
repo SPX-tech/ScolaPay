@@ -1,6 +1,12 @@
 import { createHash, randomBytes, scryptSync } from 'node:crypto';
 import { hashPassword, needsRehash, verifyPassword } from './password.util';
 
+// bcryptjs est du JS pur : au coût 12, un hash coûte ~1 s et une comparaison
+// ~0,95 s (soit ~4x le bcrypt natif). Sous les workers Jest parallèles, le
+// timeout par défaut de 5 s est franchi. C'est le prix assumé du facteur de
+// travail, pas une lenteur anormale : on donne à ces tests le temps qu'il faut.
+jest.setTimeout(60_000);
+
 describe('password.util (bcrypt + rétro-compatibilité)', () => {
   describe('bcrypt (schéma courant)', () => {
     it('hache en bcrypt et vérifie le bon mot de passe', async () => {

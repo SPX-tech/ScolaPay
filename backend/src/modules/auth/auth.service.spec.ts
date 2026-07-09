@@ -5,6 +5,10 @@ import { AuthService } from './auth.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { hashPassword } from '../../common/security/password.util';
 
+// Chaque test enchaîne un hash et une comparaison bcrypt (coût 12, JS pur) :
+// ~2 s cumulées, davantage sous les workers Jest parallèles.
+jest.setTimeout(60_000);
+
 describe('AuthService', () => {
   let service: AuthService;
 
