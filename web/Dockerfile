@@ -1,7 +1,7 @@
 # ============================================================
 # STAGE 1: Install ALL dependencies
 # ============================================================
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ RUN npm ci
 # ============================================================
 # STAGE 2: Build the Next.js application (standalone)
 # ============================================================
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 
 WORKDIR /app
 
@@ -31,7 +31,7 @@ RUN npm run build
 # ============================================================
 # STAGE 3: Production image (minimal)
 # ============================================================
-FROM node:20-alpine AS production
+FROM node:22-alpine AS production
 
 WORKDIR /app
 
