@@ -21,8 +21,8 @@ Première exécution CI exploitable : [42101514091](https://github.com/SPX-tech/
 | Next.js | 16.4.5 | Branche stable avec migrations CSS, lint et React vérifiées |
 | React | 19.3.1 | Version stable compatible avec Next.js 16 |
 | TypeScript | 6.0.3 backend, 5.9.3 web | Contraintes vérifiées par application |
-| Kotlin / compilateur Compose | 2.3.20 | Versions alignées |
-| AGP / Gradle / JDK | 9.5.1 / 9.6.0 / 17 | SDK 37 requis par Compose, Kotlin intégré et Hilt 2.60.1 |
+| Kotlin / compilateur Compose | 2.4.21 | Versions alignées |
+| AGP / Gradle / JDK | 9.3.3 / 9.6.0 / 17 | SDK 37 requis par Compose, Kotlin intégré et Hilt 2.60.1 |
 | Compose BOM | 2026.09.00 | BOM stable publiée dans le dépôt Google |
 
 Les dépendances npm directes sont figées et les lockfiles produits ensemble sur un runner GitHub. Aucun `--force`, `--legacy-peer-deps` ou override de dépendance incompatible n'est utilisé.

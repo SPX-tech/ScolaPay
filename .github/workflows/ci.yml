@@ -46,7 +46,7 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: npm install --global npm@11.19.1
-      - run: npm ci
+      - run: npm ci --strict-peer-deps
         id: dependencies
       - run: npm run prisma:generate
       - run: npm run prisma:migrate:deploy
@@ -85,7 +85,7 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm install --global npm@11.19.1
-      - run: npm ci
+      - run: npm ci --strict-peer-deps
         id: dependencies
       - run: npm run lint
       - run: npm run build
@@ -122,7 +122,7 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v4.0.4
         with:
-          packages: platform-tools platforms;android-37 build-tools;36.0.0
+          packages: platform-tools platforms;android-37.0 build-tools;36.0.0
       - uses: gradle/actions/setup-gradle@v6.4.1
         with:
           gradle-version: '9.6.0'
@@ -136,3 +136,52 @@ jobs:
             android/app/build/reports/
             android/app/build/test-results/
           if-no-files-found: ignore
+      - uses: actions/upload-artifact@v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: android-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: ignore
+
+  android-runtime:
+    needs: android
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Télécharger l’APK de cette exécution
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name android-debug --dir apk
+      - name: Activer KVM sur le runner jetable
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          ram-size: 1536M
+          disable-animations: true
+          script: |
+            adb install apk/app-debug.apk
+            adb shell am start -W -n com.scolapay.mobile/.MainActivity
+            adb shell uiautomator dump /sdcard/login.xml
+            adb pull /sdcard/login.xml login.xml
+            grep -q 'Code établissement' login.xml
+            adb shell screencap -p /sdcard/login.png
+            adb pull /sdcard/login.png login.png
+            adb logcat -d -b crash > crash.log
+            ! grep -q 'Process: com.scolapay.mobile' crash.log
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: android-runtime
+          path: |
+            login.xml
+            login.png
+            crash.log

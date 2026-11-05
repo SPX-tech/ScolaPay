@@ -14,7 +14,7 @@ La direction mobile du projet est Android-first. L'ancienne piste Flutter a ete 
 
 Le socle de la mission 001 utilise Node.js 24.22.1, NestJS 12.3.3, Prisma 7.10.1,
 PostgreSQL 16.15, Next.js 16.4.5 et React 19.3.1. Les versions npm directes et les
-lockfiles sont figés. Android utilise Kotlin 2.3.20, AGP 9.5.1, Gradle 9.6.0 et JDK 17.
+lockfiles sont figés. Android utilise Kotlin 2.4.21, AGP 9.3.3, Gradle 9.6.0 et JDK 17.
 
 Voir le [journal de validation](docs/mission-001-validation.md) et les
 [décisions pour ScolaPay 2.0](docs/architecture-scolapay-2.md).

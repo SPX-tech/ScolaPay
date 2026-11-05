@@ -16,14 +16,29 @@ export class PrismaService
     if (!connectionString) {
       throw new Error('DATABASE_URL is required.');
     }
+    let schema: string;
+    try {
+      const url = new URL(connectionString);
+      if (!['postgres:', 'postgresql:'].includes(url.protocol)) {
+        throw new Error('Invalid protocol.');
+      }
+      schema = url.searchParams.get('schema') ?? 'public';
+    } catch {
+      throw new Error('Invalid DATABASE_URL configuration.');
+    }
     super({
-      adapter: new PrismaPg({
-        connectionString,
-        max: 10,
-        connectionTimeoutMillis: 5_000,
-        idleTimeoutMillis: 30_000,
-        statement_timeout: 15_000,
-      }, { schema: new URL(connectionString).searchParams.get('schema') ?? 'public' }),
+      adapter: new PrismaPg(
+        {
+          connectionString,
+          max: 10,
+          connectionTimeoutMillis: 5_000,
+          idleTimeoutMillis: 30_000,
+          statement_timeout: 15_000,
+        },
+        {
+          schema,
+        },
+      ),
     });
   }
 

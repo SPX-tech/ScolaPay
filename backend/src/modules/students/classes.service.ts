@@ -37,7 +37,12 @@ export class ClassesService {
         },
       });
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException(
           `Une classe "${dto.name}" existe déjà pour l'année ${dto.academicYear}.`,
         );
@@ -78,7 +83,12 @@ export class ClassesService {
         include: { _count: { select: { students: true } } },
       });
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException(
           `Une classe "${dto.name}" existe déjà pour cette année académique.`,
         );
