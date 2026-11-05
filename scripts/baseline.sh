@@ -4,12 +4,14 @@ set -uo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 results=${1:-/tmp/scolapay-baseline}
 mkdir -p "$results"
+failures=0
 run() {
   local name=$1
   shift
   "$@" >"$results/$name.log" 2>&1
   local status=$?
   printf '%s=%s\n' "$name" "$status" | tee -a "$results/status.txt"
+  if ((status != 0)); then failures=$((failures + 1)); fi
 }
 : >"$results/status.txt"
 db="scolapay-baseline-$$"
@@ -28,6 +30,7 @@ run backend-install npm ci
 run prisma-generate npm run prisma:generate
 run migrations npm run prisma:migrate:deploy
 run backend-build npm run build
+run backend-seed node dist/prisma/seed.js
 run backend-unit npm test -- --runInBand
 run backend-e2e npm run test:e2e -- --runInBand
 run backend-lint npx --no-install eslint '{src,test}/**/*.ts'
@@ -38,3 +41,4 @@ run web-types npx --no-install tsc --noEmit
 run web-build npm run build
 run web-lint npm run lint
 run web-audit npm audit --json
+if ((failures > 0)); then exit 1; fi

@@ -60,7 +60,7 @@ jobs:
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
       - name: Vérifier le jeu de démonstration sur la base jetable
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
-        run: npm run prisma:seed
+        run: node dist/prisma/seed.js
       - run: npm test -- --runInBand
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
       - run: npm run test:e2e -- --runInBand

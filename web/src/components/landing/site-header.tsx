@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ const NAV = [
 export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -28,6 +29,12 @@ export function SiteHeader() {
 
   return (
     <header
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          setMobileOpen(false);
+          menuButton.current?.focus();
+        }
+      }}
       className={cn(
         'sticky top-0 z-40 w-full transition-colors duration-300',
         scrolled ? 'border-b border-ink/10 bg-paper/90 backdrop-blur' : 'bg-transparent',
@@ -63,8 +70,8 @@ export function SiteHeader() {
             aria-label={mobileOpen ? 'Fermer la navigation' : 'Ouvrir la navigation'}
             aria-controls="mobile-navigation"
             aria-expanded={mobileOpen}
+            ref={menuButton}
             onClick={() => setMobileOpen((open) => !open)}
-            onKeyDown={(event) => { if (event.key === 'Escape') setMobileOpen(false); }}
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>

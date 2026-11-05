@@ -95,6 +95,7 @@ function LedgerContent() {
   };
 
   const resetForm = () => {
+    paymentIntent.current = null;
     setStep('select');
     setSelectedStudent(null);
     setAmount('');

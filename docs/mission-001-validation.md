@@ -33,7 +33,9 @@ ESLint 10 utilise les plugins officiels Next.js et React Hooks directement. Le p
 
 ## Résultats finaux
 
-À compléter avec les liens des exécutions finales, les comptes de tests et les limitations effectivement observées avant livraison. Une exécution commencée ou une étape ignorée ne vaut pas validation.
+Mission interrompue à la demande du propriétaire avant les corrections financières. La [CI complète du socle](https://github.com/SPX-tech/ScolaPay/actions/runs/42115202377) est verte : backend, web, Android et lancement sur émulateur. Le backend a passé 155 tests unitaires et 16 E2E ; l'audit de production ne relève aucune vulnérabilité. Les [conteneurs](https://github.com/SPX-tech/ScolaPay/actions/runs/42115202324) sont également validés. Les dernières petites modifications et le test de connexion supplémentaire doivent encore être revérifiés sur leur commit.
+
+Les tests financiers ajoutés sur une autre branche reproduisent des défauts non corrigés. Voir [l'état de reprise](../HANDOFF_MISSION_001.md) pour les résultats négatifs, les branches et les tâches restantes. Le dépôt ne doit pas être considéré prêt pour une mise en production.
 
 ## Sources des décisions de version
 
