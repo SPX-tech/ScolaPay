@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { PaymentsWebhookController } from './payments-webhook.controller';
 import { LedgerService } from './ledger.service';
 import { WithdrawalsService } from '../finance/withdrawals.service';
@@ -161,5 +161,55 @@ describe('PaymentsWebhookController', () => {
       failureReason: 'RIB invalide',
     });
     expect(result).toEqual({ received: true, outcome: 'failed' });
+  });
+
+  it.each([
+    [
+      'un statut inconnu',
+      { type: 'PAYMENT', reference: 'MP-1', status: 'PENDING' },
+    ],
+    ['un statut absent', { type: 'PAYMENT', reference: 'MP-1' }],
+    [
+      'un statut en minuscules',
+      { type: 'PAYMENT', reference: 'MP-1', status: 'success' },
+    ],
+    ['un type absent', { reference: 'MP-1', status: 'SUCCESS' }],
+    [
+      'un type inconnu',
+      { type: 'REFUND', reference: 'MP-1', status: 'SUCCESS' },
+    ],
+    ['une référence absente', { type: 'PAYMENT', status: 'SUCCESS' }],
+    [
+      'une référence non textuelle',
+      { type: 'PAYMENT', reference: { $ne: '' }, status: 'SUCCESS' },
+    ],
+    [
+      'une référence surdimensionnée',
+      { type: 'PAYMENT', reference: 'x'.repeat(129), status: 'SUCCESS' },
+    ],
+    [
+      'un motif non textuel',
+      { type: 'PAYMENT', reference: 'MP-1', status: 'FAILED', reason: 42 },
+    ],
+    ['un corps vide', undefined],
+  ])('rejette %s avant toute mutation', async (_label, body) => {
+    mockPaymentProvider.verifyWebhookSignature.mockReturnValue(true);
+
+    await expect(
+      controller.handleKadryzaWebhook(buildRequest(body, Buffer.from('{}'))),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(mockLedgerService.confirmMobilePayment).not.toHaveBeenCalled();
+    expect(mockWithdrawalsService.confirmPayout).not.toHaveBeenCalled();
+  });
+
+  it('vérifie la signature avant de valider le contenu', async () => {
+    mockPaymentProvider.verifyWebhookSignature.mockReturnValue(false);
+
+    await expect(
+      controller.handleKadryzaWebhook(
+        buildRequest({ status: 'PENDING' }, Buffer.from('{}')),
+      ),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 });

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Inject,
   Post,
@@ -27,6 +28,48 @@ type KadryzaWebhookPayload = {
   providerTransactionId?: string;
   reason?: string;
 };
+
+const MAX_REFERENCE_LENGTH = 128;
+const MAX_REASON_LENGTH = 500;
+
+function optionalText(value: unknown, maxLength: number): string | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (typeof value !== 'string' || value.length > maxLength) {
+    throw new BadRequestException('Invalid webhook payload.');
+  }
+  return value;
+}
+
+/**
+ * Les valeurs inconnues sont refusées explicitement : un statut non reconnu
+ * ne doit jamais emprunter le chemin de crédit. Les champs supplémentaires
+ * restent tolérés, le contrat du prestataire pouvant les enrichir.
+ */
+function parseWebhookPayload(body: unknown): KadryzaWebhookPayload {
+  const payload = (body ?? {}) as Record<string, unknown>;
+  const { type, reference, status } = payload;
+  if (
+    (type !== 'PAYMENT' && type !== 'PAYOUT') ||
+    (status !== 'SUCCESS' && status !== 'FAILED') ||
+    typeof reference !== 'string' ||
+    reference.length === 0 ||
+    reference.length > MAX_REFERENCE_LENGTH
+  ) {
+    throw new BadRequestException('Invalid webhook payload.');
+  }
+  return {
+    type,
+    reference,
+    status,
+    providerTransactionId: optionalText(
+      payload.providerTransactionId,
+      MAX_REFERENCE_LENGTH,
+    ),
+    reason: optionalText(payload.reason, MAX_REASON_LENGTH),
+  };
+}
 
 /**
  * Endpoint public (aucun contexte tenant/utilisateur disponible) : la
@@ -58,7 +101,7 @@ export class PaymentsWebhookController {
       throw new UnauthorizedException('Invalid webhook signature.');
     }
 
-    const payload = request.body as KadryzaWebhookPayload;
+    const payload = parseWebhookPayload(request.body);
 
     const result =
       payload.type === 'PAYOUT'

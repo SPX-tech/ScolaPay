@@ -19,6 +19,12 @@ describe('StudentsService', () => {
     schoolClass: {
       findFirst: jest.fn(),
     },
+    $executeRaw: jest.fn(),
+    $queryRaw: jest.fn(),
+    // Le client de transaction expose les mêmes délégués que le client racine.
+    $transaction: jest.fn((callback: (tx: unknown) => unknown) =>
+      callback(mockPrisma),
+    ),
   };
   const mockAuditService = {
     record: jest.fn(),
@@ -67,7 +73,22 @@ describe('StudentsService', () => {
   };
 
   describe('createStudent', () => {
+    it('should reject a class outside the tenant before writing', async () => {
+      mockPrisma.schoolClass.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.createStudent(tenantId, actorUserId, baseDto),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockPrisma.schoolClass.findFirst).toHaveBeenCalledWith({
+        where: { id: 'class-1', tenantId },
+        select: { id: true },
+      });
+      expect(mockPrisma.student.create).not.toHaveBeenCalled();
+    });
+
     it('should create a student successfully', async () => {
+      mockPrisma.schoolClass.findFirst.mockResolvedValue({ id: 'class-1' });
       mockPrisma.student.create.mockResolvedValue(baseStudent);
 
       const result = await service.createStudent(
@@ -104,6 +125,7 @@ describe('StudentsService', () => {
 
     it('should throw ConflictException on duplicate studentNumber', async () => {
       const error = { code: 'P2002' };
+      mockPrisma.schoolClass.findFirst.mockResolvedValue({ id: 'class-1' });
       mockPrisma.student.create.mockRejectedValue(error);
 
       await expect(
@@ -242,6 +264,38 @@ describe('StudentsService', () => {
   });
 
   describe('updateStudent', () => {
+    beforeEach(() => {
+      mockPrisma.$queryRaw.mockResolvedValue([baseStudent]);
+    });
+
+    it('should reject a class outside the tenant without updating', async () => {
+      mockPrisma.student.findFirst.mockResolvedValue(baseStudent);
+      mockPrisma.schoolClass.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.updateStudent(tenantId, actorUserId, studentId, {
+          classId: 'other-tenant-class',
+        }),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockPrisma.student.update).not.toHaveBeenCalled();
+    });
+
+    it('should hold the balance lock and audit in the same transaction', async () => {
+      mockPrisma.student.findFirst.mockResolvedValue(baseStudent);
+      mockPrisma.student.update.mockResolvedValue(baseStudent);
+
+      await service.updateStudent(tenantId, actorUserId, studentId, {
+        debtCents: '1000',
+      });
+
+      expect(mockPrisma.$queryRaw).toHaveBeenCalledTimes(1);
+      expect(mockAuditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'student.update' }),
+        mockPrisma,
+      );
+    });
+
     it('should update a student successfully', async () => {
       mockPrisma.student.findFirst.mockResolvedValue(baseStudent);
       const updatedStudent = {
@@ -263,7 +317,7 @@ describe('StudentsService', () => {
     });
 
     it('should throw NotFoundException if student does not exist', async () => {
-      mockPrisma.student.findFirst.mockResolvedValue(null);
+      mockPrisma.$queryRaw.mockResolvedValue([]);
 
       await expect(
         service.updateStudent(tenantId, actorUserId, 'nonexistent', {
