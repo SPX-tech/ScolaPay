@@ -15,6 +15,10 @@ export class BigIntSerializerInterceptor implements NestInterceptor {
 }
 
 function serializeBigInt(value: unknown): unknown {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
   if (typeof value === 'bigint') {
     return value.toString();
   }
