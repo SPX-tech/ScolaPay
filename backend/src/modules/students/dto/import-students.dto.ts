@@ -1,4 +1,12 @@
-import { ArrayMaxSize, IsArray, IsObject, IsOptional, IsString, MinLength, ValidateNested } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsObject,
+  IsOptional,
+  IsString,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { IsMoneyString } from '../../../common/validation/is-money-string';
 

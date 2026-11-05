@@ -91,6 +91,17 @@ jobs:
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
       - run: npm audit --omit=dev --audit-level=high
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+      - name: Archiver le rendu pour vérification
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+          tar -czf web-preview.tar.gz -C .next/standalone .
+      - uses: actions/upload-artifact@v7.0.2
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        with:
+          name: web-preview
+          path: web/web-preview.tar.gz
 
   android:
     runs-on: ubuntu-24.04

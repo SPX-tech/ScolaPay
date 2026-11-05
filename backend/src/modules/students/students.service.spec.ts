@@ -6,7 +6,6 @@ import { AuditService } from '../audit/audit.service';
 
 describe('StudentsService', () => {
   let service: StudentsService;
-  let prisma: any;
 
   const mockPrisma = {
     student: {
@@ -35,7 +34,6 @@ describe('StudentsService', () => {
     }).compile();
 
     service = module.get<StudentsService>(StudentsService);
-    prisma = module.get(PrismaService);
     jest.clearAllMocks();
   });
 

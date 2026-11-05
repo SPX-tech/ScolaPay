@@ -41,7 +41,7 @@ describe('ScolaPay E2E Tests', () => {
         .send({
           tenantCode: 'NONEXISTENT',
           email: 'test@test.com',
-          password: 'wrong',
+          password: 'wrong-password',
         })
         .expect(401);
     });

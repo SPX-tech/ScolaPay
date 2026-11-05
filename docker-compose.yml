@@ -89,7 +89,7 @@ services:
   # Nginx Reverse Proxy
   # ============================================================
   nginx:
-    image: nginx:alpine
+    image: nginx:1.30.6-alpine
     container_name: scolapay-nginx
     restart: unless-stopped
     ports:

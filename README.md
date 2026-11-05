@@ -12,6 +12,13 @@ La direction mobile du projet est Android-first. L'ancienne piste Flutter a ete 
 
 ## Stack
 
+Le socle de la mission 001 utilise Node.js 24.22.1, NestJS 11.2.8, Prisma 7.10.1,
+PostgreSQL 16.15, Next.js 16.4.5 et React 19.3.1. Les versions npm directes et les
+lockfiles sont figés. Android utilise Kotlin 2.3.20, AGP 8.13.2, Gradle 8.13 et JDK 17.
+
+Voir le [journal de validation](docs/mission-001-validation.md) et les
+[décisions pour ScolaPay 2.0](docs/architecture-scolapay-2.md).
+
 ### Backend
 
 - NestJS
@@ -47,7 +54,7 @@ Renseigner au minimum:
 ```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/edu_cash?schema=public"
 ACCESS_TOKEN_SECRET="change-me-in-production"
-NEXT_PUBLIC_API_URL="http://localhost:8080/api/v1"
+NEXT_PUBLIC_API_URL="/api/v1"
 ```
 
 Lancer toute la stack web/API avec Docker:
@@ -64,9 +71,13 @@ Par defaut:
 
 ## Backend local
 
+Les compilations et suites de tests se lancent sur les runners GitHub ou un hôte
+de développement adapté. Le ThinkPad de 8 Go reste réservé aux éditions légères.
+La CI utilise une base PostgreSQL jetable dont le nom se termine par `_test`.
+
 ```bash
 cd backend
-npm install
+npm ci --strict-peer-deps
 npm run prisma:generate
 npm run prisma:migrate:dev
 npm run prisma:seed
@@ -77,6 +88,8 @@ Tests et build:
 
 ```bash
 npm test
+npm run test:e2e -- --runInBand
+npm run lint
 npm run build
 ```
 
@@ -84,7 +97,7 @@ npm run build
 
 ```bash
 cd web
-npm install
+npm ci --strict-peer-deps
 npm run dev
 ```
 
@@ -92,6 +105,8 @@ Build:
 
 ```bash
 npm run build
+npm run typecheck
+npm test
 ```
 
 ## Android
@@ -107,8 +122,30 @@ android/app/src/main/java/com/scolapay/mobile/util/Constants.kt
 Pour un emulateur Android, l'API locale de la machine hote se rejoint en general avec:
 
 ```text
-http://10.0.2.2:8080/api/v1
+http://10.0.2.2:3000/api/v1/
 ```
+
+Le build debug cible cette URL d'émulateur. Le build release interdit HTTP et
+reçoit une URL explicite, terminée par `/`, via `-PscolapayApiUrl=https://.../api/v1/`.
+Sans ce paramètre, il cible uniquement `https://localhost/api/v1/`.
+
+```bash
+cd android
+./gradlew --no-daemon --max-workers=2 :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+```
+
+## Vérification continue
+
+Les workflows GitHub Actions vérifient les trois applications et les conteneurs.
+Ils ne contiennent aucun déploiement, secret de production ou accès financier réel.
+Le workflow de maintenance des lockfiles produit des artefacts à examiner, sans
+écrire automatiquement dans une branche.
+
+Prisma 7 génère le client dans `backend/src/generated/prisma`, exclu de Git. Dans
+Docker, le service `migrate` utilise une image avec le CLI et termine avant l'API.
+L'image API n'exécute pas `npx prisma` au démarrage. Une montée majeure PostgreSQL
+est une opération distincte ; ne pas changer le format d'un volume existant sans
+répétition de la restauration ou de `pg_upgrade`.
 
 ## Notes de maintenance
 

@@ -12,6 +12,7 @@ import { OutboxModule } from './modules/outbox/outbox.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { FinanceModule } from './modules/finance/finance.module';
+import { DashboardModule } from './modules/ledger/dashboard.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { FinanceModule } from './modules/finance/finance.module';
     NotificationsModule,
     AuditModule,
     FinanceModule,
+    DashboardModule,
   ],
   controllers: [],
   providers: [],
