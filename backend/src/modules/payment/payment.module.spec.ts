@@ -15,6 +15,17 @@ describe('PaymentModule (sélection du provider)', () => {
     process.env = ORIGINAL_ENV;
   });
 
+  it('refuse les paiements simulés en production', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.PAYMENT_PROVIDER = 'mock';
+    await expect(Test.createTestingModule({ imports: [PaymentModule] }).compile()).rejects.toThrow();
+  });
+
+  it('refuse une configuration de fournisseur inconnue', async () => {
+    process.env.PAYMENT_PROVIDER = 'typo';
+    await expect(Test.createTestingModule({ imports: [PaymentModule] }).compile()).rejects.toThrow();
+  });
+
   it('sélectionne MockPaymentProvider par défaut (PAYMENT_PROVIDER non défini)', async () => {
     delete process.env.PAYMENT_PROVIDER;
 
