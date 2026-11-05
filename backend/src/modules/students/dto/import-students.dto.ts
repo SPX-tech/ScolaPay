@@ -1,5 +1,6 @@
-import { IsArray, IsObject, IsOptional, IsString, MinLength, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsObject, IsOptional, IsString, MinLength, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsMoneyString } from '../../../common/validation/is-money-string';
 
 class ImportStudentRow {
   @IsString()
@@ -28,6 +29,7 @@ class ImportStudentRow {
 
   @IsOptional()
   @IsString()
+  @IsMoneyString(true)
   debtCents?: string;
 
   @IsOptional()
@@ -37,6 +39,7 @@ class ImportStudentRow {
 
 export class ImportStudentsDto {
   @IsArray()
+  @ArrayMaxSize(1000)
   @ValidateNested({ each: true })
   @Type(() => ImportStudentRow)
   students!: ImportStudentRow[];

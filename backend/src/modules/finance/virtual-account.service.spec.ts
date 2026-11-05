@@ -29,7 +29,12 @@ describe('VirtualAccountService', () => {
 
   /** Simule la ligne verrouillée retournée par `SELECT ... FOR UPDATE`. */
   const lockedRow = (balance: bigint, pending: bigint) => [
-    { id: 'va_1', balanceCents: balance, pendingWithdrawalCents: pending, currency: 'XAF' },
+    {
+      id: 'va_1',
+      balanceCents: balance,
+      pendingWithdrawalCents: pending,
+      currency: 'XAF',
+    },
   ];
 
   beforeEach(async () => {
@@ -72,7 +77,9 @@ describe('VirtualAccountService', () => {
 
   describe('getBalance', () => {
     it('calcule le disponible = balance - pending', async () => {
-      mockPrisma.virtualAccount.upsert.mockResolvedValue(account(10_000n, 3_000n));
+      mockPrisma.virtualAccount.upsert.mockResolvedValue(
+        account(10_000n, 3_000n),
+      );
 
       const balance = await service.getBalance(TENANT);
 
@@ -106,7 +113,10 @@ describe('VirtualAccountService', () => {
       mockPrisma.ledgerEntry.findMany.mockResolvedValue([row]);
       mockPrisma.ledgerEntry.count.mockResolvedValue(1);
 
-      const result = await service.listLedgerEntries(TENANT, { page: 1, limit: 20 });
+      const result = await service.listLedgerEntries(TENANT, {
+        page: 1,
+        limit: 20,
+      });
 
       expect(mockPrisma.ledgerEntry.findMany).toHaveBeenCalledWith({
         where: { tenantId: TENANT },
@@ -114,7 +124,9 @@ describe('VirtualAccountService', () => {
         skip: 0,
         take: 20,
       });
-      expect(mockPrisma.ledgerEntry.count).toHaveBeenCalledWith({ where: { tenantId: TENANT } });
+      expect(mockPrisma.ledgerEntry.count).toHaveBeenCalledWith({
+        where: { tenantId: TENANT },
+      });
       expect(result).toEqual({
         data: [row],
         meta: { total: 1, page: 1, limit: 20, totalPages: 1 },
@@ -125,12 +137,20 @@ describe('VirtualAccountService', () => {
       mockPrisma.ledgerEntry.findMany.mockResolvedValue([]);
       mockPrisma.ledgerEntry.count.mockResolvedValue(45);
 
-      const result = await service.listLedgerEntries(TENANT, { page: 3, limit: 20 });
+      const result = await service.listLedgerEntries(TENANT, {
+        page: 3,
+        limit: 20,
+      });
 
       expect(mockPrisma.ledgerEntry.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ skip: 40, take: 20 }),
       );
-      expect(result.meta).toEqual({ total: 45, page: 3, limit: 20, totalPages: 3 });
+      expect(result.meta).toEqual({
+        total: 45,
+        page: 3,
+        limit: 20,
+        totalPages: 3,
+      });
     });
 
     it('applique les valeurs par défaut page=1/limit=50 si omises', async () => {

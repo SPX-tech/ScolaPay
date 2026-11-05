@@ -1,10 +1,11 @@
 import { WithdrawalMethod } from '../../../generated/prisma/client';
-import { IsEnum, IsInt, IsString, MaxLength, Min } from 'class-validator';
+import { IsEnum, IsInt, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class CreateWithdrawalDto {
   /** Montant à retirer, en cents (entier strictement positif). */
   @IsInt()
   @Min(1)
+  @Max(Number.MAX_SAFE_INTEGER)
   amountCents!: number;
 
   @IsEnum(WithdrawalMethod)

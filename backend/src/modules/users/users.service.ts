@@ -64,7 +64,12 @@ export class UsersService {
 
       return user;
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException(
           `Un utilisateur avec l'email "${dto.email}" existe déjà.`,
         );
@@ -73,7 +78,12 @@ export class UsersService {
     }
   }
 
-  async updateUser(tenantId: string, actorUserId: string, userId: string, dto: UpdateUserDto) {
+  async updateUser(
+    tenantId: string,
+    actorUserId: string,
+    userId: string,
+    dto: UpdateUserDto,
+  ) {
     const existingUser = await this.getUserById(tenantId, userId);
 
     try {
@@ -104,7 +114,12 @@ export class UsersService {
 
       return user;
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException(
           `Un utilisateur avec cet email existe déjà.`,
         );

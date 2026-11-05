@@ -198,7 +198,9 @@ export class NotificationsService {
     ]);
   }
 
-  async queueMobilePaymentConfirmedNotification(eventPayload: unknown): Promise<{
+  async queueMobilePaymentConfirmedNotification(
+    eventPayload: unknown,
+  ): Promise<{
     status: string;
     provider: string;
     payload: unknown;

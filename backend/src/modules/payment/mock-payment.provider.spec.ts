@@ -41,7 +41,9 @@ describe('MockPaymentProvider', () => {
       });
 
       // Deux collectes distinctes obtiennent des identifiants distincts.
-      expect(first.providerTransactionId).not.toEqual(second.providerTransactionId);
+      expect(first.providerTransactionId).not.toEqual(
+        second.providerTransactionId,
+      );
     });
   });
 

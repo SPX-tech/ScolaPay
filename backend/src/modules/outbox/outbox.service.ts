@@ -16,7 +16,8 @@ export class OutboxService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createEvent(input: CreateOutboxEventInput) {
-    const { tx, tenantId, aggregateType, aggregateId, eventType, payload } = input;
+    const { tx, tenantId, aggregateType, aggregateId, eventType, payload } =
+      input;
 
     return tx.outboxEvent.create({
       data: {

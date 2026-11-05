@@ -7,7 +7,7 @@ describe('KadryzaPaymentProvider (stub)', () => {
     provider = new KadryzaPaymentProvider();
   });
 
-  it('échoue bruyamment sur collect() tant que le contrat API réel n\'est pas fourni', async () => {
+  it("échoue bruyamment sur collect() tant que le contrat API réel n'est pas fourni", async () => {
     await expect(
       provider.collect({
         reference: 'MP-1',
@@ -21,6 +21,8 @@ describe('KadryzaPaymentProvider (stub)', () => {
   });
 
   it("échoue bruyamment sur verifyWebhookSignature() tant que le schéma de signature n'est pas fourni", () => {
-    expect(() => provider.verifyWebhookSignature('body', {})).toThrow(/pas implémenté/);
+    expect(() => provider.verifyWebhookSignature('body', {})).toThrow(
+      /pas implémenté/,
+    );
   });
 });

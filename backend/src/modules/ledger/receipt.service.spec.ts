@@ -111,7 +111,18 @@ describe('ReceiptService', () => {
       const payload = service.generateReceiptQRPayload(transaction);
       const parsed = JSON.parse(payload);
 
-      const requiredFields = ['v', 'rn', 'rh', 'ti', 'sn', 'am', 'pd', 'nd', 'cur', 'at'];
+      const requiredFields = [
+        'v',
+        'rn',
+        'rh',
+        'ti',
+        'sn',
+        'am',
+        'pd',
+        'nd',
+        'cur',
+        'at',
+      ];
       requiredFields.forEach((field) => {
         expect(parsed).toHaveProperty(field);
       });
@@ -147,9 +158,18 @@ describe('ReceiptService', () => {
       const parsed = JSON.parse(data);
 
       const expectedFields = [
-        'version', 'receiptNumber', 'hash', 'transactionId',
-        'studentName', 'studentNumber', 'amount', 'previousDebt',
-        'newDebt', 'currency', 'recordedAt', 'recordedBy',
+        'version',
+        'receiptNumber',
+        'hash',
+        'transactionId',
+        'studentName',
+        'studentNumber',
+        'amount',
+        'previousDebt',
+        'newDebt',
+        'currency',
+        'recordedAt',
+        'recordedBy',
       ];
       expectedFields.forEach((field) => {
         expect(parsed).toHaveProperty(field);

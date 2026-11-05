@@ -8,12 +8,18 @@ import { BigIntSerializerInterceptor } from './common/interceptors/bigint-serial
 /** Configuration partagée par le serveur HTTP et les tests de ses contrats. */
 export function configureApp(app: INestApplication): void {
   const reflector = app.get(Reflector);
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-  }));
-  app.useGlobalGuards(new AuthGuard(reflector), new TenantGuard(reflector), new RolesGuard(reflector));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+  app.useGlobalGuards(
+    new AuthGuard(reflector),
+    new TenantGuard(reflector),
+    new RolesGuard(reflector),
+  );
   app.useGlobalInterceptors(new BigIntSerializerInterceptor());
   app.setGlobalPrefix('api/v1');
 }

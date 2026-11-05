@@ -1,4 +1,5 @@
 import { IsObject, IsOptional, IsString, Length, Matches, MinLength } from 'class-validator';
+import { IsMoneyString } from '../../../common/validation/is-money-string';
 
 export class CreateStudentDto {
   @IsString()
@@ -29,5 +30,6 @@ export class CreateStudentDto {
 
   @IsOptional()
   @IsString()
+  @IsMoneyString(true)
   initialDebtCents?: string;
 }

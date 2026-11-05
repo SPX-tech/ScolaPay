@@ -57,8 +57,10 @@ describe('Cycle de vie du paiement mobile (intégration inter-services)', () => 
     ledgerEntries = [];
 
     const applyMoneyOp = (row: any, field: string, data: any) => {
-      if (data?.[field]?.increment !== undefined) row[field] += data[field].increment;
-      if (data?.[field]?.decrement !== undefined) row[field] -= data[field].decrement;
+      if (data?.[field]?.increment !== undefined)
+        row[field] += data[field].increment;
+      if (data?.[field]?.decrement !== undefined)
+        row[field] -= data[field].decrement;
     };
 
     mockTx = {
@@ -120,11 +122,18 @@ describe('Cycle de vie du paiement mobile (intégration inter-services)', () => 
       },
       transaction: {
         create: jest.fn((args: any) => {
-          transactionRow = { id: 'txn_1', recordedAt: new Date(), ...args.data };
+          transactionRow = {
+            id: 'txn_1',
+            recordedAt: new Date(),
+            ...args.data,
+          };
           return Promise.resolve({ ...transactionRow });
         }),
         findUnique: jest.fn((args: any) => {
-          if (transactionRow && transactionRow.providerReference === args.where.providerReference) {
+          if (
+            transactionRow &&
+            transactionRow.providerReference === args.where.providerReference
+          ) {
             return Promise.resolve({ ...transactionRow });
           }
           return Promise.resolve(null);
@@ -163,11 +172,16 @@ describe('Cycle de vie du paiement mobile (intégration inter-services)', () => 
   });
 
   it('encaisse un paiement mobile de bout en bout : initiation -> webhook -> solde -> Ledger -> notification', async () => {
-    const initResult = await ledgerService.initializeMobilePayment(TENANT, USER, 'CASHIER', {
-      studentId: STUDENT_ID,
-      amountCents: '4000',
-      payerPhone: '+23566000000',
-    });
+    const initResult = await ledgerService.initializeMobilePayment(
+      TENANT,
+      USER,
+      'CASHIER',
+      {
+        studentId: STUDENT_ID,
+        amountCents: '4000',
+        payerPhone: '+23566000000',
+      },
+    );
 
     expect(initResult.status).toBe('PENDING');
     expect(transactionRow.status).toBe('PENDING');
@@ -213,11 +227,16 @@ describe('Cycle de vie du paiement mobile (intégration inter-services)', () => 
   });
 
   it('gère un paiement refusé de bout en bout : aucun crédit, notification d’échec', async () => {
-    const initResult = await ledgerService.initializeMobilePayment(TENANT, USER, 'CASHIER', {
-      studentId: STUDENT_ID,
-      amountCents: '2000',
-      payerPhone: '+23566000000',
-    });
+    const initResult = await ledgerService.initializeMobilePayment(
+      TENANT,
+      USER,
+      'CASHIER',
+      {
+        studentId: STUDENT_ID,
+        amountCents: '2000',
+        payerPhone: '+23566000000',
+      },
+    );
 
     const confirmResult = await ledgerService.confirmMobilePayment({
       providerReference: initResult.reference,

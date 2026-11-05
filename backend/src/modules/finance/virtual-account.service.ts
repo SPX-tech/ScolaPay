@@ -79,7 +79,10 @@ export class VirtualAccountService {
   }
 
   /** Liste paginée du grand livre du tenant, plus récent en premier. */
-  async listLedgerEntries(tenantId: string, query: { page?: number; limit?: number }) {
+  async listLedgerEntries(
+    tenantId: string,
+    query: { page?: number; limit?: number },
+  ) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 50;
     const skip = (page - 1) * limit;

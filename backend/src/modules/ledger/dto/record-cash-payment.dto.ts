@@ -3,10 +3,10 @@ import {
   IsOptional,
   IsString,
   Length,
-  Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { IsMoneyString } from '../../../common/validation/is-money-string';
 
 export class RecordCashPaymentDto {
   @IsString()
@@ -14,7 +14,7 @@ export class RecordCashPaymentDto {
   studentId!: string;
 
   @IsString()
-  @Matches(/^[1-9]\d*$/)
+  @IsMoneyString()
   amountCents!: string;
 
   @IsOptional()

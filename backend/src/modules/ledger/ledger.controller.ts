@@ -1,4 +1,11 @@
-import { Body, Controller, Get, NotFoundException, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+} from '@nestjs/common';
 import { ReqContext } from '../../common/decorators/request-context.decorator';
 import type { RequestContext } from '../../common/types/request-context.type';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -63,7 +70,9 @@ export class LedgerController {
     }
 
     if (!transaction.receiptNumber || !transaction.receiptHash) {
-      throw new NotFoundException('Receipt not available: payment not yet confirmed.');
+      throw new NotFoundException(
+        'Receipt not available: payment not yet confirmed.',
+      );
     }
 
     // Generate QR code image (async - on-the-fly)

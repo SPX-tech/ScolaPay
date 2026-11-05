@@ -8,7 +8,12 @@ describe('BigIntSerializerInterceptor', () => {
     const interceptor = new BigIntSerializerInterceptor();
     const result = await firstValueFrom(
       interceptor.intercept({} as ExecutionContext, {
-        handle: () => of({ amountCents: 9007199254740993n, recordedAt: date, nested: [null, 0n] }),
+        handle: () =>
+          of({
+            amountCents: 9007199254740993n,
+            recordedAt: date,
+            nested: [null, 0n],
+          }),
       }),
     );
     expect(JSON.parse(JSON.stringify(result))).toEqual({

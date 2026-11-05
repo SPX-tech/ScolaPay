@@ -7,7 +7,10 @@ import {
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { PUBLIC_ROUTE_KEY } from '../constants/request-context.constants';
-import { REQUEST_CONTEXT_KEY, RequestContext as RequestContextType } from '../types/request-context.type';
+import {
+  REQUEST_CONTEXT_KEY,
+  RequestContext as RequestContextType,
+} from '../types/request-context.type';
 
 type RequestWithUser = Request & {
   user?: {
@@ -26,10 +29,10 @@ export class TenantGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const isPublic = this.reflector.getAllAndOverride<boolean>(PUBLIC_ROUTE_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const isPublic = this.reflector.getAllAndOverride<boolean>(
+      PUBLIC_ROUTE_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     if (isPublic) {
       return true;
@@ -42,8 +45,14 @@ export class TenantGuard implements CanActivate {
       typeof tenantHeader === 'string' ? tenantHeader : tenantHeader?.[0];
     const tenantIdFromToken = request.user?.tenantId;
 
-    if (tenantIdFromToken && tenantIdFromHeader && tenantIdFromToken !== tenantIdFromHeader) {
-      throw new UnauthorizedException('Tenant mismatch between token and header.');
+    if (
+      tenantIdFromToken &&
+      tenantIdFromHeader &&
+      tenantIdFromToken !== tenantIdFromHeader
+    ) {
+      throw new UnauthorizedException(
+        'Tenant mismatch between token and header.',
+      );
     }
 
     const tenantId = tenantIdFromToken ?? tenantIdFromHeader;

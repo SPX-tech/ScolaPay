@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { LedgerService } from './ledger.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OutboxService } from '../outbox/outbox.service';
@@ -23,7 +27,11 @@ describe('LedgerService (paiements mobiles)', () => {
   let mockPrisma: {
     tenant: { findUnique: jest.Mock; findUniqueOrThrow: jest.Mock };
     student: { findFirst: jest.Mock };
-    transaction: { create: jest.Mock; findUnique: jest.Mock; updateMany: jest.Mock };
+    transaction: {
+      create: jest.Mock;
+      findUnique: jest.Mock;
+      updateMany: jest.Mock;
+    };
     $transaction: jest.Mock;
   };
   let mockOutboxService: { createEvent: jest.Mock };
@@ -34,7 +42,10 @@ describe('LedgerService (paiements mobiles)', () => {
   };
   let mockAuditService: { record: jest.Mock };
   let mockVirtualAccountService: { creditFromPayment: jest.Mock };
-  let mockPaymentProvider: { collect: jest.Mock; verifyWebhookSignature: jest.Mock };
+  let mockPaymentProvider: {
+    collect: jest.Mock;
+    verifyWebhookSignature: jest.Mock;
+  };
 
   const tenant = { id: TENANT, code: 'ECOLE1', currency: 'XAF' };
   const student = (overrides: Record<string, unknown> = {}) => ({
@@ -78,18 +89,27 @@ describe('LedgerService (paiements mobiles)', () => {
     mockPrisma = {
       tenant: { findUnique: jest.fn(), findUniqueOrThrow: jest.fn() },
       student: { findFirst: jest.fn() },
-      transaction: { create: jest.fn(), findUnique: jest.fn(), updateMany: jest.fn() },
+      transaction: {
+        create: jest.fn(),
+        findUnique: jest.fn(),
+        updateMany: jest.fn(),
+      },
       $transaction: jest.fn(),
     };
     mockOutboxService = { createEvent: jest.fn() };
     mockReceiptService = {
-      generateReceiptNumber: jest.fn().mockReturnValue('RCP-ECOLE1-20260701-ABCD1234'),
+      generateReceiptNumber: jest
+        .fn()
+        .mockReturnValue('RCP-ECOLE1-20260701-ABCD1234'),
       generateReceiptHash: jest.fn().mockReturnValue('hash123'),
       generateReceiptData: jest.fn().mockReturnValue('{"qr":"data"}'),
     };
     mockAuditService = { record: jest.fn() };
     mockVirtualAccountService = { creditFromPayment: jest.fn() };
-    mockPaymentProvider = { collect: jest.fn(), verifyWebhookSignature: jest.fn() };
+    mockPaymentProvider = {
+      collect: jest.fn(),
+      verifyWebhookSignature: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -105,7 +125,9 @@ describe('LedgerService (paiements mobiles)', () => {
 
     service = module.get(LedgerService);
     jest.clearAllMocks();
-    mockPrisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(mockTx));
+    mockPrisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) =>
+      fn(mockTx),
+    );
   });
 
   describe('initializeMobilePayment', () => {
@@ -124,7 +146,12 @@ describe('LedgerService (paiements mobiles)', () => {
         providerTransactionId: 'MOCK-1',
       });
 
-      const result = await service.initializeMobilePayment(TENANT, USER, 'CASHIER', dto);
+      const result = await service.initializeMobilePayment(
+        TENANT,
+        USER,
+        'CASHIER',
+        dto,
+      );
 
       expect(mockPrisma.transaction.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
@@ -146,7 +173,9 @@ describe('LedgerService (paiements mobiles)', () => {
         }),
       );
       expect(mockAuditService.record).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'transaction.mobile_payment.initiate' }),
+        expect.objectContaining({
+          action: 'transaction.mobile_payment.initiate',
+        }),
       );
       expect(result.status).toBe('PENDING');
       expect(result.reference).toEqual(expect.any(String));
@@ -182,7 +211,11 @@ describe('LedgerService (paiements mobiles)', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(mockPrisma.transaction.updateMany).toHaveBeenCalledWith({
-        where: { id: pendingTransaction().id, tenantId: TENANT, status: 'PENDING' },
+        where: {
+          id: pendingTransaction().id,
+          tenantId: TENANT,
+          status: 'PENDING',
+        },
         data: { status: 'FAILED', note: 'Numéro invalide' },
       });
       expect(mockAuditService.record).not.toHaveBeenCalled();
@@ -199,7 +232,11 @@ describe('LedgerService (paiements mobiles)', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(mockPrisma.transaction.updateMany).toHaveBeenCalledWith({
-        where: { id: pendingTransaction().id, tenantId: TENANT, status: 'PENDING' },
+        where: {
+          id: pendingTransaction().id,
+          tenantId: TENANT,
+          status: 'PENDING',
+        },
         data: { status: 'FAILED', note: 'network down' },
       });
     });
@@ -230,7 +267,9 @@ describe('LedgerService (paiements mobiles)', () => {
 
       expect(result).toEqual({ outcome: 'already_processed' });
       expect(mockPrisma.$transaction).not.toHaveBeenCalled();
-      expect(mockVirtualAccountService.creditFromPayment).not.toHaveBeenCalled();
+      expect(
+        mockVirtualAccountService.creditFromPayment,
+      ).not.toHaveBeenCalled();
     });
 
     it('confirme un paiement réussi : crédite le compte virtuel, écrit le Ledger, notifie et audite', async () => {
@@ -270,11 +309,16 @@ describe('LedgerService (paiements mobiles)', () => {
         expect.objectContaining({
           tx: mockTx,
           eventType: 'mobile-payment.confirmed',
-          payload: expect.objectContaining({ amountCents: '5000', receiptNumber: 'RCP-ECOLE1-20260701-ABCD1234' }),
+          payload: expect.objectContaining({
+            amountCents: '5000',
+            receiptNumber: 'RCP-ECOLE1-20260701-ABCD1234',
+          }),
         }),
       );
       expect(mockAuditService.record).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'transaction.mobile_payment.confirm' }),
+        expect.objectContaining({
+          action: 'transaction.mobile_payment.confirm',
+        }),
         mockTx,
       );
       expect(result).toEqual({ outcome: 'credited' });
@@ -282,15 +326,24 @@ describe('LedgerService (paiements mobiles)', () => {
 
     it('applique le surplus au crédit élève en cas de trop-perçu', async () => {
       mockPrisma.transaction.findUnique.mockResolvedValue(
-        pendingTransaction({ amountCents: 15_000n, previousDebtCents: 10_000n, newDebtCents: 10_000n }),
+        pendingTransaction({
+          amountCents: 15_000n,
+          previousDebtCents: 10_000n,
+          newDebtCents: 10_000n,
+        }),
       );
       mockPrisma.tenant.findUniqueOrThrow.mockResolvedValue(tenant);
-      mockTx.student.findUniqueOrThrow.mockResolvedValue(student({ debtCents: 10_000n, creditCents: 0n }));
+      mockTx.student.findUniqueOrThrow.mockResolvedValue(
+        student({ debtCents: 10_000n, creditCents: 0n }),
+      );
       mockTx.transaction.updateMany.mockResolvedValue({ count: 1 });
       mockTx.student.update.mockResolvedValue({});
       mockVirtualAccountService.creditFromPayment.mockResolvedValue({});
 
-      await service.confirmMobilePayment({ providerReference: 'MP-abc', status: 'SUCCESS' });
+      await service.confirmMobilePayment({
+        providerReference: 'MP-abc',
+        status: 'SUCCESS',
+      });
 
       // Paiement de 15 000 pour une dette de 10 000 => dette ramenée à 0, surplus de 5 000 en crédit.
       expect(mockTx.student.update).toHaveBeenCalledWith({
@@ -312,7 +365,9 @@ describe('LedgerService (paiements mobiles)', () => {
       });
 
       expect(mockTx.student.update).not.toHaveBeenCalled();
-      expect(mockVirtualAccountService.creditFromPayment).not.toHaveBeenCalled();
+      expect(
+        mockVirtualAccountService.creditFromPayment,
+      ).not.toHaveBeenCalled();
       expect(mockOutboxService.createEvent).not.toHaveBeenCalled();
       expect(result).toEqual({ outcome: 'already_processed' });
     });
@@ -338,7 +393,9 @@ describe('LedgerService (paiements mobiles)', () => {
         expect.objectContaining({ action: 'transaction.mobile_payment.fail' }),
         mockTx,
       );
-      expect(mockVirtualAccountService.creditFromPayment).not.toHaveBeenCalled();
+      expect(
+        mockVirtualAccountService.creditFromPayment,
+      ).not.toHaveBeenCalled();
       expect(result).toEqual({ outcome: 'failed' });
     });
 

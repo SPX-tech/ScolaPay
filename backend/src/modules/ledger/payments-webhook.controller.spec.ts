@@ -42,16 +42,18 @@ describe('PaymentsWebhookController', () => {
       Buffer.from('{}'),
     );
 
-    await expect(controller.handleKadryzaWebhook(request)).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
+    await expect(
+      controller.handleKadryzaWebhook(request),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(mockLedgerService.confirmMobilePayment).not.toHaveBeenCalled();
     expect(mockWithdrawalsService.confirmPayout).not.toHaveBeenCalled();
   });
 
   it('délègue à LedgerService.confirmMobilePayment avec les champs mappés, signature valide', async () => {
     mockPaymentProvider.verifyWebhookSignature.mockReturnValue(true);
-    mockLedgerService.confirmMobilePayment.mockResolvedValue({ outcome: 'credited' });
+    mockLedgerService.confirmMobilePayment.mockResolvedValue({
+      outcome: 'credited',
+    });
     const request = buildRequest(
       { type: 'PAYMENT', reference: 'MP-1', status: 'SUCCESS' },
       Buffer.from('{"type":"PAYMENT","reference":"MP-1","status":"SUCCESS"}'),
@@ -70,8 +72,12 @@ describe('PaymentsWebhookController', () => {
 
   it('vérifie la signature sur les octets bruts (rawBody), pas sur le JSON reparsé', async () => {
     mockPaymentProvider.verifyWebhookSignature.mockReturnValue(true);
-    mockLedgerService.confirmMobilePayment.mockResolvedValue({ outcome: 'not_found' });
-    const rawBody = Buffer.from('{"type":"PAYMENT","reference":"MP-2","status":"FAILED","reason":"x"}');
+    mockLedgerService.confirmMobilePayment.mockResolvedValue({
+      outcome: 'not_found',
+    });
+    const rawBody = Buffer.from(
+      '{"type":"PAYMENT","reference":"MP-2","status":"FAILED","reason":"x"}',
+    );
     const request = buildRequest(
       { type: 'PAYMENT', reference: 'MP-2', status: 'FAILED', reason: 'x' },
       rawBody,
@@ -87,8 +93,13 @@ describe('PaymentsWebhookController', () => {
 
   it('reconstruit un rawBody de secours si absent (réponse toujours 200 implicite)', async () => {
     mockPaymentProvider.verifyWebhookSignature.mockReturnValue(true);
-    mockLedgerService.confirmMobilePayment.mockResolvedValue({ outcome: 'already_processed' });
-    const request = buildRequest({ type: 'PAYMENT', reference: 'MP-3', status: 'SUCCESS' }, undefined);
+    mockLedgerService.confirmMobilePayment.mockResolvedValue({
+      outcome: 'already_processed',
+    });
+    const request = buildRequest(
+      { type: 'PAYMENT', reference: 'MP-3', status: 'SUCCESS' },
+      undefined,
+    );
 
     const result = await controller.handleKadryzaWebhook(request);
 
@@ -101,7 +112,9 @@ describe('PaymentsWebhookController', () => {
 
   it('délègue à WithdrawalsService.confirmPayout pour un événement PAYOUT, avec les champs mappés', async () => {
     mockPaymentProvider.verifyWebhookSignature.mockReturnValue(true);
-    mockWithdrawalsService.confirmPayout.mockResolvedValue({ outcome: 'completed' });
+    mockWithdrawalsService.confirmPayout.mockResolvedValue({
+      outcome: 'completed',
+    });
     const request = buildRequest(
       {
         type: 'PAYOUT',
@@ -126,9 +139,16 @@ describe('PaymentsWebhookController', () => {
 
   it('délègue un événement PAYOUT en échec avec le motif mappé', async () => {
     mockPaymentProvider.verifyWebhookSignature.mockReturnValue(true);
-    mockWithdrawalsService.confirmPayout.mockResolvedValue({ outcome: 'failed' });
+    mockWithdrawalsService.confirmPayout.mockResolvedValue({
+      outcome: 'failed',
+    });
     const request = buildRequest(
-      { type: 'PAYOUT', reference: 'WD-2', status: 'FAILED', reason: 'RIB invalide' },
+      {
+        type: 'PAYOUT',
+        reference: 'WD-2',
+        status: 'FAILED',
+        reason: 'RIB invalide',
+      },
       Buffer.from('{}'),
     );
 

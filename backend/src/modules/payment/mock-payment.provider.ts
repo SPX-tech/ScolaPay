@@ -42,7 +42,10 @@ export class MockPaymentProvider implements PaymentProvider {
     });
   }
 
-  verifyWebhookSignature(_rawBody?: Buffer | string, _headers?: Record<string, string | string[] | undefined>): boolean {
+  verifyWebhookSignature(
+    _rawBody?: Buffer | string,
+    _headers?: Record<string, string | string[] | undefined>,
+  ): boolean {
     // Pas de sécurité réelle en mode mock : usage dev/tests uniquement.
     return true;
   }

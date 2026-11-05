@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ReqContext } from '../../common/decorators/request-context.decorator';
 import type { RequestContext } from '../../common/types/request-context.type';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -22,7 +15,10 @@ export class TransactionsController {
     @ReqContext() context: RequestContext,
     @Query() query: ListTransactionsQueryDto,
   ) {
-    return this.transactionsService.listTenantTransactions(context.tenantId, query);
+    return this.transactionsService.listTenantTransactions(
+      context.tenantId,
+      query,
+    );
   }
 
   @Get('student/:studentId')

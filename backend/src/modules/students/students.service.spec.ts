@@ -72,7 +72,11 @@ describe('StudentsService', () => {
     it('should create a student successfully', async () => {
       mockPrisma.student.create.mockResolvedValue(baseStudent);
 
-      const result = await service.createStudent(tenantId, actorUserId, baseDto);
+      const result = await service.createStudent(
+        tenantId,
+        actorUserId,
+        baseDto,
+      );
 
       expect(result).toEqual(baseStudent);
       expect(mockPrisma.student.create).toHaveBeenCalledWith({
@@ -104,9 +108,9 @@ describe('StudentsService', () => {
       const error = { code: 'P2002' };
       mockPrisma.student.create.mockRejectedValue(error);
 
-      await expect(service.createStudent(tenantId, actorUserId, baseDto)).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        service.createStudent(tenantId, actorUserId, baseDto),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should create a student without optional fields', async () => {
@@ -125,7 +129,11 @@ describe('StudentsService', () => {
         class: null,
       });
 
-      const result = await service.createStudent(tenantId, actorUserId, minimalDto);
+      const result = await service.createStudent(
+        tenantId,
+        actorUserId,
+        minimalDto,
+      );
 
       expect(result.fullName).toBe('Marie Diallo');
       expect(mockPrisma.student.create).toHaveBeenCalledWith({
@@ -152,7 +160,10 @@ describe('StudentsService', () => {
       mockPrisma.student.findMany.mockResolvedValue([baseStudent]);
       mockPrisma.student.count.mockResolvedValue(1);
 
-      const result = await service.listStudents(tenantId, { page: 1, limit: 20 });
+      const result = await service.listStudents(tenantId, {
+        page: 1,
+        limit: 20,
+      });
 
       expect(result.data).toHaveLength(1);
       expect(result.meta.total).toBe(1);
@@ -195,7 +206,10 @@ describe('StudentsService', () => {
       mockPrisma.student.findMany.mockResolvedValue([]);
       mockPrisma.student.count.mockResolvedValue(50);
 
-      const result = await service.listStudents(tenantId, { page: 3, limit: 20 });
+      const result = await service.listStudents(tenantId, {
+        page: 3,
+        limit: 20,
+      });
 
       expect(result.meta.page).toBe(3);
       expect(result.meta.totalPages).toBe(3);
@@ -232,12 +246,20 @@ describe('StudentsService', () => {
   describe('updateStudent', () => {
     it('should update a student successfully', async () => {
       mockPrisma.student.findFirst.mockResolvedValue(baseStudent);
-      const updatedStudent = { ...baseStudent, fullName: 'Jean Dupont Modifié' };
+      const updatedStudent = {
+        ...baseStudent,
+        fullName: 'Jean Dupont Modifié',
+      };
       mockPrisma.student.update.mockResolvedValue(updatedStudent);
 
-      const result = await service.updateStudent(tenantId, actorUserId, studentId, {
-        fullName: 'Jean Dupont Modifié',
-      });
+      const result = await service.updateStudent(
+        tenantId,
+        actorUserId,
+        studentId,
+        {
+          fullName: 'Jean Dupont Modifié',
+        },
+      );
 
       expect(result.fullName).toBe('Jean Dupont Modifié');
     });
@@ -246,7 +268,9 @@ describe('StudentsService', () => {
       mockPrisma.student.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.updateStudent(tenantId, actorUserId, 'nonexistent', { fullName: 'Test' }),
+        service.updateStudent(tenantId, actorUserId, 'nonexistent', {
+          fullName: 'Test',
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -256,7 +280,9 @@ describe('StudentsService', () => {
       mockPrisma.student.update.mockRejectedValue(error);
 
       await expect(
-        service.updateStudent(tenantId, actorUserId, studentId, { studentNumber: 'DUPLICATE' }),
+        service.updateStudent(tenantId, actorUserId, studentId, {
+          studentNumber: 'DUPLICATE',
+        }),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -267,7 +293,11 @@ describe('StudentsService', () => {
       const archivedStudent = { ...baseStudent, status: 'SUSPENDED' };
       mockPrisma.student.update.mockResolvedValue(archivedStudent);
 
-      const result = await service.deleteStudent(tenantId, actorUserId, studentId);
+      const result = await service.deleteStudent(
+        tenantId,
+        actorUserId,
+        studentId,
+      );
 
       expect(result).toEqual(archivedStudent);
       expect(mockPrisma.student.update).toHaveBeenCalledWith({
@@ -300,7 +330,11 @@ describe('StudentsService', () => {
     it('should import students successfully', async () => {
       const importDto = {
         students: [
-          { studentNumber: 'IMP001', fullName: 'Import 1', className: '6ème A' },
+          {
+            studentNumber: 'IMP001',
+            fullName: 'Import 1',
+            className: '6ème A',
+          },
           { studentNumber: 'IMP002', fullName: 'Import 2' },
         ],
       };
@@ -313,7 +347,11 @@ describe('StudentsService', () => {
         .mockResolvedValueOnce({ id: 'new-1' })
         .mockResolvedValueOnce({ id: 'new-2' });
 
-      const result = await service.importStudents(tenantId, actorUserId, importDto);
+      const result = await service.importStudents(
+        tenantId,
+        actorUserId,
+        importDto,
+      );
 
       expect(result.success).toBe(2);
       expect(result.errors).toHaveLength(0);
@@ -332,7 +370,11 @@ describe('StudentsService', () => {
         .mockResolvedValueOnce({ id: 'ok' })
         .mockRejectedValueOnce(new Error('DB error'));
 
-      const result = await service.importStudents(tenantId, actorUserId, importDto);
+      const result = await service.importStudents(
+        tenantId,
+        actorUserId,
+        importDto,
+      );
 
       expect(result.success).toBe(1);
       expect(result.errors).toHaveLength(1);
@@ -347,7 +389,13 @@ describe('StudentsService', () => {
       mockPrisma.student.create.mockResolvedValue({ id: 'new-1' });
 
       await service.importStudents(tenantId, actorUserId, {
-        students: [{ studentNumber: 'C001', fullName: 'Class Test', className: '5ème B' }],
+        students: [
+          {
+            studentNumber: 'C001',
+            fullName: 'Class Test',
+            className: '5ème B',
+          },
+        ],
       });
 
       expect(mockPrisma.schoolClass.findFirst).toHaveBeenCalledWith({

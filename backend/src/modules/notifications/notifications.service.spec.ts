@@ -154,7 +154,9 @@ describe('NotificationsService', () => {
       );
 
       expect(mockSend).toHaveBeenCalledWith(
-        expect.objectContaining({ to: [withdrawalCompletedPayload.requesterPhone] }),
+        expect.objectContaining({
+          to: [withdrawalCompletedPayload.requesterPhone],
+        }),
       );
       expect(result.status).toBe('sent');
       expect(result.provider).toBe('africastalking');
@@ -204,7 +206,9 @@ describe('NotificationsService', () => {
     it('simule le SMS en mode mock', async () => {
       const service = new NotificationsService();
 
-      const result = await service.queueWithdrawalFailedNotification(withdrawalFailedPayload);
+      const result = await service.queueWithdrawalFailedNotification(
+        withdrawalFailedPayload,
+      );
 
       expect(result.status).toBe('queued');
       expect(result.provider).toBe('mock-sms');
@@ -219,10 +223,14 @@ describe('NotificationsService', () => {
       });
       const service = new NotificationsService();
 
-      const result = await service.queueWithdrawalFailedNotification(withdrawalFailedPayload);
+      const result = await service.queueWithdrawalFailedNotification(
+        withdrawalFailedPayload,
+      );
 
       expect(mockSend).toHaveBeenCalledWith(
-        expect.objectContaining({ to: [withdrawalFailedPayload.requesterPhone] }),
+        expect.objectContaining({
+          to: [withdrawalFailedPayload.requesterPhone],
+        }),
       );
       expect(result.status).toBe('sent');
       expect(result.provider).toBe('africastalking');
@@ -233,7 +241,9 @@ describe('NotificationsService', () => {
       mockSend.mockRejectedValue(new Error('network down'));
       const service = new NotificationsService();
 
-      const result = await service.queueWithdrawalFailedNotification(withdrawalFailedPayload);
+      const result = await service.queueWithdrawalFailedNotification(
+        withdrawalFailedPayload,
+      );
 
       expect(result.status).toBe('failed');
       expect(result.provider).toBe('africastalking');
@@ -288,7 +298,9 @@ describe('NotificationsService', () => {
       );
 
       expect(mockSend).toHaveBeenCalledWith(
-        expect.objectContaining({ to: [mobilePaymentConfirmedPayload.payerPhone] }),
+        expect.objectContaining({
+          to: [mobilePaymentConfirmedPayload.payerPhone],
+        }),
       );
       expect(result.status).toBe('sent');
       expect(result.provider).toBe('africastalking');
@@ -355,7 +367,9 @@ describe('NotificationsService', () => {
       );
 
       expect(mockSend).toHaveBeenCalledWith(
-        expect.objectContaining({ to: [mobilePaymentFailedPayload.payerPhone] }),
+        expect.objectContaining({
+          to: [mobilePaymentFailedPayload.payerPhone],
+        }),
       );
       expect(result.status).toBe('sent');
       expect(result.provider).toBe('africastalking');

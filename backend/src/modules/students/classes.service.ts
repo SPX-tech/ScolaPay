@@ -66,7 +66,8 @@ export class ClassesService {
     try {
       const data: any = {};
       if (dto.name) data.name = dto.name.trim();
-      if (dto.description !== undefined) data.description = dto.description?.trim();
+      if (dto.description !== undefined)
+        data.description = dto.description?.trim();
       if (dto.academicYear) data.academicYear = dto.academicYear.trim();
       if (dto.status) data.status = dto.status;
 

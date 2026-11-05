@@ -18,7 +18,11 @@ export class StudentsService {
     private readonly auditService: AuditService,
   ) {}
 
-  async createStudent(tenantId: string, actorUserId: string, dto: CreateStudentDto) {
+  async createStudent(
+    tenantId: string,
+    actorUserId: string,
+    dto: CreateStudentDto,
+  ) {
     try {
       const student = await this.prisma.student.create({
         data: {
@@ -48,7 +52,12 @@ export class StudentsService {
 
       return student;
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException(
           `Un étudiant avec le matricule "${dto.studentNumber}" existe déjà.`,
         );
@@ -122,13 +131,17 @@ export class StudentsService {
       const data: Prisma.StudentUncheckedUpdateInput = {};
       if (dto.fullName) data.fullName = dto.fullName.trim();
       if (dto.studentNumber) data.studentNumber = dto.studentNumber.trim();
-      if (dto.guardianPhone !== undefined) data.guardianPhone = dto.guardianPhone?.trim();
-      if (dto.guardianName !== undefined) data.guardianName = dto.guardianName?.trim();
+      if (dto.guardianPhone !== undefined)
+        data.guardianPhone = dto.guardianPhone?.trim();
+      if (dto.guardianName !== undefined)
+        data.guardianName = dto.guardianName?.trim();
       if (dto.classId !== undefined) data.classId = dto.classId;
       if (dto.status) data.status = dto.status;
       if (dto.debtCents !== undefined) data.debtCents = BigInt(dto.debtCents);
-      if (dto.creditCents !== undefined) data.creditCents = BigInt(dto.creditCents);
-      if (dto.metadata !== undefined) data.metadata = dto.metadata as Prisma.InputJsonObject;
+      if (dto.creditCents !== undefined)
+        data.creditCents = BigInt(dto.creditCents);
+      if (dto.metadata !== undefined)
+        data.metadata = dto.metadata as Prisma.InputJsonObject;
 
       const student = await this.prisma.student.update({
         where: { id: studentId },
@@ -150,7 +163,12 @@ export class StudentsService {
 
       return student;
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException(
           `Un étudiant avec le matricule "${dto.studentNumber}" existe déjà.`,
         );
@@ -159,7 +177,11 @@ export class StudentsService {
     }
   }
 
-  async deleteStudent(tenantId: string, actorUserId: string, studentId: string) {
+  async deleteStudent(
+    tenantId: string,
+    actorUserId: string,
+    studentId: string,
+  ) {
     const existingStudent = await this.getStudentById(tenantId, studentId);
     const student = await this.prisma.student.update({
       where: { id: studentId },
@@ -182,8 +204,15 @@ export class StudentsService {
     return student;
   }
 
-  async importStudents(tenantId: string, actorUserId: string, dto: ImportStudentsDto) {
-    const results: { success: number; errors: { row: number; message: string }[] } = {
+  async importStudents(
+    tenantId: string,
+    actorUserId: string,
+    dto: ImportStudentsDto,
+  ) {
+    const results: {
+      success: number;
+      errors: { row: number; message: string }[];
+    } = {
       success: 0,
       errors: [],
     };
@@ -207,10 +236,16 @@ export class StudentsService {
         await this.prisma.student.create({
           data: {
             tenantId,
-            studentNumber: String(row.studentNumber || `IMP-${Date.now()}-${rowIndex}`),
+            studentNumber: String(
+              row.studentNumber || `IMP-${Date.now()}-${rowIndex}`,
+            ),
             fullName: String(row.fullName || 'Unknown'),
-            guardianPhone: row.guardianPhone ? String(row.guardianPhone) : undefined,
-            guardianName: row.guardianName ? String(row.guardianName) : undefined,
+            guardianPhone: row.guardianPhone
+              ? String(row.guardianPhone)
+              : undefined,
+            guardianName: row.guardianName
+              ? String(row.guardianName)
+              : undefined,
             classId,
             status: 'ACTIVE',
             debtCents: BigInt(row.debtCents || 0),

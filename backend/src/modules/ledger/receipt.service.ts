@@ -33,7 +33,8 @@ export class ReceiptService {
   generateReceiptNumber(tenantCode: string): string {
     const now = new Date();
     const yyyymmdd = `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}`;
-    const code = tenantCode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() || 'TENANT';
+    const code =
+      tenantCode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() || 'TENANT';
     const randomSuffix = randomBytes(4).toString('hex').toUpperCase();
 
     return `RCP-${code}-${yyyymmdd}-${randomSuffix}`;
@@ -83,7 +84,9 @@ export class ReceiptService {
       });
       return dataUrl;
     } catch (error) {
-      this.logger.warn(`QR code generation failed, falling back to plain data: ${(error as Error).message}`);
+      this.logger.warn(
+        `QR code generation failed, falling back to plain data: ${(error as Error).message}`,
+      );
       return data;
     }
   }
