@@ -1,9 +1,6 @@
 name: Refresh lockfiles
 on:
   workflow_dispatch:
-  push:
-    branches: ['mission001/ci-baseline']
-    paths: ['backend/package.json', 'web/package.json']
 permissions:
   contents: read
 jobs:
