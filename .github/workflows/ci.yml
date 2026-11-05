@@ -29,7 +29,6 @@ jobs:
           --health-cmd "pg_isready -U scolapay_test -d scolapay_test"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      DATABASE_URL: postgresql://scolapay_test:isolated_ci_only@localhost:${{ job.services.postgres.ports[5432] }}/scolapay_test?schema=public
       ACCESS_TOKEN_SECRET: isolated-ci-signing-key-with-no-production-access
       OUTBOX_POLLING_ENABLED: 'false'
       PAYMENT_PROVIDER: mock
@@ -39,6 +38,8 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
+      - name: Configurer la base jetable
+        run: echo 'DATABASE_URL=postgresql://scolapay_test:isolated_ci_only@localhost:${{ job.services.postgres.ports[5432] }}/scolapay_test?schema=public' >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
