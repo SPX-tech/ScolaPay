@@ -3,12 +3,13 @@ on:
   workflow_dispatch:
   push:
     branches: ['mission001/ci-baseline']
-    paths: ['backend/package.json', 'web/package.json']
+    paths: ['backend/package.json', 'web/package.json', '.github/workflows/refresh-lockfiles.yml']
 permissions:
   contents: read
 jobs:
   refresh:
-    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'build: refresh')
+    if: >-
+      github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'build: refresh')
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
