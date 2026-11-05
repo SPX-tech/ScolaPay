@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { startTransition, useState, useEffect, useCallback } from 'react';
 import { studentsApi, classesApi } from '@/lib/api';
 import { formatCurrency, getStatusColor, cn } from '@/lib/utils';
 import {
@@ -42,6 +42,8 @@ type SchoolClass = {
   academicYear: string;
   _count?: { students: number };
 };
+
+
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -98,8 +100,8 @@ export default function StudentsPage() {
     }
   }, []);
 
-  useEffect(() => { fetchClasses(); }, [fetchClasses]);
-  useEffect(() => { fetchStudents(); }, [fetchStudents]);
+  useEffect(() => { startTransition(() => { void fetchClasses(); }); }, [fetchClasses]);
+  useEffect(() => { startTransition(() => { void fetchStudents(); }); }, [fetchStudents]);
 
   const resetForm = () => {
     setForm({

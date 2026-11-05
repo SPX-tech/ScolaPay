@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { startTransition, useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { studentsApi, transactionsApi } from '@/lib/api';
 import { formatCurrency, formatDate, getStatusColor, cn } from '@/lib/utils';
@@ -59,8 +59,8 @@ export default function StudentDetailPage() {
     }
   }, [studentId, txPage]);
 
-  useEffect(() => { fetchStudent(); }, [fetchStudent]);
-  useEffect(() => { fetchTransactions(); }, [fetchTransactions]);
+  useEffect(() => { startTransition(() => { void fetchStudent(); }); }, [fetchStudent]);
+  useEffect(() => { startTransition(() => { void fetchTransactions(); }); }, [fetchTransactions]);
 
   const handleVoid = async (txId: string) => {
     const reason = prompt('Raison de l\'annulation :');

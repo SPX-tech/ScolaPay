@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { startTransition, useState, useEffect } from 'react';
 import { transactionsApi } from '@/lib/api';
 import { formatCurrency, formatDate, getStatusColor, cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight, Loader2, Search, CreditCard, XCircle, Calendar } from 'lucide-react';
@@ -39,7 +39,7 @@ export default function TransactionsPage() {
     }
   };
 
-  useEffect(() => { fetchTransactions(); }, [page, typeFilter, statusFilter, startDate, endDate]);
+  useEffect(() => { startTransition(() => { void fetchTransactions(); }); }, [page, typeFilter, statusFilter, startDate, endDate]);
 
   const handleVoid = async (id: string) => {
     const reason = prompt('Raison de l\'annulation :');

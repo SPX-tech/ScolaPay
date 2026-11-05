@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { dashboardApi } from '@/lib/api';
+import Link from 'next/link';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import {
   Banknote,
@@ -111,7 +112,7 @@ export default function DashboardPage() {
         <div className="bg-card border rounded-xl p-6">
           <h2 className="text-lg font-semibold mb-4">Actions rapides</h2>
           <div className="grid grid-cols-2 gap-3">
-            <a
+            <Link
               href="/dashboard/ledger"
               className="flex flex-col items-center gap-2 p-4 rounded-xl bg-primary/5 hover:bg-primary/10 border border-primary/10 transition-all group"
             >
@@ -119,8 +120,8 @@ export default function DashboardPage() {
                 <Banknote className="w-6 h-6 text-primary" />
               </div>
               <span className="text-sm font-medium">Nouvel encaissement</span>
-            </a>
-            <a
+            </Link>
+            <Link
               href="/dashboard/students"
               className="flex flex-col items-center gap-2 p-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 transition-all group"
             >
@@ -128,7 +129,7 @@ export default function DashboardPage() {
                 <BookOpen className="w-6 h-6 text-emerald-600" />
               </div>
               <span className="text-sm font-medium">Ajouter un élève</span>
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -136,9 +137,9 @@ export default function DashboardPage() {
         <div className="bg-card border rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Dernières transactions</h2>
-            <a href="/dashboard/transactions" className="text-sm text-primary hover:underline">
+            <Link href="/dashboard/transactions" className="text-sm text-primary hover:underline">
               Voir tout
-            </a>
+            </Link>
           </div>
           {data.recentTransactions.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">

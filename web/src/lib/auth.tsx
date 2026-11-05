@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { startTransition, createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi } from './api';
 import { useRouter } from 'next/navigation';
 
@@ -30,6 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
+    startTransition(() => {
     // Restore session from localStorage
     const savedToken = localStorage.getItem('access_token');
     const savedUser = localStorage.getItem('user');
@@ -38,11 +39,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(JSON.parse(savedUser));
     }
     setIsLoading(false);
+    });
   }, []);
 
   const login = useCallback(async (tenantCode: string, email: string, password: string) => {
     const response = await authApi.login(tenantCode, email, password);
-    const { accessToken, expiresIn, user: userData } = response.data;
+    const { accessToken, user: userData } = response.data;
 
     localStorage.setItem('access_token', accessToken);
     localStorage.setItem('user', JSON.stringify(userData));
