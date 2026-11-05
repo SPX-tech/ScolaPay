@@ -1,0 +1,32 @@
+name: Refresh lockfiles
+on:
+  workflow_dispatch:
+  push:
+    branches: ['mission001/ci-baseline']
+    paths: ['backend/package.json', 'web/package.json']
+permissions:
+  contents: read
+jobs:
+  refresh:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - name: Résoudre les versions compatibles et figer les dépendances directes
+        run: |
+          for app in backend web; do
+            (cd "$app" && npm install && npm update)
+            node scripts/pin-dependencies.mjs "$app"
+            (cd "$app" && npm install --package-lock-only)
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: manifests
+          path: |
+            backend/package.json
+            backend/package-lock.json
+            web/package.json
+            web/package-lock.json

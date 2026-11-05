@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3001",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "next start --port 3001",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -26,9 +27,9 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
-    "next": "^15.1.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "next": "16.4.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "react-hook-form": "^7.54.2",
     "recharts": "^2.15.0",
     "tailwind-merge": "^2.6.0",
@@ -36,11 +37,18 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
+    "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.2"
-  }
+    "typescript": "5.9.3",
+    "eslint": "^9.39.0",
+    "eslint-config-next": "16.4.5"
+  },
+  "engines": {
+    "node": ">=24.22.1 <25",
+    "npm": ">=11 <12"
+  },
+  "packageManager": "npm@11.19.1"
 }
