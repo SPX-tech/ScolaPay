@@ -1,4 +1,4 @@
-import { WithdrawalMethod } from '@prisma/client';
+import { WithdrawalMethod } from '../../../generated/prisma/client';
 import { IsEnum, IsInt, IsString, MaxLength, Min } from 'class-validator';
 
 export class CreateWithdrawalDto {

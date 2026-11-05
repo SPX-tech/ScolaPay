@@ -1,39 +1,18 @@
-import { ValidationPipe } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
+import 'dotenv/config';
+import { configureApp } from './configure-app';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { AuthGuard } from './common/guards/auth.guard';
-import { TenantGuard } from './common/guards/tenant.guard';
-import { RolesGuard } from './common/guards/roles.guard';
-import { BigIntSerializerInterceptor } from './common/interceptors/bigint-serializer.interceptor';
 
 async function bootstrap() {
   // rawBody: true expose request.rawBody (Buffer) pour la vérification de
   // signature des webhooks entrants (ex. Kadryza), qui doit s'effectuer sur
   // les octets exacts reçus, pas sur le JSON reparsé.
   const app = await NestFactory.create(AppModule, { rawBody: true });
-  const reflector = app.get(Reflector);
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
-
-  app.useGlobalGuards(
-    new AuthGuard(reflector),
-    new TenantGuard(reflector),
-    new RolesGuard(reflector),
-  );
-  app.useGlobalInterceptors(new BigIntSerializerInterceptor());
-
-  app.setGlobalPrefix('api/v1');
+  configureApp(app);
   const port = Number(process.env.PORT ?? process.env.APP_PORT ?? 3000);
 
   app.enableShutdownHooks();
 
   await app.listen(port, '0.0.0.0');
 }
-bootstrap();
+void bootstrap();

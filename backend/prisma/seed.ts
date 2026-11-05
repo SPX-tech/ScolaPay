@@ -1,7 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import 'dotenv/config';
+import { PrismaService } from '../src/prisma/prisma.service';
 import { createHash, randomBytes } from 'node:crypto';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaService();
 
 function hashPassword(password: string): string {
   return createHash('sha256').update(password).digest('hex');

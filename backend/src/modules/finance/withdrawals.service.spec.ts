@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { WithdrawalStatus } from '@prisma/client';
+import { WithdrawalStatus } from '../../generated/prisma/client';
 import { WithdrawalsService } from './withdrawals.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { VirtualAccountService } from './virtual-account.service';

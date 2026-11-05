@@ -6,7 +6,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, WithdrawalStatus } from '@prisma/client';
+import { Prisma, WithdrawalStatus } from '../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { VirtualAccountService } from './virtual-account.service';
 import { AuditService } from '../audit/audit.service';

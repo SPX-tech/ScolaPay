@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
-import { LedgerEntryType } from '@prisma/client';
+import { LedgerEntryType } from '../../generated/prisma/client';
 import { VirtualAccountService } from './virtual-account.service';
 import { PrismaService } from '../../prisma/prisma.service';
 

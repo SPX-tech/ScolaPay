@@ -1,5 +1,6 @@
 backend/node_modules/
 backend/dist/
+backend/src/generated/
 backend/coverage/
 backend/.env
 backend/.DS_Store
@@ -20,3 +21,8 @@ android/local.properties
 
 # OS
 .DS_Store
+
+# Variables locales et résultats temporaires
+.env
+web/.env*
+!web/.env.example

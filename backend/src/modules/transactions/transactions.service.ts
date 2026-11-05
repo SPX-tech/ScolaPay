@@ -2,7 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { PrismaService } from '../../prisma/prisma.service';
 import { ListTransactionsQueryDto } from './dto/list-transactions-query.dto';
 import { VoidTransactionDto } from './dto/void-transaction.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../../generated/prisma/client';
 import { AuditService } from '../audit/audit.service';
 
 @Injectable()
