@@ -165,7 +165,7 @@ export class LedgerService {
             qrCodeData,
             idempotencyKey: dto.idempotencyKey,
             note: dto.note,
-            metadata: dto.metadata as any,
+            metadata: dto.metadata as Prisma.InputJsonObject | undefined,
             recordedAt: new Date(),
           },
         });
@@ -233,8 +233,8 @@ export class LedgerService {
       });
 
       return response;
-    } catch (error: any) {
-      if (error?.code === 'P2002') {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
         throw new ConflictException('Transaction already recorded (duplicate).');
       }
       throw error;

@@ -9,6 +9,7 @@ import { UpdateStudentDto } from './dto/update-student.dto';
 import { ListStudentsQueryDto } from './dto/list-students-query.dto';
 import { ImportStudentsDto } from './dto/import-students.dto';
 import { AuditService } from '../audit/audit.service';
+import { Prisma } from '../../generated/prisma/client';
 
 @Injectable()
 export class StudentsService {
@@ -29,7 +30,7 @@ export class StudentsService {
           classId: dto.classId,
           status: 'ACTIVE',
           debtCents: dto.initialDebtCents ? BigInt(dto.initialDebtCents) : 0n,
-          metadata: dto.metadata as any,
+          metadata: dto.metadata as Prisma.InputJsonObject | undefined,
         },
         include: {
           class: { select: { id: true, name: true, academicYear: true } },
@@ -46,8 +47,8 @@ export class StudentsService {
       });
 
       return student;
-    } catch (error: any) {
-      if (error?.code === 'P2002') {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
         throw new ConflictException(
           `Un étudiant avec le matricule "${dto.studentNumber}" existe déjà.`,
         );
@@ -60,7 +61,7 @@ export class StudentsService {
     const { page = 1, limit = 20, search, status, classId } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = { tenantId };
+    const where: Prisma.StudentWhereInput = { tenantId };
     if (search) {
       where.OR = [
         { fullName: { contains: search, mode: 'insensitive' } },
@@ -118,7 +119,7 @@ export class StudentsService {
     const existingStudent = await this.getStudentById(tenantId, studentId);
 
     try {
-      const data: any = {};
+      const data: Prisma.StudentUncheckedUpdateInput = {};
       if (dto.fullName) data.fullName = dto.fullName.trim();
       if (dto.studentNumber) data.studentNumber = dto.studentNumber.trim();
       if (dto.guardianPhone !== undefined) data.guardianPhone = dto.guardianPhone?.trim();
@@ -127,7 +128,7 @@ export class StudentsService {
       if (dto.status) data.status = dto.status;
       if (dto.debtCents !== undefined) data.debtCents = BigInt(dto.debtCents);
       if (dto.creditCents !== undefined) data.creditCents = BigInt(dto.creditCents);
-      if (dto.metadata !== undefined) data.metadata = dto.metadata as any;
+      if (dto.metadata !== undefined) data.metadata = dto.metadata as Prisma.InputJsonObject;
 
       const student = await this.prisma.student.update({
         where: { id: studentId },
@@ -148,8 +149,8 @@ export class StudentsService {
       });
 
       return student;
-    } catch (error: any) {
-      if (error?.code === 'P2002') {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
         throw new ConflictException(
           `Un étudiant avec le matricule "${dto.studentNumber}" existe déjà.`,
         );
@@ -213,14 +214,14 @@ export class StudentsService {
             classId,
             status: 'ACTIVE',
             debtCents: BigInt(row.debtCents || 0),
-            metadata: row.metadata as any,
+            metadata: row.metadata as Prisma.InputJsonObject | undefined,
           },
         });
         results.success++;
-      } catch (error: any) {
+      } catch (error: unknown) {
         results.errors.push({
           row: rowIndex,
-          message: error?.message || 'Erreur inconnue',
+          message: error instanceof Error ? error.message : 'Erreur inconnue',
         });
       }
     }

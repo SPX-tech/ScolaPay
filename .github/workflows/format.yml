@@ -1,0 +1,23 @@
+name: Format sources
+on:
+  push:
+    branches: ['mission001/ci-baseline']
+    paths: ['.github/workflows/format.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - run: cd backend && npm ci && npx prettier --write 'src/**/*.ts' 'test/**/*.ts' prisma.config.ts
+      - run: tar -czf formatted.tar.gz backend/src backend/test backend/prisma.config.ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: formatted
+          path: formatted.tar.gz

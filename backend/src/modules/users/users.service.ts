@@ -8,6 +8,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { hashPassword } from '../../common/security/password.util';
 import { AuditService } from '../audit/audit.service';
+import { Prisma } from '../../generated/prisma/client';
 
 @Injectable()
 export class UsersService {
@@ -62,8 +63,8 @@ export class UsersService {
       });
 
       return user;
-    } catch (error: any) {
-      if (error?.code === 'P2002') {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
         throw new ConflictException(
           `Un utilisateur avec l'email "${dto.email}" existe déjà.`,
         );
@@ -76,7 +77,7 @@ export class UsersService {
     const existingUser = await this.getUserById(tenantId, userId);
 
     try {
-      const data: any = {};
+      const data: Prisma.UserUpdateInput = {};
       if (dto.email) data.email = dto.email.trim().toLowerCase();
       if (dto.fullName) data.fullName = dto.fullName.trim();
       if (dto.phone !== undefined) data.phone = dto.phone?.trim();
@@ -102,8 +103,8 @@ export class UsersService {
       });
 
       return user;
-    } catch (error: any) {
-      if (error?.code === 'P2002') {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
         throw new ConflictException(
           `Un utilisateur avec cet email existe déjà.`,
         );

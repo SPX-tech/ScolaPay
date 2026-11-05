@@ -160,7 +160,6 @@ describe('ReceiptService', () => {
   describe('generateQRCodeImage', () => {
     it('should return data when QR code generation works', async () => {
       // Mock dynamic import of qrcode
-      const originalImport = jest.requireActual('qrcode');
       jest.isolateModules(() => {
         // In test environment, dynamic import may fail, testing the fallback
       });

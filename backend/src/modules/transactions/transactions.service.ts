@@ -16,7 +16,7 @@ export class TransactionsService {
     const { page = 1, limit = 50, type, status, studentId, startDate, endDate } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = { tenantId };
+    const where: Prisma.TransactionWhereInput = { tenantId };
 
     if (type) where.type = type;
     if (status) where.status = status;
@@ -80,7 +80,7 @@ export class TransactionsService {
     const { page = 1, limit = 50 } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = { tenantId, studentId };
+    const where: Prisma.TransactionWhereInput = { tenantId, studentId };
 
     const [transactions, total] = await Promise.all([
       this.prisma.transaction.findMany({

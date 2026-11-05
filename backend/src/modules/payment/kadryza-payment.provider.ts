@@ -16,20 +16,20 @@ import {
  */
 @Injectable()
 export class KadryzaPaymentProvider implements PaymentProvider {
-  async collect(_input: CollectPaymentInput): Promise<CollectPaymentResult> {
-    throw new Error(
+  collect(_input: CollectPaymentInput): Promise<CollectPaymentResult> {
+    return Promise.reject(new Error(
       "KadryzaPaymentProvider.collect() n'est pas implémenté : contrat de l'API Kadryza " +
         "(URL de base, authentification, format de la requête de collecte) requis avant activation. " +
         'Utilisez PAYMENT_PROVIDER=mock en attendant.',
-    );
+    ));
   }
 
-  async payout(_input: PayoutInput): Promise<PayoutResult> {
-    throw new Error(
+  payout(_input: PayoutInput): Promise<PayoutResult> {
+    return Promise.reject(new Error(
       "KadryzaPaymentProvider.payout() n'est pas implémenté : contrat de l'API Kadryza " +
         "(URL de base, authentification, format de la requête de virement) requis avant activation. " +
         'Utilisez PAYMENT_PROVIDER=mock en attendant.',
-    );
+    ));
   }
 
   verifyWebhookSignature(): boolean {

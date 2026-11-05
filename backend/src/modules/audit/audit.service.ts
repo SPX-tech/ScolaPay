@@ -35,9 +35,9 @@ export class AuditService {
         action: input.action,
         targetType: input.targetType,
         targetId: input.targetId,
-        before: toAuditJson(input.before) as any,
-        after: toAuditJson(input.after) as any,
-        metadata: toAuditJson(input.metadata) as any,
+        before: toAuditJson(input.before) as Prisma.InputJsonValue | undefined,
+        after: toAuditJson(input.after) as Prisma.InputJsonValue | undefined,
+        metadata: toAuditJson(input.metadata) as Prisma.InputJsonValue | undefined,
       },
     });
   }
@@ -72,5 +72,5 @@ function toAuditJson(value: unknown): unknown {
     );
   }
 
-  return String(value);
+  return undefined;
 }

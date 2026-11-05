@@ -18,31 +18,31 @@ import {
 export class MockPaymentProvider implements PaymentProvider {
   private readonly logger = new Logger(MockPaymentProvider.name);
 
-  async collect(input: CollectPaymentInput): Promise<CollectPaymentResult> {
+  collect(input: CollectPaymentInput): Promise<CollectPaymentResult> {
     this.logger.log(
       `[MOCK USSD] Push envoyé à ${input.payerPhone} pour ${input.studentName} : ` +
         `${input.amountCents} ${input.currency} (réf. ${input.reference})`,
     );
 
-    return {
+    return Promise.resolve({
       status: 'PENDING',
       providerTransactionId: `MOCK-${randomUUID()}`,
-    };
+    });
   }
 
-  async payout(input: PayoutInput): Promise<PayoutResult> {
+  payout(input: PayoutInput): Promise<PayoutResult> {
     this.logger.log(
       `[MOCK PAYOUT] Virement accepté vers ${input.destination} (${input.method}) : ` +
         `${input.amountCents} (réf. ${input.reference})`,
     );
 
-    return {
+    return Promise.resolve({
       status: 'PROCESSING',
       providerTransactionId: `MOCK-PAYOUT-${randomUUID()}`,
-    };
+    });
   }
 
-  verifyWebhookSignature(): boolean {
+  verifyWebhookSignature(_rawBody?: Buffer | string, _headers?: Record<string, string | string[] | undefined>): boolean {
     // Pas de sécurité réelle en mode mock : usage dev/tests uniquement.
     return true;
   }
