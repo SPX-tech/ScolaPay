@@ -20,6 +20,20 @@ export function formatDate(date: string | Date): string {
   });
 }
 
+/**
+ * Une journée de rapport (AAAA-MM-JJ) est déjà calculée dans le fuseau de
+ * l'établissement : la convertir selon celui du navigateur pourrait changer de jour.
+ */
+export function formatCalendarDay(day: string): string {
+  const [year, month, date] = day.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, date)).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
 export function getStatusColor(status: string): string {
   const colors: Record<string, string> = {
     ACTIVE: 'bg-emerald-100 text-emerald-800',

@@ -2,7 +2,7 @@
 
 import { startTransition, useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCalendarDay, formatCurrency } from '@/lib/utils';
 import {
   Calendar,
   Download,
@@ -248,7 +248,7 @@ export default function ReportsPage() {
                         <tr><td colSpan={4} className="text-center py-8 text-muted-foreground">Aucune donnée pour cette période</td></tr>
                       ) : collections.dailyCollections.map((d: DailyCollection) => (
                         <tr key={d.date} className="border-b last:border-0 hover:bg-secondary/30 transition-colors">
-                          <td className="px-4 py-3 text-sm">{formatDate(d.date)}</td>
+                          <td className="px-4 py-3 text-sm">{formatCalendarDay(d.date)}</td>
                           <td className="px-4 py-3 text-sm text-right font-semibold text-emerald-600">
                             {formatCurrency(d.totalCents)}
                           </td>
