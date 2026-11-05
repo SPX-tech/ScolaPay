@@ -24,7 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.scolapay.mobile.ui.theme.Blue50
 import com.scolapay.mobile.ui.theme.Blue700
 
@@ -32,7 +32,7 @@ import com.scolapay.mobile.ui.theme.Blue700
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
-    viewModel: LoginViewModel = viewModel()
+    viewModel: LoginViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
@@ -89,6 +89,15 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(48.dp))
 
         // Email
+        OutlinedTextField(
+            value = uiState.tenantCode,
+            onValueChange = viewModel::onTenantCodeChanged,
+            label = { Text("Code établissement") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
         OutlinedTextField(
             value = uiState.email,
             onValueChange = viewModel::onEmailChanged,

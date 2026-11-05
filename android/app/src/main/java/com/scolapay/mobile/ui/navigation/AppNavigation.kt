@@ -9,7 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -48,7 +48,7 @@ fun AppNavigation(
     startDestination: String = Screen.Login.route
 ) {
     val navController = rememberNavController()
-    val loginViewModel: LoginViewModel = viewModel()
+    val loginViewModel: LoginViewModel = hiltViewModel()
 
     NavHost(
         navController = navController,
@@ -100,9 +100,9 @@ fun AppNavigation(
 
         composable(
             route = Screen.StudentDetail.route,
-            arguments = listOf(navArgument("studentId") { type = NavType.LongType })
+            arguments = listOf(navArgument("studentId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getLong("studentId") ?: return@composable
+            val studentId = backStackEntry.arguments?.getString("studentId") ?: return@composable
             StudentDetailScreen(
                 studentId = studentId,
                 onNavigateBack = { navController.popBackStack() },
@@ -115,13 +115,13 @@ fun AppNavigation(
         composable(
             route = Screen.StudentForm.route,
             arguments = listOf(navArgument("studentId") {
-                type = NavType.LongType
-                defaultValue = -1L
+                type = NavType.StringType
+                nullable = true; defaultValue = null
             })
         ) { backStackEntry ->
-            val studentId = backStackEntry.arguments?.getLong("studentId")
+            val studentId = backStackEntry.arguments?.getString("studentId")
             StudentFormScreen(
-                studentId = if (studentId != null && studentId > 0) studentId else null,
+                studentId = if (!studentId.isNullOrBlank()) studentId else null,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

@@ -3,6 +3,8 @@ package com.scolapay.mobile.data.repository
 import com.scolapay.mobile.data.api.ApiClient
 import com.scolapay.mobile.data.model.Transaction
 import com.scolapay.mobile.data.model.TransactionListResponse
+import com.scolapay.mobile.data.model.VoidTransactionRequest
+import com.scolapay.mobile.data.model.VoidTransactionResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -11,9 +13,9 @@ class TransactionRepository {
     private val api = ApiClient.getApiService()
 
     suspend fun getTransactions(
-        page: Int = 0,
+        page: Int = 1,
         limit: Int = 50,
-        studentId: Long? = null,
+        studentId: String? = null,
         status: String? = null,
         startDate: String? = null,
         endDate: String? = null
@@ -27,9 +29,9 @@ class TransactionRepository {
         }
     }
 
-    suspend fun voidTransaction(id: Long): Result<Transaction> = withContext(Dispatchers.IO) {
+    suspend fun voidTransaction(id: String, reason: String): Result<VoidTransactionResponse> = withContext(Dispatchers.IO) {
         try {
-            val response = api.voidTransaction(id)
+            val response = api.voidTransaction(id, VoidTransactionRequest(reason))
             if (response.isSuccessful) Result.success(response.body()!!)
             else Result.failure(Exception("Erreur lors de l'annulation"))
         } catch (e: Exception) {

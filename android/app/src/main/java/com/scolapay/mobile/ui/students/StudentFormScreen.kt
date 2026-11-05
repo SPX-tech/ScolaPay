@@ -12,15 +12,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.scolapay.mobile.ui.theme.Blue700
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudentFormScreen(
-    studentId: Long? = null,
+    studentId: String? = null,
     onNavigateBack: () -> Unit,
-    viewModel: StudentsViewModel = viewModel()
+    viewModel: StudentsViewModel = hiltViewModel()
 ) {
     LaunchedEffect(studentId) { viewModel.loadForm(studentId) }
     val uiState by viewModel.formState.collectAsStateWithLifecycle()
@@ -72,11 +72,11 @@ fun StudentFormScreen(
                 singleLine = true
             )
 
-            // Email
+            // GuardianName
             OutlinedTextField(
-                value = uiState.email,
-                onValueChange = viewModel::onEmailChanged,
-                label = { Text("Email") },
+                value = uiState.guardianName,
+                onValueChange = viewModel::onGuardianNameChanged,
+                label = { Text("Nom du tuteur") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -85,7 +85,7 @@ fun StudentFormScreen(
             OutlinedTextField(
                 value = uiState.phone,
                 onValueChange = viewModel::onPhoneChanged,
-                label = { Text("Téléphone") },
+                label = { Text("Téléphone du tuteur") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )

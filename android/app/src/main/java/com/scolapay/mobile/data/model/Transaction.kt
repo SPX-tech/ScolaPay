@@ -21,6 +21,10 @@ data class Transaction(
     val studentNumber: String get() = student?.studentNumber ?: ""
     val recordedByName: String get() = recordedBy?.fullName ?: ""
     val amountFormatted: String get() = "${amountCents / 100} $currency"
+    val amount: java.math.BigDecimal get() = amountCents.toBigDecimal().movePointLeft(2)
+    val description: String? get() = note
+    val paymentMethod: String get() = type
+    val createdAt: String get() = recordedAt
     val isPosted: Boolean get() = status == "POSTED"
     val isVoided: Boolean get() = status == "VOIDED"
     val isCashPayment: Boolean get() = type == "CASH_PAYMENT"
@@ -45,7 +49,10 @@ data class TransactionStudent(
     val id: String,
     val fullName: String,
     val studentNumber: String
-)
+) {
+    val firstName: String get() = fullName.substringBefore(' ')
+    val lastName: String get() = fullName.substringAfter(' ', "")
+}
 
 data class TransactionUser(
     val id: String,
@@ -54,11 +61,9 @@ data class TransactionUser(
 
 data class TransactionListResponse(
     val data: List<Transaction>,
-    val total: Int,
-    val page: Int,
-    val limit: Int
+    val meta: PaginationMeta
 ) {
-    val hasMore: Boolean get() = page * limit < total
+    val hasMore: Boolean get() = meta.page < meta.totalPages
 }
 
 data class VoidTransactionRequest(

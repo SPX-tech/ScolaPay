@@ -14,42 +14,30 @@ interface ApiService {
     @GET("dashboard/summary")
     suspend fun getDashboardSummary(): Response<DashboardSummary>
 
-    @GET("dashboard/monthly-report")
-    suspend fun getMonthlyReport(
-        @Query("year") year: Int,
-        @Query("month") month: Int
-    ): Response<MonthlyReport>
-
-    @GET("dashboard/class-report/{classId}")
-    suspend fun getClassReport(@Path("classId") classId: Long): Response<ClassReport>
-
-    @GET("dashboard/student-debts")
-    suspend fun getStudentDebts(): Response<List<StudentDebt>>
-
     // ===== Students =====
     @GET("students")
     suspend fun getStudents(
-        @Query("page") page: Int = 0,
+        @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 50,
         @Query("search") search: String? = null,
-        @Query("classId") classId: Long? = null,
+        @Query("classId") classId: String? = null,
         @Query("status") status: String? = null
     ): Response<StudentListResponse>
 
     @GET("students/{id}")
-    suspend fun getStudent(@Path("id") id: Long): Response<Student>
+    suspend fun getStudent(@Path("id") id: String): Response<Student>
 
     @POST("students")
     suspend fun createStudent(@Body request: CreateStudentRequest): Response<Student>
 
-    @PUT("students/{id}")
+    @PATCH("students/{id}")
     suspend fun updateStudent(
-        @Path("id") id: Long,
+        @Path("id") id: String,
         @Body request: UpdateStudentRequest
     ): Response<Student>
 
     @DELETE("students/{id}")
-    suspend fun deleteStudent(@Path("id") id: Long): Response<Unit>
+    suspend fun deleteStudent(@Path("id") id: String): Response<Unit>
 
     // ===== Classes =====
     @GET("classes")
@@ -58,32 +46,32 @@ interface ApiService {
     @POST("classes")
     suspend fun createClass(@Body request: CreateClassRequest): Response<SchoolClass>
 
-    @PUT("classes/{id}")
+    @PATCH("classes/{id}")
     suspend fun updateClass(
-        @Path("id") id: Long,
+        @Path("id") id: String,
         @Body request: UpdateClassRequest
     ): Response<SchoolClass>
 
     @DELETE("classes/{id}")
-    suspend fun deleteClass(@Path("id") id: Long): Response<Unit>
+    suspend fun deleteClass(@Path("id") id: String): Response<Unit>
 
     // ===== Ledger =====
-    @POST("ledger/cash-payment")
-    suspend fun recordCashPayment(@Body request: RecordCashPaymentRequest): Response<Transaction>
+    @POST("ledger/record-cash-payment")
+    suspend fun recordCashPayment(@Body request: RecordCashPaymentRequest): Response<RecordCashPaymentResponse>
 
     // ===== Transactions =====
     @GET("transactions")
     suspend fun getTransactions(
-        @Query("page") page: Int = 0,
+        @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 50,
-        @Query("studentId") studentId: Long? = null,
+        @Query("studentId") studentId: String? = null,
         @Query("status") status: String? = null,
         @Query("startDate") startDate: String? = null,
         @Query("endDate") endDate: String? = null
     ): Response<TransactionListResponse>
 
     @POST("transactions/{id}/void")
-    suspend fun voidTransaction(@Path("id") id: Long): Response<Transaction>
+    suspend fun voidTransaction(@Path("id") id: String, @Body request: VoidTransactionRequest): Response<VoidTransactionResponse>
 
     // ===== Users =====
     @GET("users")
@@ -92,24 +80,22 @@ interface ApiService {
     @POST("users")
     suspend fun createUser(@Body request: CreateUserRequest): Response<User>
 
-    @PUT("users/{id}")
+    @PATCH("users/{id}")
     suspend fun updateUser(
-        @Path("id") id: Long,
+        @Path("id") id: String,
         @Body request: UpdateUserRequest
     ): Response<User>
 
-    @DELETE("users/{id}")
-    suspend fun deleteUser(@Path("id") id: Long): Response<Unit>
+    @POST("users/{id}/suspend")
+    suspend fun deleteUser(@Path("id") id: String): Response<Unit>
 
     // ===== Reports =====
-    @GET("reports/revenue")
+    @GET("dashboard/reports/collections")
     suspend fun getRevenueReport(
         @Query("startDate") startDate: String,
         @Query("endDate") endDate: String
-    ): Response<RevenueReport>
+    ): Response<ReportCollection>
 
-    @GET("reports/student-debts")
-    suspend fun getDebtsReport(
-        @Query("classId") classId: Long? = null
-    ): Response<List<StudentDebt>>
+    @GET("dashboard/reports/students-debt")
+    suspend fun getDebtsReport(): Response<List<DebtStudent>>
 }

@@ -6,7 +6,12 @@ object Constants {
     const val COUNTRY = "Tchad"
     const val DEFAULT_CURRENCY = "XAF"
 
-    const val DEFAULT_API_URL = "http://161.97.119.233:8090/api/v1"
+    const val DEFAULT_API_URL = "http://10.0.2.2:3000/api/v1/"
+    const val PREFS_NAME = "scolapay_session"
+    const val KEY_TOKEN = "access_token"
+    const val KEY_USER_ID = "user_id"
+    const val KEY_USER_NAME = "user_name"
+    const val KEY_USER_ROLE = "user_role"
 
     const val DEFAULT_PAGE_SIZE = 20
     const val MAX_PAGE_SIZE = 100

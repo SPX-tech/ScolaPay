@@ -13,13 +13,13 @@ import javax.inject.Inject
 data class TransactionsUiState(
     val isLoading: Boolean = true,
     val transactions: List<Transaction> = emptyList(),
-    val currentPage: Int = 0,
+    val currentPage: Int = 1,
     val totalPages: Int = 1,
     val selectedStatus: String? = null,
     val startDate: String? = null,
     val endDate: String? = null,
     val error: String? = null,
-    val voidingTransactionId: Long? = null
+    val voidingTransactionId: String? = null
 )
 
 @HiltViewModel
@@ -57,16 +57,21 @@ class TransactionsViewModel @Inject constructor(
     }
 
     fun onStatusFilterChanged(status: String?) {
-        _uiState.value = _uiState.value.copy(selectedStatus = status, currentPage = 0)
+        _uiState.value = _uiState.value.copy(selectedStatus = status, currentPage = 1)
         loadTransactions()
     }
 
-    fun voidTransaction(id: Long) {
+    fun voidTransaction(id: String, reason: String) {
+        if (reason.trim().length < 5) {
+            _uiState.value = _uiState.value.copy(error = "Le motif doit contenir au moins 5 caractères")
+            return
+        }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(voidingTransactionId = id)
-            repo.voidTransaction(id)
+            val result = repo.voidTransaction(id, reason.trim())
             _uiState.value = _uiState.value.copy(voidingTransactionId = null)
-            loadTransactions()
+            if (result.isSuccess) loadTransactions()
+            else _uiState.value = _uiState.value.copy(error = result.exceptionOrNull()?.message)
         }
     }
 }

@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class LoginUiState(
+    val tenantCode: String = "",
     val email: String = "",
     val password: String = "",
     val isLoading: Boolean = false,
@@ -25,6 +26,10 @@ class LoginViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState
 
+    fun onTenantCodeChanged(value: String) {
+        _uiState.value = _uiState.value.copy(tenantCode = value, error = null)
+    }
+
     fun onEmailChanged(email: String) {
         _uiState.value = _uiState.value.copy(email = email, error = null)
     }
@@ -35,14 +40,14 @@ class LoginViewModel @Inject constructor(
 
     fun login() {
         val state = _uiState.value
-        if (state.email.isBlank() || state.password.isBlank()) {
+        if (state.tenantCode.isBlank() || state.email.isBlank() || state.password.isBlank()) {
             _uiState.value = state.copy(error = "Veuillez remplir tous les champs")
             return
         }
 
         viewModelScope.launch {
             _uiState.value = state.copy(isLoading = true, error = null)
-            val result = authRepository.login(state.email, state.password)
+            val result = authRepository.login(state.tenantCode, state.email, state.password)
             result.fold(
                 onSuccess = {
                     _uiState.value = _uiState.value.copy(isLoading = false, isLoggedIn = true)

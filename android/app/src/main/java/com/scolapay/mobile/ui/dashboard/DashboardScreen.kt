@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.scolapay.mobile.data.model.DashboardSummary
 import com.scolapay.mobile.data.model.MonthlyReport
 import com.scolapay.mobile.ui.theme.*
@@ -25,7 +25,7 @@ import com.scolapay.mobile.util.CurrencyFormatter
 fun DashboardScreen(
     onNavigateToStudents: () -> Unit = {},
     onNavigateToLedger: () -> Unit = {},
-    viewModel: DashboardViewModel = viewModel()
+    viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 

@@ -30,7 +30,7 @@ class ClassRepository {
             }
         }
 
-    suspend fun updateClass(id: Long, request: UpdateClassRequest): Result<SchoolClass> =
+    suspend fun updateClass(id: String, request: UpdateClassRequest): Result<SchoolClass> =
         withContext(Dispatchers.IO) {
             try {
                 val response = api.updateClass(id, request)
@@ -41,7 +41,7 @@ class ClassRepository {
             }
         }
 
-    suspend fun deleteClass(id: Long): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun deleteClass(id: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val response = api.deleteClass(id)
             if (response.isSuccessful) Result.success(Unit)

@@ -13,16 +13,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.scolapay.mobile.data.model.Student
 import com.scolapay.mobile.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudentsListScreen(
-    onStudentClick: (Long) -> Unit,
+    onStudentClick: (String) -> Unit,
     onAddStudent: () -> Unit,
-    viewModel: StudentsViewModel = viewModel()
+    viewModel: StudentsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.listState.collectAsStateWithLifecycle()
     var searchText by remember { mutableStateOf("") }
@@ -142,7 +142,7 @@ fun StudentCard(student: Student, onClick: () -> Unit) {
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
-                        text = "${student.firstName.first()}${student.lastName.first()}",
+                        text = "${student.firstName.take(1)}${student.lastName.take(1)}",
                         fontWeight = FontWeight.Bold,
                         color = Blue700
                     )

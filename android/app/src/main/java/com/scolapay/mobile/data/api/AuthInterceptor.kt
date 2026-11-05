@@ -41,15 +41,15 @@ class AuthInterceptor(context: Context) : Interceptor {
         prefs.edit().remove(Constants.KEY_TOKEN).apply()
     }
 
-    fun saveUserInfo(userId: Long, userName: String, userRole: String) {
+    fun saveUserInfo(userId: String, userName: String, userRole: String) {
         prefs.edit()
-            .putLong(Constants.KEY_USER_ID, userId)
+            .putString(Constants.KEY_USER_ID, userId)
             .putString(Constants.KEY_USER_NAME, userName)
             .putString(Constants.KEY_USER_ROLE, userRole)
             .apply()
     }
 
-    fun getUserId(): Long = prefs.getLong(Constants.KEY_USER_ID, 0)
+    fun getUserId(): String? = prefs.getString(Constants.KEY_USER_ID, null)
 
     fun getUserName(): String? = prefs.getString(Constants.KEY_USER_NAME, null)
 

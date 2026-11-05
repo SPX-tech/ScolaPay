@@ -10,10 +10,10 @@ class StudentRepository {
     private val api = ApiClient.getApiService()
 
     suspend fun getStudents(
-        page: Int = 0,
+        page: Int = 1,
         limit: Int = 50,
         search: String? = null,
-        classId: Long? = null,
+        classId: String? = null,
         status: String? = null
     ): Result<StudentListResponse> = withContext(Dispatchers.IO) {
         try {
@@ -25,7 +25,7 @@ class StudentRepository {
         }
     }
 
-    suspend fun getStudent(id: Long): Result<Student> = withContext(Dispatchers.IO) {
+    suspend fun getStudent(id: String): Result<Student> = withContext(Dispatchers.IO) {
         try {
             val response = api.getStudent(id)
             if (response.isSuccessful) Result.success(response.body()!!)
@@ -46,7 +46,7 @@ class StudentRepository {
             }
         }
 
-    suspend fun updateStudent(id: Long, request: UpdateStudentRequest): Result<Student> =
+    suspend fun updateStudent(id: String, request: UpdateStudentRequest): Result<Student> =
         withContext(Dispatchers.IO) {
             try {
                 val response = api.updateStudent(id, request)
@@ -57,7 +57,7 @@ class StudentRepository {
             }
         }
 
-    suspend fun deleteStudent(id: Long): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun deleteStudent(id: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val response = api.deleteStudent(id)
             if (response.isSuccessful) Result.success(Unit)

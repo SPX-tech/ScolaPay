@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.scolapay.mobile.data.model.Student
 import com.scolapay.mobile.ui.theme.*
 import com.scolapay.mobile.util.CurrencyFormatter
@@ -20,10 +20,10 @@ import com.scolapay.mobile.util.CurrencyFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudentDetailScreen(
-    studentId: Long,
+    studentId: String,
     onNavigateBack: () -> Unit,
-    onEditStudent: (Long) -> Unit,
-    viewModel: StudentsViewModel = viewModel()
+    onEditStudent: (String) -> Unit,
+    viewModel: StudentsViewModel = hiltViewModel()
 ) {
     LaunchedEffect(studentId) { viewModel.loadStudent(studentId) }
     val uiState by viewModel.detailState.collectAsStateWithLifecycle()
@@ -79,7 +79,7 @@ fun StudentDetailScreen(
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Text(
-                                            text = "${student.firstName.first()}${student.lastName.first()}",
+                                            text = "${student.firstName.take(1)}${student.lastName.take(1)}",
                                             style = MaterialTheme.typography.headlineMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = Blue700
@@ -103,7 +103,7 @@ fun StudentDetailScreen(
                     // Info sections
                     item {
                         InfoRow("Matricule", student.matricule ?: "Non défini")
-                        InfoRow("Email", student.email ?: "Non défini")
+                        InfoRow("Tuteur", student.guardianName ?: "Non défini")
                         InfoRow("Téléphone", student.phone ?: "Non défini")
                         InfoRow("Statut", if (student.status == "ACTIVE") "Actif" else "Inactif")
                     }

@@ -30,7 +30,7 @@ class UserRepository {
             }
         }
 
-    suspend fun updateUser(id: Long, request: UpdateUserRequest): Result<User> =
+    suspend fun updateUser(id: String, request: UpdateUserRequest): Result<User> =
         withContext(Dispatchers.IO) {
             try {
                 val response = api.updateUser(id, request)
@@ -41,7 +41,7 @@ class UserRepository {
             }
         }
 
-    suspend fun deleteUser(id: Long): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun deleteUser(id: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val response = api.deleteUser(id)
             if (response.isSuccessful) Result.success(Unit)

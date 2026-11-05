@@ -13,7 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.scolapay.mobile.data.model.Transaction
 import com.scolapay.mobile.ui.theme.*
 import com.scolapay.mobile.util.CurrencyFormatter
@@ -21,9 +21,21 @@ import com.scolapay.mobile.util.CurrencyFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionsScreen(
-    viewModel: TransactionsViewModel = viewModel()
+    viewModel: TransactionsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var pendingVoid by remember { mutableStateOf<String?>(null) }
+    var voidReason by remember { mutableStateOf("") }
+
+    pendingVoid?.let { id ->
+        AlertDialog(
+            onDismissRequest = { pendingVoid = null },
+            title = { Text("Annuler l'encaissement") },
+            text = { OutlinedTextField(value = voidReason, onValueChange = { voidReason = it }, label = { Text("Motif") }) },
+            confirmButton = { TextButton(enabled = voidReason.trim().length >= 5, onClick = { viewModel.voidTransaction(id, voidReason); pendingVoid = null }) { Text("Confirmer") } },
+            dismissButton = { TextButton(onClick = { pendingVoid = null }) { Text("Retour") } }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -48,13 +60,13 @@ fun TransactionsScreen(
                     label = { Text("Toutes") }
                 )
                 FilterChip(
-                    selected = uiState.selectedStatus == "COMPLETED",
-                    onClick = { viewModel.onStatusFilterChanged("COMPLETED") },
-                    label = { Text("Complétées") }
+                    selected = uiState.selectedStatus == "POSTED",
+                    onClick = { viewModel.onStatusFilterChanged("POSTED") },
+                    label = { Text("Validées") }
                 )
                 FilterChip(
-                    selected = uiState.selectedStatus == "VOID",
-                    onClick = { viewModel.onStatusFilterChanged("VOID") },
+                    selected = uiState.selectedStatus == "VOIDED",
+                    onClick = { viewModel.onStatusFilterChanged("VOIDED") },
                     label = { Text("Annulées") }
                 )
             }
@@ -80,7 +92,7 @@ fun TransactionsScreen(
                     items(uiState.transactions) { transaction ->
                         TransactionCard(
                             transaction = transaction,
-                            onVoid = { viewModel.voidTransaction(transaction.id) },
+                            onVoid = { voidReason = ""; pendingVoid = transaction.id },
                             isVoiding = uiState.voidingTransactionId == transaction.id
                         )
                     }
@@ -96,7 +108,7 @@ fun TransactionCard(
     onVoid: () -> Unit,
     isVoiding: Boolean
 ) {
-    val isVoid = transaction.status == "VOID"
+    val isVoid = transaction.status == "VOIDED"
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
