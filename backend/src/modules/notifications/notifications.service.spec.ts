@@ -7,7 +7,7 @@ const mockFactory = jest.fn(() => ({ SMS: { send: mockSend } }));
 
 // L'accès à mockFactory est différé dans une arrow afin d'éviter le TDZ :
 // la factory de jest.mock est hissée au-dessus des const ci-dessus.
-jest.mock('africastalking', () => ({
+jest.mock('./sms-client', () => ({
   __esModule: true,
   default: (config: unknown) => mockFactory(config),
 }));

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import africastalkingFactory from 'africastalking';
+import africastalkingFactory from './sms-client';
 
 type AfricastalkingInstance = ReturnType<typeof africastalkingFactory>;
 
