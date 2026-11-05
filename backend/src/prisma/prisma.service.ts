@@ -23,7 +23,7 @@ export class PrismaService
         connectionTimeoutMillis: 5_000,
         idleTimeoutMillis: 30_000,
         statement_timeout: 15_000,
-      }),
+      }, { schema: new URL(connectionString).searchParams.get('schema') ?? 'public' }),
     });
   }
 

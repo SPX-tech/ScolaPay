@@ -160,7 +160,7 @@ export class VirtualAccountService {
     fn: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
     if (tx) {
-      return fn(tx as Prisma.TransactionClient);
+      return fn(tx);
     }
     return this.prisma.$transaction((trx) => fn(trx));
   }

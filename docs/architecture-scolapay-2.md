@@ -46,7 +46,7 @@ Les simulations doivent rester dans des bases de développement ou de test sépa
 
 Conserver PostgreSQL 16 avec un correctif de maintenance évite une migration de format des volumes. Une montée majeure PostgreSQL demandera une sauvegarde restaurée en test, une répétition de `pg_upgrade` ou de la restauration logique, puis une fenêtre d'exploitation distincte.
 
-Prisma 7 change le client généré, la configuration CLI et le pilote PostgreSQL. Le générateur produit des sources TypeScript CommonJS compatibles avec NestJS 11. Les tests adaptent leur résolution des imports `.js` des sources générées ; les fichiers générés ne sont ni édités ni suivis dans Git.
+Prisma 7 change le client généré, la configuration CLI et le pilote PostgreSQL. Le générateur produit des sources TypeScript CommonJS compatibles avec NestJS 12. Les tests adaptent leur résolution des imports `.js` des sources générées ; les fichiers générés ne sont ni édités ni suivis dans Git.
 
 Une image Docker `migration` applique les migrations avant l'API. L'image d'exécution n'installe pas le CLI Prisma. Ne jamais utiliser `prisma migrate dev`, `db push` ou un reset sur une base persistante. Les migrations existantes restent immuables.
 

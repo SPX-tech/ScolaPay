@@ -15,19 +15,19 @@ Première exécution CI exploitable : [42101514091](https://github.com/SPX-tech/
 | Technologie | Cible | Motif |
 | --- | --- | --- |
 | Node.js | 24.22.1 | Branche LTS corrigée, commune aux images et à la CI |
-| NestJS | 11.2.8 | Correctif de la branche existante ; la version 12 implique aussi une migration ESM et TypeScript 6 |
+| NestJS | 12.3.3 | La branche 11 conserve une version de Multer vulnérable ; migration avec TypeScript 6 |
 | Prisma | 7.10.1 | Version 7 stable, pilote PostgreSQL explicite, aucun saut vers Prisma 8 en préversion |
 | PostgreSQL | 16.15 | Branche maintenue, format des volumes conservé |
 | Next.js | 16.4.5 | Branche stable avec migrations CSS, lint et React vérifiées |
 | React | 19.3.1 | Version stable compatible avec Next.js 16 |
-| TypeScript | 5.9.3 | Compatible avec le backend conservé et Prisma 7 |
+| TypeScript | 6.0.3 backend, 5.9.3 web | Contraintes vérifiées par application |
 | Kotlin / compilateur Compose | 2.3.20 | Versions alignées |
-| AGP / Gradle / JDK | 8.13.2 / 8.13 / 17 | Combinaison documentée, sans migration AGP 9 |
+| AGP / Gradle / JDK | 9.5.1 / 9.6.0 / 17 | SDK 37 requis par Compose, Kotlin intégré et Hilt 2.60.1 |
 | Compose BOM | 2026.09.00 | BOM stable publiée dans le dépôt Google |
 
 Les dépendances npm directes sont figées et les lockfiles produits ensemble sur un runner GitHub. Aucun `--force`, `--legacy-peer-deps` ou override de dépendance incompatible n'est utilisé.
 
-Hilt 2.58 est retenu car les versions 2.59 et suivantes imposent AGP 9. Le SDK Africa's Talking a été retiré : ses versions publiées 0.7.9 et 0.8.4 figent des versions vulnérables d'Axios et Joi. Son seul usage est remplacé par un transport SMS Node borné et testé, en conservant le fournisseur et le mode simulé sans clé. La CI n'envoie aucun SMS.
+AGP 9 et Hilt 2.60.1 sont retenus car Compose 2026.09.00 exige le SDK 37 et AGP 9.1 au minimum. Kotlin utilise le support intégré, sans option de compatibilité temporaire. Le SDK Africa's Talking a été retiré : ses versions publiées 0.7.9 et 0.8.4 figent des versions vulnérables d'Axios et Joi. Son seul usage est remplacé par un transport SMS Node borné et testé, en conservant le fournisseur et le mode simulé sans clé. La CI n'envoie aucun SMS.
 
 ESLint 10 utilise les plugins officiels Next.js et React Hooks directement. Le paquet de configuration agrégé Next.js entraîne encore des plugins dont les contraintes déclarées excluent ESLint 10 ; aucune contrainte n'est forcée pour les installer. Les tests Jest exécutent les imports dynamiques de Prisma avec le mode VM ESM documenté par Jest.
 

@@ -17,6 +17,9 @@ function generateReceiptNumber(tenantCode: string): string {
 }
 
 async function main() {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Le jeu de démonstration est interdit en production.');
+  }
   console.log('🌱 Début du seeding...\n');
 
   // ──────────────────────────────────────

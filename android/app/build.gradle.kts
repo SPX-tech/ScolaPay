@@ -3,7 +3,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
@@ -11,7 +10,7 @@ plugins {
 
 android {
     namespace = "com.scolapay.mobile"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.scolapay.mobile"
@@ -79,8 +78,8 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.5")
 
     // Hilt
-    implementation("com.google.dagger:hilt-android:2.58")
-    ksp("com.google.dagger:hilt-compiler:2.58")
+    implementation("com.google.dagger:hilt-android:2.60.1")
+    ksp("com.google.dagger:hilt-compiler:2.60.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // Retrofit + OkHttp

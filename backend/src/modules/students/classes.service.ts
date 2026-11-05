@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateClassDto } from './dto/create-class.dto';
 import { UpdateClassDto } from './dto/update-class.dto';
+import { Prisma } from '../../generated/prisma/client';
 
 @Injectable()
 export class ClassesService {
@@ -35,8 +36,8 @@ export class ClassesService {
           status: 'ACTIVE',
         },
       });
-    } catch (error: any) {
-      if (error?.code === 'P2002') {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
         throw new ConflictException(
           `Une classe "${dto.name}" existe déjà pour l'année ${dto.academicYear}.`,
         );
@@ -46,7 +47,7 @@ export class ClassesService {
   }
 
   async listClasses(tenantId: string, academicYear?: string) {
-    const where: any = { tenantId };
+    const where: Prisma.SchoolClassWhereInput = { tenantId };
     if (academicYear) where.academicYear = academicYear;
 
     return this.prisma.schoolClass.findMany({
@@ -64,7 +65,7 @@ export class ClassesService {
     await this.validateClass(tenantId, classId);
 
     try {
-      const data: any = {};
+      const data: Prisma.SchoolClassUpdateInput = {};
       if (dto.name) data.name = dto.name.trim();
       if (dto.description !== undefined)
         data.description = dto.description?.trim();
@@ -76,8 +77,8 @@ export class ClassesService {
         data,
         include: { _count: { select: { students: true } } },
       });
-    } catch (error: any) {
-      if (error?.code === 'P2002') {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
         throw new ConflictException(
           `Une classe "${dto.name}" existe déjà pour cette année académique.`,
         );

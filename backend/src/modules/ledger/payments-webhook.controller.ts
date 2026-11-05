@@ -51,7 +51,7 @@ export class PaymentsWebhookController {
 
     const isValid = this.paymentProvider.verifyWebhookSignature(
       rawBody,
-      request.headers as Record<string, string | string[] | undefined>,
+      request.headers,
     );
 
     if (!isValid) {

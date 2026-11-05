@@ -52,10 +52,15 @@ jobs:
       - run: npm run prisma:migrate:deploy
       - name: Vérifier le rejeu des migrations
         run: npm run prisma:migrate:deploy
+      - name: Vérifier l'absence de dérive du schéma
+        run: npx --no-install prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
       - run: npm run lint
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
       - run: npm run build
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+      - name: Vérifier le jeu de démonstration sur la base jetable
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        run: npm run prisma:seed
       - run: npm test -- --runInBand
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
       - run: npm run test:e2e -- --runInBand
@@ -117,10 +122,10 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v4.0.4
         with:
-          packages: platform-tools platforms;android-36 build-tools;35.0.0
+          packages: platform-tools platforms;android-37 build-tools;36.0.0
       - uses: gradle/actions/setup-gradle@v6.4.1
         with:
-          gradle-version: '8.13'
+          gradle-version: '9.6.0'
       - name: Compiler et vérifier Android
         run: bash gradlew --no-daemon --max-workers=2 :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
       - uses: actions/upload-artifact@v7.0.2

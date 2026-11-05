@@ -50,23 +50,23 @@ export class OutboxWorkerService {
 
           if (event.eventType === 'cash-payment.recorded') {
             await this.notificationsService.queueCashPaymentNotification(
-              event.payload as Record<string, unknown>,
+              event.payload,
             );
           } else if (event.eventType === 'withdrawal.completed') {
             await this.notificationsService.queueWithdrawalCompletedNotification(
-              event.payload as Record<string, unknown>,
+              event.payload,
             );
           } else if (event.eventType === 'withdrawal.failed') {
             await this.notificationsService.queueWithdrawalFailedNotification(
-              event.payload as Record<string, unknown>,
+              event.payload,
             );
           } else if (event.eventType === 'mobile-payment.confirmed') {
             await this.notificationsService.queueMobilePaymentConfirmedNotification(
-              event.payload as Record<string, unknown>,
+              event.payload,
             );
           } else if (event.eventType === 'mobile-payment.failed') {
             await this.notificationsService.queueMobilePaymentFailedNotification(
-              event.payload as Record<string, unknown>,
+              event.payload,
             );
           }
 

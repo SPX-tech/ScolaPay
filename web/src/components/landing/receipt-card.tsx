@@ -16,6 +16,9 @@ export function ReceiptCard() {
         <div className="receipt-perf h-4 bg-ink" />
 
         <div className="space-y-5 p-6">
+          <p className="font-mono text-[11px] uppercase tracking-wide text-slatey">
+            Démonstration, sans valeur de paiement
+          </p>
           <div className="flex items-center justify-between">
             <div>
               <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-slatey">
