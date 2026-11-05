@@ -46,18 +46,21 @@ export default function ReportsPage() {
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(true);
   const [collections, setCollections] = useState<any>(null);
+  const [collectionsError, setCollectionsError] = useState('');
   const [debtStudents, setDebtStudents] = useState<DebtStudent[]>([]);
   const [debtLoading, setDebtLoading] = useState(false);
 
   const fetchCollections = useCallback(async () => {
     setLoading(true);
+    setCollectionsError('');
     try {
       const res = await api.get('/dashboard/reports/collections', {
         params: { startDate, endDate },
       });
       setCollections(res.data);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setCollections(null);
+      setCollectionsError(err.response?.data?.message || 'Impossible de charger le rapport.');
     } finally {
       setLoading(false);
     }
@@ -167,11 +170,12 @@ export default function ReportsPage() {
       {activeTab === 'collections' && (
         <>
           {/* Date filter */}
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex flex-wrap items-center gap-3 mb-4">
             <Calendar className="w-4 h-4 text-muted-foreground" />
             <input
               type="date"
               value={startDate}
+              max={endDate}
               onChange={(e) => setStartDate(e.target.value)}
               className="px-3 py-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             />
@@ -179,10 +183,17 @@ export default function ReportsPage() {
             <input
               type="date"
               value={endDate}
+              min={startDate}
               onChange={(e) => setEndDate(e.target.value)}
               className="px-3 py-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
+
+          {collectionsError && (
+            <p role="alert" className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+              {collectionsError}
+            </p>
+          )}
 
           {loading ? (
             <div className="flex items-center justify-center h-64">

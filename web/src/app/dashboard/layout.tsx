@@ -24,7 +24,14 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '@/hooks/use-toast';
 
-const queryClient = new QueryClient();
+/**
+ * Monté avec une clé de session : le cache meurt avec la session, et les données
+ * d'un établissement ne peuvent pas réapparaître après un changement de compte.
+ */
+function SessionQueryProvider({ children }: { children: React.ReactNode }) {
+  const [queryClient] = useState(() => new QueryClient());
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+}
 
 /**
  * `roles` optionnel : absent = visible par tous les rôles connectés
@@ -63,7 +70,7 @@ export default function DashboardLayout({
   };
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <SessionQueryProvider key={user ? `${user.tenantId}:${user.id}` : 'anonymous'}>
       <ToastProvider>
       <div className="min-h-screen flex">
         {/* Mobile overlay */}
@@ -186,6 +193,6 @@ export default function DashboardLayout({
         </main>
       </div>
       </ToastProvider>
-    </QueryClientProvider>
+    </SessionQueryProvider>
   );
 }

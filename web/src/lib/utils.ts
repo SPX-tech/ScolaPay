@@ -39,3 +39,26 @@ export function getStatusColor(status: string): string {
   };
   return colors[status] || 'bg-gray-100 text-gray-800';
 }
+
+const TRANSACTION_TYPE_LABELS: Record<string, string> = {
+  CASH_PAYMENT: 'Paiement cash',
+  MOBILE_PAYMENT: 'Paiement mobile',
+  DEBT_ADJUSTMENT: 'Ajustement',
+  REFUND: 'Remb.',
+  WITHDRAWAL: 'Retrait',
+};
+
+const TRANSACTION_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'En attente',
+  POSTED: 'Publié',
+  FAILED: 'Échoué',
+  VOIDED: 'Annulé',
+};
+
+export function transactionTypeLabel(type: string): string {
+  return TRANSACTION_TYPE_LABELS[type] ?? type;
+}
+
+export function transactionStatusLabel(status: string): string {
+  return TRANSACTION_STATUS_LABELS[status] ?? status;
+}

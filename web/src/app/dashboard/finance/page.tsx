@@ -120,19 +120,24 @@ export default function FinancePage() {
   const [withdrawalsPage, setWithdrawalsPage] = useState(1);
   const [ledgerPage, setLedgerPage] = useState(1);
 
-  const { data: balance, isLoading: balanceLoading } = useQuery({
-    queryKey: ['finance', 'balance'],
+  const tenantId = user?.tenantId;
+
+  const { data: balance, isPending: balanceLoading } = useQuery({
+    queryKey: ['finance', tenantId, 'balance'],
+    enabled: Boolean(tenantId),
     queryFn: async () => (await financeApi.getBalance()).data as Balance,
   });
 
-  const { data: withdrawalsData, isLoading: withdrawalsLoading } = useQuery({
-    queryKey: ['finance', 'withdrawals', withdrawalsPage],
+  const { data: withdrawalsData, isPending: withdrawalsLoading } = useQuery({
+    queryKey: ['finance', tenantId, 'withdrawals', withdrawalsPage],
+    enabled: Boolean(tenantId),
     queryFn: async () =>
       (await financeApi.listWithdrawals({ page: withdrawalsPage, limit: PAGE_SIZE })).data as Paginated<WithdrawalRequest>,
   });
 
-  const { data: ledgerData, isLoading: ledgerLoading } = useQuery({
-    queryKey: ['finance', 'ledger', ledgerPage],
+  const { data: ledgerData, isPending: ledgerLoading } = useQuery({
+    queryKey: ['finance', tenantId, 'ledger', ledgerPage],
+    enabled: Boolean(tenantId),
     queryFn: async () =>
       (await financeApi.listLedgerEntries({ page: ledgerPage, limit: PAGE_SIZE })).data as Paginated<LedgerEntry>,
   });
@@ -157,7 +162,7 @@ export default function FinancePage() {
         description: 'La demande a été créée et les fonds ont été bloqués.',
         variant: 'success',
       });
-      queryClient.invalidateQueries({ queryKey: ['finance'] });
+      queryClient.invalidateQueries({ queryKey: ['finance', tenantId] });
       setWithdrawalsPage(1);
       setDialogOpen(false);
       form.reset();

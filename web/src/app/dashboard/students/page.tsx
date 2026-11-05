@@ -165,7 +165,8 @@ export default function StudentsPage() {
         studentNumber: form.studentNumber || undefined,
         guardianPhone: form.guardianPhone || undefined,
         guardianName: form.guardianName || undefined,
-        classId: form.classId || undefined,
+        // Les sentinelles de statut partagent ce sélecteur mais ne sont pas des classes.
+        classId: form.classId && !form.classId.startsWith('__') ? form.classId : undefined,
         status: form.classId === '__GRADUATED__' ? 'GRADUATED' : form.classId === '__SUSPENDED__' ? 'SUSPENDED' : undefined,
       });
       setShowEditModal(false);

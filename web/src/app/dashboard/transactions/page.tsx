@@ -2,7 +2,7 @@
 
 import { startTransition, useState, useEffect } from 'react';
 import { transactionsApi } from '@/lib/api';
-import { formatCurrency, formatDate, getStatusColor, cn } from '@/lib/utils';
+import { formatCurrency, formatDate, getStatusColor, cn, transactionStatusLabel, transactionTypeLabel } from '@/lib/utils';
 import { ChevronLeft, ChevronRight, Loader2, Search, CreditCard, XCircle, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -16,11 +16,13 @@ export default function TransactionsPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [voidingId, setVoidingId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState('');
   const { toast } = useToast();
   const limit = 20;
 
   const fetchTransactions = async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const res = await transactionsApi.list({
         page,
@@ -32,8 +34,9 @@ export default function TransactionsPage() {
       });
       setTransactions(res.data.data);
       setTotalPages(res.data.meta.totalPages);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setTransactions([]);
+      setLoadError(err.response?.data?.message || 'Impossible de charger les transactions.');
     } finally {
       setLoading(false);
     }
@@ -84,11 +87,12 @@ export default function TransactionsPage() {
           <option value="POSTED">Publié</option>
           <option value="VOIDED">Annulé</option>
         </select>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Calendar className="w-4 h-4 text-muted-foreground" />
           <input
             type="date"
             value={startDate}
+            max={endDate || undefined}
             onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
             className="px-3 py-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
           />
@@ -96,6 +100,7 @@ export default function TransactionsPage() {
           <input
             type="date"
             value={endDate}
+            min={startDate || undefined}
             onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
             className="px-3 py-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
           />
@@ -109,6 +114,12 @@ export default function TransactionsPage() {
           )}
         </div>
       </div>
+
+      {loadError && (
+        <p role="alert" className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+          {loadError}
+        </p>
+      )}
 
       {/* Table */}
       <div className="bg-card border rounded-xl overflow-hidden">
@@ -138,7 +149,7 @@ export default function TransactionsPage() {
                   <td className="px-4 py-3 text-sm font-medium">{tx.student?.fullName || 'N/A'}</td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">{tx.recordedBy?.fullName || 'N/A'}</td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
-                    {tx.type === 'CASH_PAYMENT' ? 'Paiement cash' : tx.type === 'DEBT_ADJUSTMENT' ? 'Ajustement' : 'Remb.'}
+                    {transactionTypeLabel(tx.type)}
                   </td>
                   <td className="px-4 py-3 text-sm text-right font-semibold text-emerald-600">
                     {formatCurrency(tx.amountCents)}
@@ -146,12 +157,12 @@ export default function TransactionsPage() {
                   <td className="px-4 py-3 text-sm text-right">{formatCurrency(tx.newDebtCents)}</td>
                   <td className="px-4 py-3 text-center">
                     <span className={cn('inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium', getStatusColor(tx.status))}>
-                      {tx.status === 'POSTED' ? 'Publié' : 'Annulé'}
+                      {transactionStatusLabel(tx.status)}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground text-right">{formatDate(tx.recordedAt)}</td>
                   <td className="px-4 py-3 text-center">
-                    {tx.status === 'POSTED' && (
+                    {tx.status === 'POSTED' && tx.type === 'CASH_PAYMENT' && (
                       <button
                         onClick={() => handleVoid(tx.id)}
                         disabled={voidingId === tx.id}

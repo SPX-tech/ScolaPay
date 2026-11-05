@@ -3,7 +3,7 @@
 import { startTransition, useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { studentsApi, transactionsApi } from '@/lib/api';
-import { formatCurrency, formatDate, getStatusColor, cn } from '@/lib/utils';
+import { formatCurrency, formatDate, getStatusColor, cn, transactionStatusLabel, transactionTypeLabel } from '@/lib/utils';
 import {
   ArrowLeft,
   BookOpen,
@@ -233,19 +233,19 @@ export default function StudentDetailPage() {
                 <tr key={tx.id} className="border-b last:border-0 hover:bg-secondary/30 transition-colors">
                   <td className="px-4 py-3 text-sm font-mono">{tx.receiptNumber}</td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
-                    {tx.type === 'CASH_PAYMENT' ? 'Paiement cash' : tx.type === 'DEBT_ADJUSTMENT' ? 'Ajustement' : 'Remb.'}
+                    {transactionTypeLabel(tx.type)}
                   </td>
                   <td className="px-4 py-3 text-sm text-right font-semibold text-emerald-600">{formatCurrency(tx.amountCents)}</td>
                   <td className="px-4 py-3 text-sm text-right">{formatCurrency(tx.previousDebtCents)}</td>
                   <td className="px-4 py-3 text-sm text-right">{formatCurrency(tx.newDebtCents)}</td>
                   <td className="px-4 py-3 text-center">
                     <span className={cn('inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium', getStatusColor(tx.status))}>
-                      {tx.status === 'POSTED' ? 'Publié' : 'Annulé'}
+                      {transactionStatusLabel(tx.status)}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground text-right">{formatDate(tx.recordedAt)}</td>
                   <td className="px-4 py-3 text-center">
-                    {tx.status === 'POSTED' && (
+                    {tx.status === 'POSTED' && tx.type === 'CASH_PAYMENT' && (
                       <button onClick={() => handleVoid(tx.id)} disabled={voidingId === tx.id}
                         className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30"
                         title="Annuler cette transaction">
