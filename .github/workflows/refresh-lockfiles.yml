@@ -20,10 +20,16 @@ jobs:
       - name: Résoudre les versions compatibles et figer les dépendances directes
         run: |
           for app in backend web; do
-            (cd "$app" && npm install && npm update)
+            (cd "$app" && npm install --strict-peer-deps && npm update --strict-peer-deps)
             node scripts/pin-dependencies.mjs "$app"
             (cd "$app" && npm install --package-lock-only)
           done
+      - name: Normaliser le formatage backend
+        run: |
+          cd backend
+          npx --no-install prettier --write 'src/**/*.ts' 'test/**/*.ts' prisma.config.ts
+          cd ..
+          tar -czf formatted.tar.gz backend/src backend/test backend/prisma.config.ts
       - uses: actions/upload-artifact@v4
         with:
           name: manifests
@@ -32,3 +38,7 @@ jobs:
             backend/package-lock.json
             web/package.json
             web/package-lock.json
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: formatted
+          path: formatted.tar.gz
