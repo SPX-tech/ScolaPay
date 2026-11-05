@@ -68,7 +68,7 @@ export function ReceiptCard() {
       </div>
 
       {/* Cachet « VÉRIFIÉ » — le geste du tampon officiel */}
-      <div className="animate-stamp pointer-events-none absolute -right-3 bottom-10 select-none sm:-right-6">
+      <div className="animate-stamp pointer-events-none absolute right-2 bottom-10 select-none lg:-right-6">
         <div className="flex h-24 w-24 flex-col items-center justify-center rounded-full border-4 border-gold/80 bg-paper/40 text-center backdrop-blur-[1px]">
           <BadgeCheck className="h-6 w-6 text-gold" />
           <span className="font-display text-sm font-extrabold uppercase tracking-wider text-gold">
