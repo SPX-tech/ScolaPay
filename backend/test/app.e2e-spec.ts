@@ -28,6 +28,25 @@ describe('ScolaPay E2E Tests', () => {
   });
 
   describe('Authentication', () => {
+    it('authentifie et retourne un jeton utilisable', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          tenantCode: 'DEMO001',
+          email: 'admin@demo.td',
+          password: 'admin123',
+        })
+        .expect(201);
+      expect(typeof response.body.accessToken).toBe('string');
+      expect(typeof response.body.expiresInSeconds).toBe('number');
+      expect(response.body.user.role).toBe('TENANT_ADMIN');
+      const tenant = await request(app.getHttpServer())
+        .get('/api/v1/tenants/me')
+        .auth(response.body.accessToken, { type: 'bearer' })
+        .expect(200);
+      expect(tenant.body.code).toBe('DEMO001');
+    });
+
     it('POST /api/v1/auth/login without body should return 400', () => {
       return request(app.getHttpServer())
         .post('/api/v1/auth/login')

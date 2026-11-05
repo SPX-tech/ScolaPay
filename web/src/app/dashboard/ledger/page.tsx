@@ -95,6 +95,7 @@ function LedgerContent() {
   };
 
   const resetForm = () => {
+    paymentIntent.current = null;
     setStep('select');
     setSelectedStudent(null);
     setAmount('');
@@ -128,22 +129,23 @@ function LedgerContent() {
         <div className="max-w-2xl">
           {/* Step indicators */}
           <div className="flex items-center gap-2 mb-6">
-            {['Sélection élève', 'Montant', 'Confirmation'].map((label, i) => {
+            {['Élève', 'Montant', 'Reçu'].map((label, i) => {
               const steps = ['select', 'confirm', 'done'];
               const currentIdx = steps.indexOf(step);
               const isActive = i <= currentIdx;
+              const StepIcon = [Search, Banknote, ReceiptIcon][i];
               return (
                 <div key={label} className="flex items-center gap-2">
                   <div className={cn(
                     'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors',
                     isActive ? 'bg-primary text-white' : 'bg-secondary text-muted-foreground',
                   )}>
-                    {isActive && i < currentIdx ? <CheckCircle className="w-4 h-4" /> : i + 1}
+                    {isActive && i < currentIdx ? <CheckCircle className="w-4 h-4" /> : <StepIcon className="w-4 h-4" aria-hidden="true" />}
                   </div>
                   <span className={cn('text-sm', isActive ? 'text-foreground font-medium' : 'text-muted-foreground')}>
                     {label}
                   </span>
-                  {i < 2 && <div className={cn('w-8 h-0.5', i < currentIdx ? 'bg-primary' : 'bg-secondary')} />}
+                  {i < 2 && <div className={cn('w-3 sm:w-8 h-0.5', i < currentIdx ? 'bg-primary' : 'bg-secondary')} />}
                 </div>
               );
             })}
