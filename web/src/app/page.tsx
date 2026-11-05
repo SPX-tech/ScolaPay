@@ -308,7 +308,7 @@ export default function LandingPage() {
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 font-mono text-sm">
-              <p className="text-white/40">// empreinte du reçu</p>
+              <p className="text-white/40">Empreinte du reçu</p>
               <p className="mt-3 break-all leading-relaxed text-gold">
                 SHA-256(tenant + élève + montant + n° reçu + secret)
               </p>
