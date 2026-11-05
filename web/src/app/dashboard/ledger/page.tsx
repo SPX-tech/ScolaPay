@@ -1,9 +1,10 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ledgerApi, studentsApi } from '@/lib/api';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
+import { parseAmountCents } from '@/lib/money';
 import { Loader2, Search, CheckCircle, Printer, Banknote, Receipt as ReceiptIcon } from 'lucide-react';
 
 function LedgerContent() {
@@ -20,6 +21,7 @@ function LedgerContent() {
   const [result, setResult] = useState<any>(null);
   const [receiptData, setReceiptData] = useState<any>(null);
   const [error, setError] = useState('');
+  const paymentIntent = useRef<{ payload: string; key: string } | null>(null);
 
   useEffect(() => {
     const preSelectedId = searchParams.get('studentId');
@@ -54,7 +56,8 @@ function LedgerContent() {
   };
 
   const handleSubmit = async () => {
-    if (!amount || Number(amount) <= 0) {
+    const amountCents = parseAmountCents(amount);
+    if (!amountCents) {
       setError('Montant invalide');
       return;
     }
@@ -63,12 +66,15 @@ function LedgerContent() {
     setError('');
 
     try {
-      const amountCents = Math.round(parseFloat(amount) * 100);
+      const payload = JSON.stringify({ studentId: selectedStudent.id, amountCents, note });
+      if (paymentIntent.current?.payload !== payload) {
+        paymentIntent.current = { payload, key: crypto.randomUUID() };
+      }
       const res = await ledgerApi.recordCashPayment({
         studentId: selectedStudent.id,
         amountCents,
         note: note || undefined,
-        idempotencyKey: `${selectedStudent.id}-${Date.now()}`,
+        idempotencyKey: paymentIntent.current.key,
       });
       setResult(res.data);
 

@@ -1,12 +1,14 @@
 package com.scolapay.mobile.util
 
+import com.scolapay.mobile.BuildConfig
+
 object Constants {
     const val APP_NAME = "ScolaPay"
     const val APP_TAGLINE = "Gestion Financière Scolaire"
     const val COUNTRY = "Tchad"
     const val DEFAULT_CURRENCY = "XAF"
 
-    const val DEFAULT_API_URL = "http://10.0.2.2:3000/api/v1/"
+    const val DEFAULT_API_URL = BuildConfig.API_BASE_URL
     const val PREFS_NAME = "scolapay_session"
     const val KEY_TOKEN = "access_token"
     const val KEY_USER_ID = "user_id"

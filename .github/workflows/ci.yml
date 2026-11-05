@@ -37,14 +37,15 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - name: Configurer la base jetable
         run: echo 'DATABASE_URL=postgresql://scolapay_test:isolated_ci_only@localhost:${{ job.services.postgres.ports[5432] }}/scolapay_test?schema=public' >> "$GITHUB_ENV"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version-file: .node-version
           cache: npm
           cache-dependency-path: backend/package-lock.json
+      - run: npm install --global npm@11.19.1
       - run: npm ci
         id: dependencies
       - run: npm run prisma:generate
@@ -72,18 +73,21 @@ jobs:
       NEXT_TELEMETRY_DISABLED: '1'
       NEXT_PUBLIC_API_URL: /api/v1
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version-file: .node-version
           cache: npm
           cache-dependency-path: web/package-lock.json
+      - run: npm install --global npm@11.19.1
       - run: npm ci
         id: dependencies
       - run: npm run lint
       - run: npm run build
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
       - run: npm run typecheck
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+      - run: npm test
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
       - run: npm audit --omit=dev --audit-level=high
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
@@ -95,20 +99,20 @@ jobs:
       run:
         working-directory: android
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-java@v6.2.0
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4.0.4
         with:
           packages: platform-tools platforms;android-36 build-tools;35.0.0
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6.4.1
         with:
           gradle-version: '8.13'
       - name: Compiler et vérifier Android
         run: bash gradlew --no-daemon --max-workers=2 :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         if: always()
         with:
           name: android-reports

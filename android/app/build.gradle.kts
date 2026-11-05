@@ -1,3 +1,5 @@
+import java.net.URI
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -21,7 +23,15 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:3000/api/v1/\"")
+        }
         release {
+            val apiUrl = providers.gradleProperty("scolapayApiUrl").getOrElse("https://localhost/api/v1/")
+            require(URI(apiUrl).scheme == "https" && apiUrl.endsWith("/")) {
+                "scolapayApiUrl doit être une URL HTTPS terminée par /"
+            }
+            buildConfigField("String", "API_BASE_URL", "\"${apiUrl.replace("\"", "\\\"")}\"")
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -41,6 +51,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

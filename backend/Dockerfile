@@ -1,7 +1,10 @@
 # ============================================================
 # STAGE 1: Install ALL dependencies (including devDependencies)
 # ============================================================
-FROM node:24.22.1-alpine AS deps
+FROM node:24.22.1-alpine AS base
+RUN npm install --global npm@11.19.1
+
+FROM base AS deps
 
 WORKDIR /app
 
@@ -12,7 +15,7 @@ RUN npm ci
 # ============================================================
 # STAGE 2: Build the application
 # ============================================================
-FROM node:24.22.1-alpine AS build
+FROM base AS build
 
 WORKDIR /app
 
@@ -28,7 +31,7 @@ RUN npm run build
 # ============================================================
 # STAGE 3: Production image
 # ============================================================
-FROM node:24.22.1-alpine AS production
+FROM base AS production
 
 WORKDIR /app
 
