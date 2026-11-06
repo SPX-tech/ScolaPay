@@ -20,9 +20,9 @@ Une décision mérite une entrée ici lorsqu'elle est coûteuse à inverser ou q
 | [0012](0012-convention-monetaire.md) | Montants entiers dans l'unité minimale ISO de chaque devise | Acceptée | S'imposera à la Mission 003 : aucun montant dans `core/` à ce jour |
 | [0013](0013-majorite-et-autorisations-familiales.md) | Majorité légale et autorisations familiales | Acceptée, modalités juridiques à confirmer | En place dans `core/` |
 | [0014](0014-android-hors-feuille-de-route.md) | Android hors de la feuille de route active | Acceptée | Contrôles CI séparés, code conservé |
-| [0015](0015-modele-de-facturation.md) | Modèle du moteur de facturation | Proposée | Aucune |
-| [0016](0016-outbox-durable.md) | Outbox durable | Proposée, choix technique à prouver | Aucune |
-| [0017](0017-controles-de-mise-en-service.md) | Contrôles de mise en service | Principe accepté, conception proposée | Aucune |
+| [0015](0015-modele-de-facturation.md) | Modèle du moteur de facturation | Acceptée, règles juridiques à valider | À venir, lots de la Mission 003 |
+| [0016](0016-outbox-durable.md) | Outbox durable | Besoin accepté, choix technique à prouver | Lot 1 |
+| [0017](0017-controles-de-mise-en-service.md) | Contrôles de mise en service | Acceptée | Lot 1 |
 
 ## Statuts
 

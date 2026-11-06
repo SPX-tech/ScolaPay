@@ -1,6 +1,6 @@
 # 0016 : outbox durable
 
-- **Statut** : Proposée. Le besoin est exigé par le propriétaire, le choix technique reste à prouver par le lot 1 de la Mission 003.
+- **Statut** : Besoin accepté. Évaluation du registre Spring Modulith à conclure par les tests du lot 1 de la Mission 003, avec repli justifié sur une solution PostgreSQL dédiée.
 - **Date** : 2026-11-06
 - **Implémentation** : aucune.
 

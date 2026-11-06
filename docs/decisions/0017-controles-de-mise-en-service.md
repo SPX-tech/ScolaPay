@@ -1,6 +1,6 @@
 # 0017 : contrôles de mise en service
 
-- **Statut** : Principe accepté par le propriétaire, conception proposée
+- **Statut** : Acceptée
 - **Date** : 2026-11-06
 - **Implémentation** : **aucune. Aujourd'hui, rien n'empêche techniquement d'ouvrir `/api/v2/me` si l'application est déployée.** Rien n'est déployé.
 
@@ -12,9 +12,9 @@ Une documentation ne suffit pas à bloquer une ouverture. `legal_majority_rules.
 
 Avant toute ouverture réelle du portail, l'application doit **refuser de démarrer** si une condition n'est pas remplie, plutôt que de compter sur une liste à relire.
 
-Conception proposée :
+Conception :
 
-- `scolapay.portal.enabled`, **faux par défaut**. Faux : la surface `/api/v2/me/students`, et plus tard celle des obligations, répond 404.
+- `scolapay.portal.enabled`, **faux par défaut : le portail est fermé pour les familles**. Faux : la surface familiale de `/api/v2/me`, et plus tard celle des obligations, répond 404, et aucune invitation familiale ne peut être créée ni acceptée. La gestion par le personnel reste disponible.
 - Vrai : au démarrage, un contrôle parcourt des conditions déclarées par les modules et arrête l'application au premier échec, en nommant la condition.
 - Toute condition s'évalue sur l'état réel, sans option de contournement.
 

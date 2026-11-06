@@ -13,7 +13,7 @@ Référence stratégique et technique du projet, lisible sans l'historique des c
 | Données de l'ancienne instance | **Archivées**, chiffrées, hors du serveur et hors du dépôt, avec restauration et relecture vérifiées. La clé est conservée séparément |
 | Mission 002 (fondation Java) | **Finalisée** : identités, établissements, inscriptions et liens familiaux dans `core/`. Testée en CI, jamais déployée |
 | Facturation, paiements, portail familles | **Pas commencés** |
-| Mission 003 (moteur de facturation) | **En cadrage**, aucun code. Voir le [cadrage](missions/mission-003-billing-engine.md) et ses décisions attendues |
+| Mission 003 (moteur de facturation) | **Cadrage validé, construction en cours lot par lot.** État tenu dans le [cadrage](missions/mission-003-billing-engine.md) |
 | Android | **Hors de la feuille de route active**, code conservé comme référence ([0014](decisions/0014-android-hors-feuille-de-route.md)) |
 | Ordre de construction | Backend Java, puis interfaces web. L'APK viendra une fois les parcours métier et financiers stabilisés |
 
@@ -47,9 +47,9 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Majorité et consentement | Vérifié, modalités juridiques à confirmer | Âge légal par pays, non configurable. Un majeur contrôle l'accès académique des tiers | `AcademicAccess`, `FamilyAccessTest`, [0013](decisions/0013-majorite-et-autorisations-familiales.md) |
 | Audit | Vérifié | Immuable par trigger, écrit dans la transaction | `audit`, `DatabaseGuardsTest` |
 | Frontière vers la facturation | Vérifié, sans consommateur | `StudentDirectory`, événements `StudentEnrolled` et `EnrollmentEnded`, contributeurs financiers | `schooling` |
-| Facturation | En cadrage | Rien : modèle proposé, décisions attendues | [Cadrage](missions/mission-003-billing-engine.md), [0015](decisions/0015-modele-de-facturation.md) |
-| Outbox durable | Proposée | Rien : événements synchrones uniquement | [0016](decisions/0016-outbox-durable.md) |
-| Contrôles de mise en service | Principe accepté | **Rien : aucun code n'empêche encore d'ouvrir le portail** | [0017](decisions/0017-controles-de-mise-en-service.md) |
+| Facturation | Prévu, modèle accepté | Rien pour l'instant | [Cadrage](missions/mission-003-billing-engine.md), [0015](decisions/0015-modele-de-facturation.md) |
+| Outbox durable | Prévu, lot 1 | Rien : événements synchrones uniquement | [0016](decisions/0016-outbox-durable.md) |
+| Contrôles de mise en service | Prévu, lot 1 | **Rien : aucun code n'empêche encore d'ouvrir le portail** | [0017](decisions/0017-controles-de-mise-en-service.md) |
 | Encaissement réel, comptabilité | Prévu | Rien | [0006](decisions/0006-backend-java-spring-boot.md) |
 | Portail web des familles | Prévu | L'API `/api/v2/me` existe, aucune interface | [0007](decisions/0007-portail-familles-avant-apk.md) |
 | Application Android des familles | Hors feuille de route active | Rien. L'application `android/` sert le personnel | [0014](decisions/0014-android-hors-feuille-de-route.md) |
@@ -108,8 +108,8 @@ Android Compose ┘            monolithe modulaire, Prisma 7
 
 | Élément | Décision | Référence |
 | --- | --- | --- |
-| Facturation (Mission 003) | Frais, obligations, échéances, remises et ajustements, en module Java au-dessus de `schooling`, indépendant de l'encaissement réel. Redevable, responsable et contributeur sont distincts | [0015](decisions/0015-modele-de-facturation.md), proposée |
-| Outbox | Durable, avant les premiers événements asynchrones critiques | [0016](decisions/0016-outbox-durable.md), proposée |
+| Facturation (Mission 003) | Frais, obligations, échéances, remises et ajustements, en module Java au-dessus de `schooling`, indépendant de l'encaissement réel. Redevable, responsable et contributeur sont distincts | [0015](decisions/0015-modele-de-facturation.md) |
+| Outbox | Durable, avant les premiers événements asynchrones critiques | [0016](decisions/0016-outbox-durable.md), à prouver |
 | Ouverture du portail | L'application refuse de démarrer tant que les règles juridiques ne sont pas confirmées | [0017](decisions/0017-controles-de-mise-en-service.md), non implémentée |
 | Montants | Entiers dans l'unité minimale ISO : francs entiers pour le XAF. Conversions de prestataire dans leurs connecteurs | [0012](decisions/0012-convention-monetaire.md) |
 | Web | Next.js/TypeScript conservé, écrans portés vers `/api/v2` au fil des domaines | [0011](decisions/0011-transition-depuis-nestjs.md) |
@@ -142,12 +142,12 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 - **0008**, orientation validée : Go envisagé pour de futurs services financiers, sans introduction immédiate.
 - **0009 à 0013**, acceptées : fondation technique, modèle d'identité et d'accès, transition depuis NestJS, convention monétaire, majorité légale et autorisations familiales. Les modalités juridiques de 0013 restent à confirmer.
 - **0014**, acceptée : Android hors de la feuille de route active.
-- **0015 à 0017**, proposées pour la Mission 003 : modèle de facturation, outbox durable, contrôles de mise en service.
+- **0015 et 0017**, acceptées : modèle de facturation, contrôles de mise en service. **0016**, besoin accepté : outbox durable, choix technique à prouver.
 
 ## Priorités actuelles
 
-1. **Mission 003, ScolaPay Billing Engine** : priorité absolue, **en cadrage et sans code**. Elle s'appuie sur `schooling` sans refaire les utilisateurs ni les établissements. La construction attend les [décisions du propriétaire](missions/mission-003-billing-engine.md#décisions-attendues-du-propriétaire).
-2. **Interfaces web des établissements, des parents et des étudiants**, sur `/api/v2`, une fois le cœur financier en place.
+1. **Mission 003, ScolaPay Billing Engine** : priorité absolue, en construction par lots. Elle s'appuie sur `schooling` sans refaire les utilisateurs ni les établissements. Voir le [cadrage](missions/mission-003-billing-engine.md).
+2. **Sites web ScolaPay Schools et ScolaPay Families**, sur `/api/v2`, une fois le cœur financier en place.
 
 ## Risques connus
 
@@ -190,7 +190,7 @@ Ce serait un nouveau déploiement, avec des secrets neufs :
 
 **Prochain chantier : Mission 003, ScolaPay Billing Engine**
 
-Périmètre, critères d'acceptation et lots dans le [cadrage](missions/mission-003-billing-engine.md). Le premier lot construit l'outbox durable et le contrôle de mise en service. La construction attend six décisions du propriétaire, chacune avec une recommandation.
+Périmètre, critères d'acceptation et état des lots dans le [cadrage](missions/mission-003-billing-engine.md). Le premier lot construit l'outbox durable et le contrôle de mise en service.
 
 **Ensuite, sans ordre arrêté**
 
