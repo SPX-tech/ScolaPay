@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scolapay.core.schooling.EnrollmentEnded;
 import com.scolapay.core.schooling.StudentEnrolled;
+import com.scolapay.testsupport.TestInvitationDelivery;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -31,7 +32,6 @@ import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -41,7 +41,7 @@ import tools.jackson.databind.json.JsonMapper;
  * les conditions d'une base partagée entre plusieurs établissements.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import(IntegrationTest.CapturedEvents.class)
+@Import({IntegrationTest.CapturedEvents.class, TestInvitationDelivery.class})
 abstract class IntegrationTest {
 
     static final String JWT_SECRET = "secret-de-test-uniquement-0123456789-abcdef";
@@ -49,19 +49,16 @@ abstract class IntegrationTest {
     static final String OPERATOR_CONTACT = "operateur@scolapay.test";
     static final String OPERATOR_PASSWORD = "phrase-de-passe-operateur";
 
-    private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:18.6-alpine");
     private static final HttpClient HTTP = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
-    static {
-        POSTGRES.start();
-    }
-
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
+        registry.add("spring.datasource.url", TestDatabases.POSTGRES::getJdbcUrl);
+        registry.add("spring.datasource.username", TestDatabases.POSTGRES::getUsername);
+        registry.add("spring.datasource.password", TestDatabases.POSTGRES::getPassword);
+        registry.add("spring.flyway.locations", () -> "classpath:db/migration,classpath:db/test-migration");
+        registry.add("scolapay.portal.enabled", () -> "true");
         registry.add("scolapay.security.jwt-secret", () -> JWT_SECRET);
         registry.add("scolapay.bootstrap.operator-contact", () -> OPERATOR_CONTACT);
         registry.add("scolapay.bootstrap.operator-password", () -> OPERATOR_PASSWORD);

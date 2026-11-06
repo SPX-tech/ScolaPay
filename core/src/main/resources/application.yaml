@@ -15,6 +15,18 @@ spring:
       fail-on-unknown-properties: true
   flyway:
     locations: classpath:db/migration
+  modulith:
+    events:
+      completion-mode: archive
+      jdbc:
+        schema-initialization:
+          enabled: false
+      # Sans ces durées, une publication interrompue par un arrêt brutal ne serait jamais reprise.
+      staleness:
+        published: PT5M
+        processing: PT5M
+        resubmitted: PT5M
+        check-interval: PT1M
 
 server:
   error:
@@ -39,6 +51,14 @@ scolapay:
     access-token-ttl: PT30M
   http:
     max-request-body-bytes: 262144
+  portal:
+    enabled: ${SCOLAPAY_PORTAL_ENABLED:false}
+  outbox:
+    recovery-interval: PT1M
+    batch-size: 1000
+    retry-delay: PT1M
+    max-retry-delay: PT1H
+    overdue-after: PT15M
   bootstrap:
     # Ne crée le premier opérateur que si ces deux valeurs sont fournies.
     operator-contact: ${SCOLAPAY_BOOTSTRAP_OPERATOR_CONTACT:}

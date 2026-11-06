@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -15,9 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Surface des parents, tuteurs et étudiants. Elle ne prend aucun identifiant d'établissement :
- * un compte n'y voit que les dossiers auxquels un lien actif le rattache.
+ * un compte n'y voit que les dossiers auxquels un lien actif le rattache. Portail fermé, ces routes
+ * n'existent pas.
  */
 @RestController
+@ConditionalOnProperty(name = "scolapay.portal.enabled", havingValue = "true")
 @RequestMapping("/api/v2/me/students")
 class FamilyController {
 
