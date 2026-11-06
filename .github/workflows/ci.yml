@@ -46,7 +46,7 @@ jobs:
           cache-dependency-path: core/pom.xml
       - name: Compiler et tester sur PostgreSQL réel
         run: ./mvnw --batch-mode --no-transfer-progress verify
-      - uses: actions/upload-artifact@v7.0.2
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: core-test-reports
@@ -72,7 +72,7 @@ jobs:
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:18081/actuator/env)" = 401
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"identifier":"inconnu@scolapay.test","password":"mot-de-passe-faux"}' http://127.0.0.1:18081/api/v2/auth/login)" = 401
           kill "$APP_PID"
-      - uses: actions/upload-artifact@v7.0.2
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: core-smoke-log
@@ -172,7 +172,7 @@ jobs:
         run: npx --no-install playwright install --with-deps chromium
       - run: npm run test:e2e
         if: ${{ !cancelled() && steps.standalone.outcome == 'success' }}
-      - uses: actions/upload-artifact@v7.0.2
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && steps.standalone.outcome == 'success' }}
         with:
           name: web-e2e
@@ -183,7 +183,7 @@ jobs:
       - name: Archiver le rendu pour vérification
         if: ${{ !cancelled() && steps.standalone.outcome == 'success' }}
         run: tar -czf web-preview.tar.gz -C .next/standalone .
-      - uses: actions/upload-artifact@v7.0.2
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         with:
           name: web-preview

@@ -43,7 +43,7 @@ jobs:
       - name: Collecter les journaux
         if: always()
         run: docker compose logs --no-color > container-logs.txt
-      - uses: actions/upload-artifact@v7.0.2
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: container-logs

@@ -43,7 +43,7 @@ jobs:
           gradle-version: '9.6.0'
       - name: Compiler et vérifier Android
         run: bash gradlew --no-daemon --max-workers=2 :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
-      - uses: actions/upload-artifact@v7.0.2
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: android-reports
@@ -51,7 +51,7 @@ jobs:
             android/app/build/reports/
             android/app/build/test-results/
           if-no-files-found: ignore
-      - uses: actions/upload-artifact@v7.0.2
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: android-debug
@@ -92,7 +92,7 @@ jobs:
             adb pull /sdcard/login.png login.png
             adb logcat -d -b crash > crash.log
             ! grep -q 'Process: com.scolapay.mobile' crash.log
-      - uses: actions/upload-artifact@v7.0.2
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: android-runtime

@@ -30,7 +30,7 @@ jobs:
           npx --no-install prettier --write 'src/**/*.ts' 'test/**/*.ts' prisma.config.ts
           cd ..
           tar -czf formatted.tar.gz backend/src backend/test backend/prisma.config.ts
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: manifests
           path: |
@@ -38,7 +38,7 @@ jobs:
             backend/package-lock.json
             web/package.json
             web/package-lock.json
-      - uses: actions/upload-artifact@v7.0.2
+      - uses: actions/upload-artifact@v7
         with:
           name: formatted
           path: formatted.tar.gz
