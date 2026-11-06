@@ -36,6 +36,10 @@ Règles :
 - **Reprise des inscriptions existantes.** Rien n'est déployé. Une inscription existante ferait échouer la migration, ce qui vaut mieux que d'inventer son rattachement.
 - **Classes et groupes**, qui ne servent pas à tarifer.
 
+## Preuves
+
+`AcademicCatalogTest` passe par la vraie API et écrit directement en base pour les garanties de PostgreSQL. Sur 15 défauts injectés un à un, dont la suppression du verrou entre archivage et création, tous sont détectés. Trois exécutions du code intact sont vertes.
+
 ## Conséquences
 
 - L'inscription demande désormais `academicUnitId` au lieu d'un texte. **Le contrat `/api/v2` change**, sans conséquence : aucun client ne l'utilise encore.
