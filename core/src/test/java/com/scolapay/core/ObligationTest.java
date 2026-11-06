@@ -353,6 +353,27 @@ class ObligationTest extends IntegrationTest {
         assertThat(obligationsOf(student) + obligationsOf(newcomer)).isZero();
     }
 
+    /** Même effectif, mais plus les mêmes personnes : ce n'est plus ce que le personnel a confirmé. */
+    @Test
+    void unLotConfirmeApresUnRemplacementDEleveAEffectifConstantNEmetRien() {
+        School school = school();
+        Tenant tenant = school.tenant();
+        UUID replaced = enrolled(school, null);
+        Response preview = issuancePreview(tenant, school.year());
+        assertThat(preview.body().path("obligationsToCreate").asLong()).isEqualTo(1);
+
+        assertThat(post(tenant.path("/students/" + replaced + "/enrollments/" + enrollmentOf(tenant, replaced) + "/end"), tenant.adminToken(),
+                Map.of("status", "WITHDRAWN")).status()).isEqualTo(204);
+        UUID newcomer = enrolled(school, null);
+        assertThat(issuancePreview(tenant, school.year()).body().path("obligationsToCreate").asLong()).as("L'effectif n'a pas changé").isEqualTo(1);
+
+        Response refused = confirm(tenant, school.year(), preview);
+
+        assertThat(refused.status()).as(refused.raw()).isEqualTo(409);
+        assertThat(refused.code()).isEqualTo("ISSUANCE_PREVIEW_OUTDATED");
+        assertThat(obligationsOf(replaced) + obligationsOf(newcomer)).isZero();
+    }
+
     @Test
     void unLotConfirmeSurUneVersionRemplaceeNEmetRien() {
         School school = school();
@@ -1017,6 +1038,41 @@ class ObligationTest extends IntegrationTest {
         assertThat(results).hasSize(10);
         assertThat(refused.get()).as("Seules 8 remises de 3 000 tiennent dans 25 000").isEqualTo(2);
         assertThat(obligationView(school, obligation).path("dueMinor").asString()).isEqualTo("1000");
+    }
+
+    /**
+     * Déterministe, sur deux connexions directes : la seconde écriture attend la fin de la première, puis
+     * voit le dû déjà consommé. Sans ce verrou, elle lirait un dû périmé et le rendrait négatif.
+     */
+    @Test
+    void uneEcritureConcurrenteAttendPuisNeRendJamaisLeDuNegatif() throws Exception {
+        School school = school();
+        UUID obligation = issuedObligation(school);
+        UUID actor = accountOf(school.tenant());
+
+        try (java.sql.Connection first = dataSource.getConnection();
+                java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            first.setAutoCommit(false);
+            try (java.sql.PreparedStatement discount = first.prepareStatement("""
+                    INSERT INTO obligation_entries (id, establishment_id, obligation_id, kind, amount_minor, reason, idempotency_key, recorded_at, recorded_by)
+                    VALUES (gen_random_uuid(), ?, ?, 'DISCOUNT', -25000, 'Remise totale', ?, now(), ?)
+                    """)) {
+                discount.setObject(1, school.tenant().id());
+                discount.setObject(2, obligation);
+                discount.setString(3, UUID.randomUUID().toString());
+                discount.setObject(4, actor);
+                assertThat(discount.executeUpdate()).isEqualTo(1);
+            }
+
+            java.util.concurrent.Future<?> second = executor.submit(() -> appendEntry(school, obligation, "DISCOUNT", -1, "Remise concurrente"));
+
+            Thread.sleep(500);
+            assertThat(second.isDone()).as("La seconde écriture attend la première").isFalse();
+            first.commit();
+
+            assertThatThrownBy(second::get).hasMessageContaining("négatif");
+        }
+        assertThat(obligationView(school, obligation).path("dueMinor").asString()).isEqualTo("0");
     }
 
     private void assertImmutable(String sql, UUID id) {

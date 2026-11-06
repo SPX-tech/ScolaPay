@@ -64,7 +64,8 @@ export default {
       ]
     },
     {
-      "id": "token-ignores-amount",
+      "id": "token-ignores-content",
+      "mustFail": ["ObligationTest.unLotConfirmeApresUnRemplacementDEleveAEffectifConstantNEmetRien"],
       "steps": [
         [
           "core/src/main/java/com/scolapay/core/billing/internal/ObligationService.java",
@@ -343,6 +344,7 @@ export default {
     },
     {
       "id": "db-entries-no-lock",
+      "mustFail": ["ObligationTest.uneEcritureConcurrenteAttendPuisNeRendJamaisLeDuNegatif"],
       "steps": [
         [
           "core/src/main/resources/db/migration/V5__obligations.sql",
