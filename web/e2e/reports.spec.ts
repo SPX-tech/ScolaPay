@@ -20,13 +20,13 @@ test('explique pourquoi une période est refusée', async ({ page }) => {
     json(route, 400, { message: 'La date de début doit précéder la date de fin.' }),
   );
   await page.goto('/dashboard/reports');
-  await expect(page.getByRole('alert')).toHaveText('La date de début doit précéder la date de fin.');
+  await expect(page.locator('main').getByRole('alert')).toHaveText('La date de début doit précéder la date de fin.');
 });
 
 test('explique pourquoi les transactions ne se chargent pas', async ({ page }) => {
   await page.route('**/api/v1/transactions?**', (route) => json(route, 400, { message: 'Date invalide : "x".' }));
   await page.goto('/dashboard/transactions');
-  await expect(page.getByRole('alert')).toHaveText('Date invalide : "x".');
+  await expect(page.locator('main').getByRole('alert')).toHaveText('Date invalide : "x".');
   await expect(page.getByText('Aucune transaction')).toBeVisible();
 });
 
