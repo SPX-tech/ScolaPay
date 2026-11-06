@@ -29,3 +29,7 @@ android/local.properties
 .env
 web/.env*
 !web/.env.example
+
+# Backend Java
+core/target/
+core/.env

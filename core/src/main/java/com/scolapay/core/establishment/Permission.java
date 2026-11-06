@@ -1,0 +1,13 @@
+package com.scolapay.core.establishment;
+
+public enum Permission {
+    ESTABLISHMENT_READ,
+    ESTABLISHMENT_MANAGE,
+    MEMBERS_MANAGE,
+    ACADEMIC_YEARS_MANAGE,
+    STUDENTS_READ,
+    STUDENTS_MANAGE,
+    ENROLLMENTS_MANAGE,
+    GUARDIANS_MANAGE,
+    AUDIT_READ
+}
