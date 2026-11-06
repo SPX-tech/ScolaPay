@@ -18,7 +18,7 @@ Quatre notions distinctes, dans quatre structures distinctes :
 | Identité | `accounts`, `account_identifiers` | Qui est cette personne ? E-mail ou téléphone, car beaucoup de familles n'ont qu'un téléphone |
 | Affiliation | `memberships` | Fait-elle partie du personnel de cet établissement ? |
 | Rôle | `membership_roles`, puis `StaffRole` et `Permission` | Que peut-elle y faire ? |
-| Accès à un dossier | `record_access_grants` (`GUARDIAN` ou `SELF`) | Quels dossiers scolaires la concernent ? |
+| Accès à un dossier | `record_access_grants` (`THIRD_PARTY` ou `SELF`), avec des droits distincts | Quels dossiers la concernent, et pour quoi faire ? Voir [0013](0013-majorite-et-autorisations-familiales.md) |
 
 Un dossier (`student_records`) appartient à un établissement. Une personne scolarisée dans deux établissements a deux dossiers, reliés le cas échéant au même compte.
 
@@ -37,9 +37,9 @@ Conséquences voulues : un opérateur n'entre dans aucun établissement sans y �
 - **Le jeton prouve seulement qui parle.** Il ne porte ni rôle ni établissement. Le compte et ses droits sont relus à chaque requête, donc une suspension ou une révocation agit immédiatement.
 - **Invitations à usage unique.** Seule une empreinte du jeton est stockée. Si un compte existe pour le contact, seul ce compte connecté peut accepter. Un autre compte connecté est refusé.
 - **Le dernier administrateur** d'un établissement ne peut être ni retiré ni rétrogradé, sous verrou.
-- **La majorité est une règle de l'établissement** (`age_of_majority`), évaluée dans son fuseau. Une date de naissance inconnue ne l'établit pas.
+- **La majorité est une règle juridique liée au pays**, évaluée dans le fuseau de l'établissement. Elle n'est pas configurable par lui : voir [0013](0013-majorite-et-autorisations-familiales.md).
 - **Défense en profondeur.** Les clés composites `(establishment_id, id)` rendent impossible en base toute référence vers un autre établissement. C'était l'objectif différé de [D-002](../architecture-scolapay-2.md#décision-002--isolation-explicite-par-établissement).
-- **Le responsable financier** est un attribut explicite du lien tuteur, pour la facturation.
+- **La contribution financière** est un droit explicite du lien, distinct de l'accès aux informations académiques.
 
 ## Conséquences
 
@@ -56,5 +56,4 @@ Conséquences voulues : un opérateur n'entre dans aucun établissement sans y �
 
 ## Questions ouvertes
 
-- **Un tuteur garde-t-il l'accès au dossier d'un enfant devenu majeur ?** Aujourd'hui oui, jusqu'à révocation par l'établissement. C'est une question de droit et de produit à trancher.
 - Mode d'authentification du portail familles : jeton porteur ou cookie.

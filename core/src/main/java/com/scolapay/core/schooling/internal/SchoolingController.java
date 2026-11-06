@@ -48,10 +48,11 @@ class SchoolingController {
 
     record EndEnrollmentRequest(@NotBlank @Size(max = 20) String status, @Size(max = 500) String reason) {}
 
-    record GuardianInvitationRequest(
+    record ThirdPartyInvitationRequest(
             @NotBlank @Size(max = 254) String contact,
             @NotBlank @Pattern(regexp = "^(MOTHER|FATHER|GUARDIAN|OTHER)$") String relationship,
-            boolean financiallyResponsible) {}
+            boolean academicAccess,
+            boolean financialContributor) {}
 
     record SelfAccessInvitationRequest(@NotBlank @Size(max = 254) String contact) {}
 
@@ -130,14 +131,19 @@ class SchoolingController {
         return schooling.enrollmentHistory(establishmentId, studentId, enrollmentId);
     }
 
-    @PostMapping(STUDENT + "/guardian-invitations")
+    @PostMapping(STUDENT + "/third-party-invitations")
     @ResponseStatus(HttpStatus.CREATED)
-    Invitations.Issued inviteGuardian(
+    Invitations.Issued inviteThirdParty(
             @PathVariable UUID establishmentId,
             @PathVariable UUID studentId,
-            @Valid @RequestBody GuardianInvitationRequest request) {
-        return schooling.inviteGuardian(
-                establishmentId, studentId, request.contact(), request.relationship(), request.financiallyResponsible());
+            @Valid @RequestBody ThirdPartyInvitationRequest request) {
+        return schooling.inviteThirdParty(
+                establishmentId,
+                studentId,
+                request.contact(),
+                request.relationship(),
+                request.academicAccess(),
+                request.financialContributor());
     }
 
     @PostMapping(STUDENT + "/self-access-invitations")

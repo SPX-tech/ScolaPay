@@ -215,11 +215,11 @@ class SecurityHardeningTest extends IntegrationTest {
 
         Response timezone = post("/api/v2/platform/establishments", operatorToken(), Map.of(
                 "code", uniqueCode(), "name", "Lycée", "kind", "SCHOOL", "timezone", "Mars/Olympus",
-                "currency", "XAF", "firstAdminContact", uniqueEmail()));
+                "currency", "XAF", "countryCode", "TD", "firstAdminContact", uniqueEmail()));
         assertThat(timezone.code()).isEqualTo("INVALID_TIMEZONE");
         Response currency = post("/api/v2/platform/establishments", operatorToken(), Map.of(
                 "code", uniqueCode(), "name", "Lycée", "kind", "SCHOOL", "timezone", "Africa/Ndjamena",
-                "currency", "ZZZ", "firstAdminContact", uniqueEmail()));
+                "currency", "ZZZ", "countryCode", "TD", "firstAdminContact", uniqueEmail()));
         assertThat(currency.code()).isEqualTo("INVALID_CURRENCY");
     }
 

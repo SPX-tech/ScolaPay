@@ -170,8 +170,8 @@ class TenantIsolationTest extends IntegrationTest {
         assertThat(get(b.path("/students/" + studentA + "/access-grants"), token).status()).isEqualTo(404);
         assertThat(post(b.path("/students/" + studentA + "/enrollments"), token, Map.of(
                 "academicYearId", yearB.toString(), "level", "Sixième")).status()).isEqualTo(404);
-        assertThat(post(b.path("/students/" + studentA + "/guardian-invitations"), token, Map.of(
-                "contact", uniqueEmail(), "relationship", "OTHER", "financiallyResponsible", false)).status()).isEqualTo(404);
+        assertThat(post(b.path("/students/" + studentA + "/third-party-invitations"), token, Map.of(
+                "contact", uniqueEmail(), "relationship", "OTHER", "academicAccess", false, "financialContributor", true)).status()).isEqualTo(404);
 
         // Mélanger un dossier de B avec une année de A.
         assertThat(post(b.path("/students/" + studentB + "/enrollments"), token, Map.of(
@@ -227,7 +227,7 @@ class TenantIsolationTest extends IntegrationTest {
         String admin = tenant.adminToken();
         Response create = post("/api/v2/platform/establishments", admin, Map.of(
                 "code", uniqueCode(), "name", "Pirate", "kind", "SCHOOL", "timezone", "Africa/Ndjamena",
-                "currency", "XAF", "firstAdminContact", uniqueEmail()));
+                "currency", "XAF", "countryCode", "TD", "firstAdminContact", uniqueEmail()));
         assertThat(create.status()).as(create.raw()).isEqualTo(403);
         assertThat(create.code()).isEqualTo("OPERATOR_REQUIRED");
         assertThat(post("/api/v2/platform/establishments/" + tenant.id() + "/status", admin, Map.of("status", "SUSPENDED")).status()).isEqualTo(403);

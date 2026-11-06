@@ -28,12 +28,11 @@ public class EstablishmentService {
             String kind,
             String timezone,
             String currency,
-            Integer ageOfMajority,
+            String countryCode,
             String firstAdminContact) {}
 
     public record Created(Establishment establishment, Invitations.Issued firstAdminInvitation) {}
 
-    private static final int DEFAULT_AGE_OF_MAJORITY = 18;
     private static final Set<String> STATUSES = Set.of("ACTIVE", "SUSPENDED");
 
     private final EstablishmentRepository establishments;
@@ -65,18 +64,21 @@ public class EstablishmentService {
         Identifier firstAdmin = Identifier.parse(request.firstAdminContact());
         requireValidTimezone(request.timezone());
         requireValidCurrency(request.currency());
-        int ageOfMajority = request.ageOfMajority() == null ? DEFAULT_AGE_OF_MAJORITY : request.ageOfMajority();
+        if (!establishments.countryIsSupported(request.countryCode())) {
+            throw ApiException.invalid("UNSUPPORTED_COUNTRY", "Aucune règle juridique n'est définie pour ce pays.");
+        }
 
-        Establishment establishment = new Establishment(
-                UUID.randomUUID(),
+        UUID establishmentId = UUID.randomUUID();
+        establishments.insert(
+                establishmentId,
                 request.code(),
                 request.name().trim(),
                 request.kind(),
                 request.timezone(),
                 request.currency(),
-                ageOfMajority,
-                "ACTIVE");
-        establishments.insert(establishment, clock.instant());
+                request.countryCode(),
+                clock.instant());
+        Establishment establishment = establishments.find(establishmentId).orElseThrow();
         audit.record(
                 establishment.id(),
                 operatorId,
@@ -119,16 +121,10 @@ public class EstablishmentService {
     }
 
     @Transactional
-    public Establishment updateSettings(UUID establishmentId, String name, Integer ageOfMajority) {
+    public Establishment updateSettings(UUID establishmentId, String name) {
         UUID actorId = access.require(establishmentId, Permission.ESTABLISHMENT_MANAGE);
-        Establishment current = establishments.lock(establishmentId)
-                .orElseThrow(() -> ApiException.notFound("ESTABLISHMENT_NOT_FOUND", "Établissement introuvable."));
-        String newName = name == null ? current.name() : name.trim();
-        int newAge = ageOfMajority == null ? current.ageOfMajority() : ageOfMajority;
-        establishments.updateSettings(establishmentId, newName, newAge, clock.instant());
-        audit.record(
-                establishmentId, actorId, "establishment.settings.updated", "establishment", establishmentId,
-                Map.of("ageOfMajority", newAge));
+        establishments.updateSettings(establishmentId, name.trim(), clock.instant());
+        audit.record(establishmentId, actorId, "establishment.settings.updated", "establishment", establishmentId, Map.of());
         return establishments.find(establishmentId).orElseThrow();
     }
 

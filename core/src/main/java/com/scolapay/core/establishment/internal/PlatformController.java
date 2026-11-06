@@ -3,8 +3,6 @@ package com.scolapay.core.establishment.internal;
 import com.scolapay.core.establishment.Establishments.Establishment;
 import com.scolapay.core.identity.Invitations;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -28,7 +26,7 @@ class PlatformController {
             @NotBlank @Pattern(regexp = "^(SCHOOL|UNIVERSITY|TRAINING_CENTER|OTHER)$") String kind,
             @NotBlank @Size(max = 64) String timezone,
             @NotBlank @Pattern(regexp = "^[A-Z]{3}$") String currency,
-            @Min(15) @Max(25) Integer ageOfMajority,
+            @NotBlank @Pattern(regexp = "^[A-Z]{2}$") String countryCode,
             @NotBlank @Size(max = 254) String firstAdminContact) {}
 
     record CreateResponse(Establishment establishment, Invitations.Issued firstAdminInvitation) {}
@@ -52,7 +50,7 @@ class PlatformController {
                 request.kind(),
                 request.timezone(),
                 request.currency(),
-                request.ageOfMajority(),
+                request.countryCode(),
                 request.firstAdminContact()));
         return new CreateResponse(created.establishment(), created.firstAdminInvitation());
     }

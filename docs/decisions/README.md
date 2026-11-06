@@ -8,7 +8,7 @@ Une décision mérite une entrée ici lorsqu'elle est coûteuse à inverser ou q
 | --- | --- | --- | --- |
 | [D-001](../architecture-scolapay-2.md#décision-001--conserver-le-monolithe-modulaire) | Monolithe modulaire | Acceptée, monolithe modulaire conservé, choix de NestJS pour les futurs domaines remplacé par 0006 | En place |
 | [D-002](../architecture-scolapay-2.md#décision-002--isolation-explicite-par-établissement) | Isolation explicite par établissement | Acceptée | Partielle : contrôle applicatif, contraintes composites à venir |
-| [D-003](../architecture-scolapay-2.md#décision-003--conserver-les-unités-financières-historiques) | Unités financières historiques | Acceptée | En place |
+| [D-003](../architecture-scolapay-2.md#décision-003--conserver-les-unités-financières-historiques) | Unités financières historiques | Acceptée pour le code NestJS, remplacée par 0012 pour le nouveau backend | En place dans `backend/` |
 | [D-004](../architecture-scolapay-2.md#décision-004--prestataires-financiers-fermés-par-défaut) | Prestataires fermés par défaut | Acceptée | En place |
 | [D-005](../architecture-scolapay-2.md#décision-005--migrations-séparées-du-démarrage) | Migrations séparées du démarrage | Acceptée | En place |
 | [0006](0006-backend-java-spring-boot.md) | Nouveau backend ScolaPay 2.0 en Java/Spring Boot, code NestJS conservé comme référence | Acceptée | Fondation en place dans `core/`, facturation à venir |
@@ -17,6 +17,8 @@ Une décision mérite une entrée ici lorsqu'elle est coûteuse à inverser ou q
 | [0009](0009-fondation-technique-core.md) | Fondation technique du backend Java | Acceptée | En place dans `core/` |
 | [0010](0010-identite-et-acces.md) | Modèle d'identité et d'accès | Acceptée | En place dans `core/`, sans remise des invitations |
 | [0011](0011-transition-depuis-nestjs.md) | Transition depuis NestJS | Acceptée | Schéma et contrat séparés en place, portage des clients à venir |
+| [0012](0012-convention-monetaire.md) | Montants entiers dans l'unité minimale ISO de chaque devise | Acceptée | S'imposera à la Mission 003 : aucun montant dans `core/` à ce jour |
+| [0013](0013-majorite-et-autorisations-familiales.md) | Majorité légale et autorisations familiales | Acceptée, modalités juridiques à confirmer | En place dans `core/` |
 
 ## Statuts
 

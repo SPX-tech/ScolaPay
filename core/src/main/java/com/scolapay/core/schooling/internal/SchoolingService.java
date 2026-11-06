@@ -39,20 +39,29 @@ public class SchoolingService implements StudentDirectory {
             String fullName,
             String kind,
             String relationship,
-            boolean financiallyResponsible,
+            boolean academicAccess,
+            boolean financialContributor,
             Instant grantedAt,
             Instant revokedAt) {}
 
+    /**
+     * Ce qu'une famille voit d'un dossier. Sans accès académique, seul ce qui permet d'identifier
+     * l'élève reste visible : le matricule est nul et la liste des inscriptions vide.
+     */
     public record FamilyStudent(
             UUID studentId,
             UUID establishmentId,
             String establishmentName,
-            String studentNumber,
             String fullName,
             String access,
             String relationship,
-            boolean financiallyResponsible,
+            boolean academicAccess,
+            boolean financialContributor,
+            String studentNumber,
             List<Enrollment> enrollments) {}
+
+    public record ThirdPartyView(
+            UUID grantId, String fullName, String relationship, boolean academicAccess, boolean financialContributor) {}
 
     private static final Map<String, Set<String>> YEAR_TRANSITIONS = Map.of(
             "OPEN", Set.of("PLANNED"),
@@ -218,19 +227,44 @@ public class SchoolingService implements StudentDirectory {
     // Accès des comptes aux dossiers
 
     @Transactional
-    public Invitations.Issued inviteGuardian(
-            UUID establishmentId, UUID studentId, String contact, String relationship, boolean financiallyResponsible) {
+    public Invitations.Issued inviteThirdParty(
+            UUID establishmentId,
+            UUID studentId,
+            String contact,
+            String relationship,
+            boolean academicAccess,
+            boolean financialContributor) {
         UUID actorId = access.require(establishmentId, Permission.GUARDIANS_MANAGE);
-        requireStudent(establishmentId, studentId);
+        Student student = requireStudent(establishmentId, studentId);
+        if (!academicAccess && !financialContributor) {
+            throw ApiException.invalid("NO_CAPABILITY", "Le lien doit accorder au moins un droit.");
+        }
+        if (academicAccess) {
+            requireMinor(student, establishments.find(establishmentId).orElseThrow());
+        }
         return invitations.issue(new Invitations.NewInvitation(
                 Identifier.parse(contact),
-                GuardianInvitationHandler.PURPOSE,
+                ThirdPartyInvitationHandler.PURPOSE,
                 establishmentId,
                 studentId,
                 Map.of(
-                        GuardianInvitationHandler.RELATIONSHIP_ATTRIBUTE, relationship,
-                        GuardianInvitationHandler.FINANCIAL_ATTRIBUTE, String.valueOf(financiallyResponsible)),
+                        ThirdPartyInvitationHandler.RELATIONSHIP_ATTRIBUTE, relationship,
+                        ThirdPartyInvitationHandler.ACADEMIC_ATTRIBUTE, String.valueOf(academicAccess),
+                        ThirdPartyInvitationHandler.FINANCIAL_ATTRIBUTE, String.valueOf(financialContributor)),
                 actorId));
+    }
+
+    /** L'établissement ne peut pas accorder lui-même l'accès au dossier d'un élève majeur. */
+    private void requireMinor(Student student, Establishments.Establishment establishment) {
+        switch (Majority.statusOf(student.birthDate(), establishment, clock)) {
+            case MINOR -> {}
+            case ADULT -> throw ApiException.conflict(
+                    "ADULT_CONSENT_REQUIRED",
+                    "L'élève est majeur : l'accès à ses informations académiques relève de son consentement.");
+            case UNKNOWN -> throw ApiException.conflict(
+                    "MINORITY_NOT_ESTABLISHED",
+                    "La date de naissance est requise pour accorder l'accès aux informations académiques.");
+        }
     }
 
     @Transactional
@@ -239,8 +273,7 @@ public class SchoolingService implements StudentDirectory {
         Student student = requireStudent(establishmentId, studentId);
         Establishments.Establishment establishment = establishments.find(establishmentId).orElseThrow();
         if (!Majority.isReached(student.birthDate(), establishment, clock)) {
-            throw ApiException.conflict(
-                    "STUDENT_NOT_ADULT", "L'étudiant doit avoir atteint l'âge de la majorité fixé par l'établissement.");
+            throw ApiException.conflict("STUDENT_NOT_ADULT", "L'étudiant doit avoir atteint l'âge légal de la majorité.");
         }
         return invitations.issue(new Invitations.NewInvitation(
                 Identifier.parse(contact), SelfAccessInvitationHandler.PURPOSE, establishmentId, studentId, Map.of(), actorId));
@@ -249,7 +282,8 @@ public class SchoolingService implements StudentDirectory {
     @Transactional(readOnly = true)
     public List<GrantView> listGrants(UUID establishmentId, UUID studentId) {
         access.require(establishmentId, Permission.STUDENTS_READ);
-        requireStudent(establishmentId, studentId);
+        Student student = requireStudent(establishmentId, studentId);
+        Establishments.Establishment establishment = establishments.find(establishmentId).orElseThrow();
         List<Grant> grants = repository.grantsOfStudent(establishmentId, studentId);
         Map<UUID, AccountDirectory.AccountSummary> accounts =
                 directory.findAll(grants.stream().map(Grant::accountId).distinct().toList());
@@ -260,7 +294,8 @@ public class SchoolingService implements StudentDirectory {
                         accounts.get(grant.accountId()).fullName(),
                         grant.kind(),
                         grant.relationship(),
-                        grant.financiallyResponsible(),
+                        grant.revokedAt() == null && AcademicAccess.allowed(grant, student, establishment, clock),
+                        grant.financialContributor(),
                         grant.grantedAt(),
                         grant.revokedAt()))
                 .toList();
@@ -299,16 +334,76 @@ public class SchoolingService implements StudentDirectory {
         return establishments.find(grant.establishmentId())
                 .filter(Establishments.Establishment::active)
                 .flatMap(establishment -> repository.findStudent(establishment.id(), grant.studentId())
-                        .map(student -> new FamilyStudent(
-                                student.id(),
-                                establishment.id(),
-                                establishment.name(),
-                                student.studentNumber(),
-                                student.fullName(),
-                                grant.kind(),
-                                grant.relationship(),
-                                grant.financiallyResponsible(),
-                                repository.listEnrollments(establishment.id(), student.id()))));
+                        .map(student -> {
+                            boolean academic = AcademicAccess.allowed(grant, student, establishment, clock);
+                            return new FamilyStudent(
+                                    student.id(),
+                                    establishment.id(),
+                                    establishment.name(),
+                                    student.fullName(),
+                                    grant.kind(),
+                                    grant.relationship(),
+                                    academic,
+                                    grant.financialContributor(),
+                                    academic ? student.studentNumber() : null,
+                                    academic ? repository.listEnrollments(establishment.id(), student.id()) : List.of());
+                        }));
+    }
+
+    // Un étudiant majeur décide de ce que les tiers voient de ses informations académiques.
+
+    @Transactional(readOnly = true)
+    public List<ThirdPartyView> myThirdParties(UUID studentId) {
+        Grant self = requireSelfAccess(studentId);
+        Student student = requireStudent(self.establishmentId(), studentId);
+        Establishments.Establishment establishment = establishments.find(self.establishmentId()).orElseThrow();
+        List<Grant> thirdParties = repository.grantsOfStudent(self.establishmentId(), studentId).stream()
+                .filter(grant -> "THIRD_PARTY".equals(grant.kind()) && grant.revokedAt() == null)
+                .toList();
+        Map<UUID, AccountDirectory.AccountSummary> accounts =
+                directory.findAll(thirdParties.stream().map(Grant::accountId).distinct().toList());
+        return thirdParties.stream()
+                .map(grant -> new ThirdPartyView(
+                        grant.id(),
+                        accounts.get(grant.accountId()).fullName(),
+                        grant.relationship(),
+                        AcademicAccess.allowed(grant, student, establishment, clock),
+                        grant.financialContributor()))
+                .toList();
+    }
+
+    @Transactional
+    public void setAcademicConsent(UUID studentId, UUID grantId, boolean consent) {
+        Grant self = requireSelfAccess(studentId);
+        Student student = requireStudent(self.establishmentId(), studentId);
+        Establishments.Establishment establishment = establishments.find(self.establishmentId()).orElseThrow();
+        if (!Majority.isReached(student.birthDate(), establishment, clock)) {
+            throw ApiException.conflict("STUDENT_NOT_ADULT", "Ce consentement relève d'un étudiant majeur.");
+        }
+        Instant now = clock.instant();
+        int updated = repository.setAcademicConsent(
+                self.establishmentId(), studentId, grantId, consent ? now : null, consent ? self.accountId() : null);
+        if (updated == 0) {
+            throw ApiException.notFound("ACCESS_GRANT_NOT_FOUND", "Accès introuvable.");
+        }
+        audit.record(
+                self.establishmentId(),
+                self.accountId(),
+                consent ? "schooling.access.consent.granted" : "schooling.access.consent.withdrawn",
+                "record_access_grant",
+                grantId,
+                Map.of());
+    }
+
+    /** Seul l'étudiant lui-même : un tiers ou un membre du personnel reçoit le même 404 qu'un dossier inconnu. */
+    private Grant requireSelfAccess(UUID studentId) {
+        UUID accountId = actor.requireAccountId();
+        return repository.activeGrant(accountId, studentId)
+                .filter(grant -> "SELF".equals(grant.kind()))
+                .filter(grant -> establishments.find(grant.establishmentId())
+                        .filter(Establishments.Establishment::active)
+                        .isPresent())
+                .orElseThrow(() -> ApiException.notFound("STUDENT_NOT_FOUND", "Dossier introuvable."));
     }
 
     // Frontière publiée
@@ -323,8 +418,8 @@ public class SchoolingService implements StudentDirectory {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UUID> financiallyResponsibleAccounts(UUID establishmentId, UUID studentId) {
-        return repository.financiallyResponsibleAccounts(establishmentId, studentId);
+    public List<UUID> financialContributorAccounts(UUID establishmentId, UUID studentId) {
+        return repository.financialContributorAccounts(establishmentId, studentId);
     }
 
     private Student requireStudent(UUID establishmentId, UUID studentId) {

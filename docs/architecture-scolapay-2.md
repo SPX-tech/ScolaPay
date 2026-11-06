@@ -32,6 +32,8 @@ Les clés étrangères actuelles n'encodent pas systématiquement le couple `(te
 
 ## Décision 003 : conserver les unités financières historiques
 
+> **Limitée au code NestJS le 2026-11-06.** Le nouveau backend applique la [décision 0012](decisions/0012-convention-monetaire.md) : montants entiers dans l'unité minimale ISO de chaque devise, soit des francs entiers pour le XAF.
+
 Les montants persistés sont des `BIGINT` PostgreSQL. Les réponses JSON les représentent par des chaînes décimales pour préserver leur précision dans JavaScript. Les écritures en chaînes sont validées avant conversion ; les routes historiques acceptant encore des nombres doivent rester dans la plage entière sûre.
 
 Le code existant nomme ces unités `Cents` et affiche un montant divisé par 100, y compris pour XAF. **Cette convention historique ne doit pas être confondue avec l'exposant monétaire ISO de XAF.** Ne pas changer d'échelle des données dans une mise à niveau technique. La définition des unités par devise, l'éventuelle migration et les arrondis devront être contractualisés avant l'intégration d'un prestataire.

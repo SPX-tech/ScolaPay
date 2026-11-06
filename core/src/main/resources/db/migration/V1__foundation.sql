@@ -38,6 +38,16 @@ CREATE TABLE account_identifiers (
 );
 CREATE INDEX account_identifiers_account_idx ON account_identifiers (account_id);
 
+-- Règle juridique par pays. Elle ne se configure pas par établissement et ne change que
+-- par migration, donc par une décision relue. legally_confirmed reste faux tant que la règle
+-- n'a pas été validée juridiquement : c'est une condition d'ouverture du portail des familles.
+CREATE TABLE legal_majority_rules (
+  country_code      text PRIMARY KEY CHECK (country_code ~ '^[A-Z]{2}$'),
+  age_of_majority   smallint NOT NULL CHECK (age_of_majority BETWEEN 15 AND 25),
+  legally_confirmed boolean NOT NULL DEFAULT false
+);
+INSERT INTO legal_majority_rules (country_code, age_of_majority) VALUES ('TD', 18);
+
 -- Établissements et personnel.
 
 CREATE TABLE establishments (
@@ -47,7 +57,7 @@ CREATE TABLE establishments (
   kind            text NOT NULL CHECK (kind IN ('SCHOOL', 'UNIVERSITY', 'TRAINING_CENTER', 'OTHER')),
   timezone        text NOT NULL,
   currency        text NOT NULL CHECK (currency ~ '^[A-Z]{3}$'),
-  age_of_majority smallint NOT NULL DEFAULT 18 CHECK (age_of_majority BETWEEN 15 AND 25),
+  country_code    text NOT NULL REFERENCES legal_majority_rules (country_code),
   status          text NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'SUSPENDED')),
   created_at      timestamptz NOT NULL,
   updated_at      timestamptz NOT NULL
@@ -161,21 +171,27 @@ CREATE TRIGGER enrollment_history_no_truncate BEFORE TRUNCATE ON enrollment_hist
 
 -- Le seul lien entre un compte et un dossier, hors personnel. Aucune donnée n'est
 -- accessible aux familles sans une ligne active ici. Les lignes révoquées restent.
+-- academic_access vaut pour un élève mineur. Pour un élève majeur, seul son consentement
+-- (academic_consent_at) ouvre l'accès académique : voir AcademicAccess.
 CREATE TABLE record_access_grants (
-  id                      uuid PRIMARY KEY,
-  establishment_id        uuid NOT NULL,
-  student_record_id       uuid NOT NULL,
-  account_id              uuid NOT NULL REFERENCES accounts (id),
-  kind                    text NOT NULL CHECK (kind IN ('GUARDIAN', 'SELF')),
-  relationship            text CHECK (relationship IN ('MOTHER', 'FATHER', 'GUARDIAN', 'OTHER')),
-  financially_responsible boolean NOT NULL DEFAULT false,
-  granted_at              timestamptz NOT NULL,
-  granted_by              uuid REFERENCES accounts (id),
-  revoked_at              timestamptz,
-  revoked_by              uuid REFERENCES accounts (id),
+  id                    uuid PRIMARY KEY,
+  establishment_id      uuid NOT NULL,
+  student_record_id     uuid NOT NULL,
+  account_id            uuid NOT NULL REFERENCES accounts (id),
+  kind                  text NOT NULL CHECK (kind IN ('THIRD_PARTY', 'SELF')),
+  relationship          text CHECK (relationship IN ('MOTHER', 'FATHER', 'GUARDIAN', 'OTHER')),
+  academic_access       boolean NOT NULL DEFAULT false,
+  financial_contributor boolean NOT NULL DEFAULT false,
+  academic_consent_at   timestamptz,
+  academic_consent_by   uuid REFERENCES accounts (id),
+  granted_at            timestamptz NOT NULL,
+  granted_by            uuid REFERENCES accounts (id),
+  revoked_at            timestamptz,
+  revoked_by            uuid REFERENCES accounts (id),
   UNIQUE (establishment_id, id),
   FOREIGN KEY (establishment_id, student_record_id) REFERENCES student_records (establishment_id, id),
-  CHECK ((kind = 'GUARDIAN') = (relationship IS NOT NULL))
+  CHECK ((kind = 'THIRD_PARTY') = (relationship IS NOT NULL)),
+  CHECK (kind = 'SELF' OR academic_access OR financial_contributor)
 );
 CREATE UNIQUE INDEX record_access_one_active_per_account
   ON record_access_grants (student_record_id, account_id) WHERE revoked_at IS NULL;

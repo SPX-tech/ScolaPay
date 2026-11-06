@@ -11,9 +11,9 @@ Référence stratégique et technique du projet, lisible sans l'historique des c
 | Mission 001 (socle et durcissement financier) | **Finalisée**, PR #1 et #2 fusionnées dans `main` le 2026-11-06 |
 | Ancien déploiement | **Retiré** le 2026-11-06. Il ne contenait qu'un établissement de démonstration |
 | Données de l'ancienne instance | **Archivées**, chiffrées, hors du serveur et hors du dépôt, avec restauration et relecture vérifiées. La clé est conservée séparément |
-| Mission 002 (fondation Java) | **Livrée** : identités, établissements, inscriptions et liens familiaux dans `core/`. Testée en CI, jamais déployée |
+| Mission 002 (fondation Java) | **Finalisée** : identités, établissements, inscriptions et liens familiaux dans `core/`. Testée en CI, jamais déployée |
 | Facturation, paiements, portail familles | **Pas commencés** |
-| Prochain chantier | Moteur de facturation scolaire |
+| Prochain chantier | **Mission 003, ScolaPay Billing Engine**, exigences métier à définir avant son démarrage |
 
 ## Vision
 
@@ -37,13 +37,14 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | --- | --- | --- | --- |
 | Identité globale | Vérifié | Compte unique, e-mail ou téléphone, connexion, verrouillage après 5 échecs, jetons révocables | `identity`, `SecurityHardeningTest` |
 | Invitations | Vérifié, remise non construite | Usage unique, empreinte seule stockée, liées au contact. Le jeton est renvoyé à la personne qui invite | `identity`, `SecurityHardeningTest` |
-| Établissements | Vérifié | Création par un opérateur, type, fuseau, devise, âge de la majorité, suspension | `establishment` |
+| Établissements | Vérifié | Création par un opérateur, type, fuseau, devise, pays, suspension | `establishment` |
 | Personnel et permissions | Vérifié | Adhésion par établissement, rôles multiples, dernier administrateur protégé | `establishment`, `TenantIsolationTest` |
 | Isolation entre établissements | Vérifié | Barrière d'adhésion, 404 aux non-membres, clés composites en base | `TenantIsolationTest`, `DatabaseGuardsTest` |
 | Années, dossiers, inscriptions | Vérifié | Inscription active unique par année, historique immuable | `schooling`, `ConcurrencyTest` |
-| Tuteurs et étudiants majeurs | Vérifié | Liens révocables entre compte et dossier, plusieurs enfants et établissements | `schooling`, `FoundationJourneyTest` |
+| Liens familiaux | Vérifié | Liens révocables entre compte et dossier, plusieurs enfants et établissements. Accès académique et contribution financière séparés | `schooling`, `FoundationJourneyTest`, `FamilyAccessTest` |
+| Majorité et consentement | Vérifié, modalités juridiques à confirmer | Âge légal par pays, non configurable. Un majeur contrôle l'accès académique des tiers | `AcademicAccess`, `FamilyAccessTest`, [0013](decisions/0013-majorite-et-autorisations-familiales.md) |
 | Audit | Vérifié | Immuable par trigger, écrit dans la transaction | `audit`, `DatabaseGuardsTest` |
-| Frontière vers la facturation | Vérifié, sans consommateur | `StudentDirectory`, événements `StudentEnrolled` et `EnrollmentEnded`, responsable financier | `schooling` |
+| Frontière vers la facturation | Vérifié, sans consommateur | `StudentDirectory`, événements `StudentEnrolled` et `EnrollmentEnded`, contributeurs financiers | `schooling` |
 | Facturation, paiements, comptabilité | Prévu | Rien | [0006](decisions/0006-backend-java-spring-boot.md) |
 | Portail web des familles | Prévu | L'API `/api/v2/me` existe, aucune interface | [0007](decisions/0007-portail-familles-avant-apk.md) |
 | Application Android des familles | Prévu, après le portail | Rien. L'application `android/` sert le personnel | [0007](decisions/0007-portail-familles-avant-apk.md) |
@@ -102,7 +103,8 @@ Android Compose ┘            monolithe modulaire, Prisma 7
 
 | Élément | Décision | Référence |
 | --- | --- | --- |
-| Facturation | Module Java au-dessus de `schooling` | [0006](decisions/0006-backend-java-spring-boot.md) |
+| Facturation (Mission 003) | Frais, factures, échéanciers et obligations financières, en module Java au-dessus de `schooling`, avec une outbox durable avant les premiers événements asynchrones critiques | [0006](decisions/0006-backend-java-spring-boot.md) |
+| Montants | Entiers dans l'unité minimale ISO : francs entiers pour le XAF. Conversions de prestataire dans leurs connecteurs | [0012](decisions/0012-convention-monetaire.md) |
 | Web | Next.js/TypeScript conservé, écrans portés vers `/api/v2` au fil des domaines | [0011](decisions/0011-transition-depuis-nestjs.md) |
 | Familles | Véritable site web d'abord, application Android ensuite | [0007](decisions/0007-portail-familles-avant-apk.md) |
 | Services financiers | Go envisagé, notamment pour les intégrations de prestataires, sans introduction immédiate | [0008](decisions/0008-go-services-paiement.md) |
@@ -122,7 +124,7 @@ Android Compose ┘            monolithe modulaire, Prisma 7
 7. **Cash et numérique séparés.** Le cash ne crédite pas le compte virtuel. Un paiement numérique ne s'annule pas sans remboursement réel.
 8. **Fermé par défaut.** Sans configuration, aucun prestataire n'est actif. `mock` et `kadryza` n'existent qu'avec `NODE_ENV` à `development` ou `test`. Une valeur inconnue empêche le démarrage.
 9. **Webhook.** Signature vérifiée sur le corps brut, puis contenu validé strictement, avant toute mutation.
-10. **Montants exacts.** Jamais de flottant pour un montant stocké. `Cents` est une convention historique, y compris pour XAF, voir [D-003](architecture-scolapay-2.md#décision-003--conserver-les-unités-financières-historiques).
+10. **Montants exacts.** Jamais de flottant pour un montant stocké. Dans `core/` : entiers dans l'unité minimale ISO de la devise, voir [0012](decisions/0012-convention-monetaire.md). `Cents` est une convention propre au code NestJS, voir [D-003](architecture-scolapay-2.md#décision-003--conserver-les-unités-financières-historiques).
 
 ## Décisions
 
@@ -131,11 +133,11 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 - **D-001 à D-005** ([détail](architecture-scolapay-2.md)) : monolithe modulaire, isolation par établissement, unités historiques, prestataires fermés par défaut, migrations séparées du démarrage.
 - **0006 et 0007**, acceptées : nouveau backend en Java/Spring Boot, construit directement, avec le code NestJS conservé comme référence, puis portail web des familles avant l'application Android.
 - **0008**, orientation validée : Go envisagé pour de futurs services financiers, sans introduction immédiate.
-- **0009 à 0011**, acceptées : fondation technique, modèle d'identité et d'accès, transition depuis NestJS.
+- **0009 à 0013**, acceptées : fondation technique, modèle d'identité et d'accès, transition depuis NestJS, convention monétaire, majorité légale et autorisations familiales. Les modalités juridiques de 0013 restent à confirmer.
 
 ## Priorités actuelles
 
-1. **Moteur de facturation scolaire** : prochain chantier, à cadrer. Il s'appuie sur `schooling` sans refaire les utilisateurs ni les établissements. Voir ses [prérequis](#prochaines-étapes).
+1. **Mission 003, ScolaPay Billing Engine** : prochain chantier, distinct. **Il n'est pas commencé**, et ses exigences métier seront définies avant son démarrage. Il s'appuie sur `schooling` sans refaire les utilisateurs ni les établissements. Voir ses [prérequis](#prochaines-étapes).
 
 ## Risques connus
 
@@ -144,7 +146,7 @@ Dans `core/`, les limites connues sont listées dans [0010](decisions/0010-ident
 | Risque | Conséquence | Où |
 | --- | --- | --- |
 | Invitations non remises | Le jeton transite par la personne qui invite. Un service de notification est nécessaire avant tout usage réel | `core`, `identity` |
-| Tuteur d'un enfant devenu majeur | Il garde l'accès jusqu'à révocation. Question de droit à trancher | [0010](decisions/0010-identite-et-acces.md#questions-ouvertes) |
+| Règles juridiques non confirmées | L'âge légal enregistré pour le Tchad est provisoire. Les modalités doivent être confirmées avant toute ouverture réelle du portail | [0013](decisions/0013-majorite-et-autorisations-familiales.md#limites-et-conditions) |
 | Pas de limitation de débit par adresse | Le verrouillage par compte permet de gêner un compte connu | `core`, `identity` |
 | Événements non durables | Publiés de façon synchrone, sans outbox : à résoudre avant la facturation | [0009](decisions/0009-fondation-technique-core.md#conséquences) |
 
@@ -155,7 +157,7 @@ Dans le code historique :
 | Solde modifiable par `PATCH /students/:id` | Change la dette sans `Transaction` : seul l'audit la trace. `DEBT_ADJUSTMENT` et `REFUND` existent dans le schéma mais rien ne les produit | `students.service.ts` |
 | Rapports limités au cash | `MOBILE_PAYMENT` n'entre ni dans le rapport d'encaissements ni dans le tableau de bord. À trancher avant d'activer un prestataire | `reports.controller.ts`, `dashboard.service.ts` |
 | Contrat Kadryza inconnu | Webhook provisoire : montant et devise non rapprochés, états incertains après un délai réseau non définis | [D-004](architecture-scolapay-2.md#décision-004--prestataires-financiers-fermés-par-défaut) |
-| Unités monétaires | `Cents` affiché divisé par 100 pour XAF, sans exposant ISO. À contractualiser avant un prestataire | [D-003](architecture-scolapay-2.md#décision-003--conserver-les-unités-financières-historiques) |
+| Unités monétaires | `Cents` affiché divisé par 100 pour XAF, sans exposant ISO. Tranché pour le nouveau backend, à ne jamais copier tel quel | [0012](decisions/0012-convention-monetaire.md) |
 | Isolation applicative seule | Pas de clé étrangère composite `(tenantId, id)`. Résolu dans `core/`, pas dans `backend/` | [D-002](architecture-scolapay-2.md#décision-002--isolation-explicite-par-établissement) |
 | Une seule instance d'API | Le garde du worker outbox est en mémoire : deux instances pourraient traiter le même événement | `outbox-worker.service.ts` |
 | Connexion sans limitation de débit | Aucune limite côté API ni Nginx | `modules/auth`, `nginx/` |
@@ -175,19 +177,23 @@ Ce serait un nouveau déploiement, avec des secrets neufs :
 - Ne pas exécuter le seed : ses comptes de démonstration ont des mots de passe publics.
 - Définir HTTPS, les origines, les limites du proxy et une sauvegarde restaurée : voir les [conditions de production](architecture-scolapay-2.md#conditions-avant-une-future-ouverture-en-production).
 
-**Prochain chantier : moteur de facturation scolaire**
+**Prochain chantier : Mission 003, ScolaPay Billing Engine**
 
-À trancher au cadrage :
+Frais scolaires, factures, échéanciers et obligations financières, sur les modules Java existants. Les exigences métier précises seront définies avant son démarrage. Déjà acquis :
 
-- **Unités monétaires** : `Cents` divisé par 100 pour XAF dans l'historique, alors que le XAF n'a pas de décimales selon ISO 4217. Voir [D-003](architecture-scolapay-2.md#décision-003--conserver-les-unités-financières-historiques).
-- **Outbox durable** : le registre de publication de Spring Modulith est le candidat à évaluer.
+- **Montants** : la [convention monétaire](decisions/0012-convention-monetaire.md) s'applique dès sa première migration.
+- **Outbox durable** : exigée avant les premiers événements asynchrones critiques. Le registre de publication de Spring Modulith est le candidat à évaluer.
+
+À traiter au cadrage :
+
 - **Catalogue de frais** : `enrollments.level` est un texte libre. La tarification par niveau demandera sans doute un catalogue de niveaux ou de classes.
-- **Soldes** : ils seront dérivés de factures et de paiements, sans modification directe comme dans NestJS.
+- **Soldes** : à dériver de factures et de paiements, sans modification directe comme dans NestJS.
+- **Contributeurs** : ce qu'un contributeur financier voit d'une facture, et sa distinction éventuelle avec un débiteur légal.
 
 **Ensuite, sans ordre arrêté**
 
 - Service de notification, pour remettre les invitations par SMS ou e-mail.
-- Portail web des familles ([0007](decisions/0007-portail-familles-avant-apk.md)), avec réinitialisation de mot de passe et renouvellement de session.
+- Portail web des familles ([0007](decisions/0007-portail-familles-avant-apk.md)), avec réinitialisation de mot de passe et renouvellement de session. Son ouverture réelle exige la confirmation juridique de [0013](decisions/0013-majorite-et-autorisations-familiales.md).
 - Portage de la caisse, des reçus et de la trésorerie vers `core/`.
 - Contrat d'un prestataire réel, puis besoins de services dédiés ([0008](decisions/0008-go-services-paiement.md)).
 

@@ -12,8 +12,8 @@ import org.junit.jupiter.api.Test;
 
 class MajorityTest {
 
-    private static Establishment establishment(int age, String timezone) {
-        return new Establishment(UUID.randomUUID(), "E-1", "Lycée", "SCHOOL", timezone, "XAF", age, "ACTIVE");
+    private static Establishment establishment(int legalAge, String timezone) {
+        return new Establishment(UUID.randomUUID(), "E-1", "Lycée", "SCHOOL", timezone, "XAF", "TD", legalAge, "ACTIVE");
     }
 
     private static Clock at(String instant) {
@@ -29,8 +29,15 @@ class MajorityTest {
     }
 
     @Test
-    void laDateDeNaissanceInconnueNEtablitPasLaMajorite() {
+    void laDateDeNaissanceInconnueNEtablitNiLaMajoriteNiLaMinorite() {
+        assertThat(Majority.statusOf(null, establishment(18, "UTC"), at("2026-06-15T12:00:00Z"))).isEqualTo(Majority.Status.UNKNOWN);
         assertThat(Majority.isReached(null, establishment(18, "UTC"), at("2026-06-15T12:00:00Z"))).isFalse();
+    }
+
+    @Test
+    void laVeilleDeLaMajoriteLEleveEstMineur() {
+        Clock clock = at("2026-06-14T12:00:00Z");
+        assertThat(Majority.statusOf(LocalDate.of(2008, 6, 15), establishment(18, "UTC"), clock)).isEqualTo(Majority.Status.MINOR);
     }
 
     @Test
@@ -43,7 +50,7 @@ class MajorityTest {
     }
 
     @Test
-    void lAgeEstUneRegleDeLEtablissement() {
+    void lAgeAppliqueEstCeluiDeLaRegleLegale() {
         Clock clock = at("2026-06-15T12:00:00Z");
         LocalDate birthDate = LocalDate.of(2006, 1, 1);
         assertThat(Majority.isReached(birthDate, establishment(18, "UTC"), clock)).isTrue();

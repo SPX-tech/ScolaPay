@@ -17,6 +17,7 @@ Le portail destiné aux parents et aux étudiants sera d'abord un véritable sit
 
 - L'application Android existante reste un outil du personnel. Ne pas la présenter comme l'application des familles.
 - Le portail consomme `/api/v2/me` et s'appuie sur la fondation Java, livrée.
+- **Condition d'ouverture réelle :** les modalités juridiques de [0013](0013-majorite-et-autorisations-familiales.md) doivent être confirmées.
 - [D-002](../architecture-scolapay-2.md#décision-002--isolation-explicite-par-établissement) reste applicable : pas de transformation directe de `User` en compte parent global, et une relation famille-élève n'accorde jamais d'accès à tout l'établissement.
 
 ## Questions ouvertes

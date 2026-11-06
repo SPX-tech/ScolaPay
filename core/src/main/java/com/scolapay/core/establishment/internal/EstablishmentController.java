@@ -8,8 +8,6 @@ import com.scolapay.core.establishment.StaffRole;
 import com.scolapay.core.identity.Invitations;
 import com.scolapay.core.shared.PageQuery;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -32,7 +30,7 @@ class EstablishmentController {
 
     private static final String BASE = "/api/v2/establishments/{establishmentId}";
 
-    record SettingsRequest(@Size(min = 2, max = 200) String name, @Min(15) @Max(25) Integer ageOfMajority) {}
+    record SettingsRequest(@NotBlank @Size(min = 2, max = 200) String name) {}
 
     record InviteStaffRequest(@NotBlank @Size(max = 254) String contact, @NotNull StaffRole role) {}
 
@@ -70,7 +68,7 @@ class EstablishmentController {
 
     @PatchMapping(BASE)
     Establishment updateSettings(@PathVariable UUID establishmentId, @Valid @RequestBody SettingsRequest request) {
-        return establishments.updateSettings(establishmentId, request.name(), request.ageOfMajority());
+        return establishments.updateSettings(establishmentId, request.name());
     }
 
     @GetMapping(BASE + "/members")

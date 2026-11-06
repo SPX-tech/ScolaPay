@@ -27,7 +27,7 @@ class SelfAccessInvitationHandler implements InvitationHandler {
         return PURPOSE;
     }
 
-    /** La majorité est revérifiée : la règle de l'établissement a pu changer depuis l'émission. */
+    /** La majorité est revérifiée : le dossier a pu être corrigé depuis l'émission. */
     @Override
     public void onAccepted(Accepted invitation) {
         Establishments.Establishment establishment = establishments.find(invitation.establishmentId())
@@ -38,7 +38,7 @@ class SelfAccessInvitationHandler implements InvitationHandler {
                 .orElseThrow(() -> ApiException.conflict("RECORD_UNAVAILABLE", "Ce dossier n'est plus disponible."));
         if (!Majority.isReached(student.birthDate(), establishment, clock)) {
             throw ApiException.conflict(
-                    "STUDENT_NOT_ADULT", "L'étudiant doit avoir atteint l'âge de la majorité fixé par l'établissement.");
+                    "STUDENT_NOT_ADULT", "L'étudiant doit avoir atteint l'âge légal de la majorité.");
         }
         repository.insertGrant(
                 new SchoolingRepository.Grant(
@@ -49,6 +49,8 @@ class SelfAccessInvitationHandler implements InvitationHandler {
                         "SELF",
                         null,
                         false,
+                        false,
+                        null,
                         clock.instant(),
                         null),
                 invitation.issuedBy());

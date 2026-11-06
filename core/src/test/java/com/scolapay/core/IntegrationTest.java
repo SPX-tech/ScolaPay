@@ -184,6 +184,7 @@ abstract class IntegrationTest {
                 "kind", "SCHOOL",
                 "timezone", "Africa/Ndjamena",
                 "currency", "XAF",
+                "countryCode", "TD",
                 "firstAdminContact", firstAdminContact));
     }
 
@@ -240,12 +241,17 @@ abstract class IntegrationTest {
         return created.id("id");
     }
 
-    /** Invite un tuteur sur un dossier et renvoie le jeton d'invitation. */
-    String inviteGuardian(Tenant tenant, UUID studentId, String contact, boolean financiallyResponsible) {
-        Response invited = post(tenant.path("/students/" + studentId + "/guardian-invitations"), tenant.adminToken(), Map.of(
+    Response inviteThirdParty(Tenant tenant, UUID studentId, String contact, boolean academic, boolean financial) {
+        return post(tenant.path("/students/" + studentId + "/third-party-invitations"), tenant.adminToken(), Map.of(
                 "contact", contact,
                 "relationship", "MOTHER",
-                "financiallyResponsible", financiallyResponsible));
+                "academicAccess", academic,
+                "financialContributor", financial));
+    }
+
+    /** Invite un tuteur avec accès académique sur le dossier d'un mineur et renvoie le jeton d'invitation. */
+    String inviteGuardian(Tenant tenant, UUID studentId, String contact, boolean financialContributor) {
+        Response invited = inviteThirdParty(tenant, studentId, contact, true, financialContributor);
         assertThat(invited.status()).as(invited.raw()).isEqualTo(201);
         return invited.text("token");
     }

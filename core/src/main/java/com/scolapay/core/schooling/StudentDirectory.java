@@ -15,6 +15,9 @@ public interface StudentDirectory {
 
     Optional<StudentSummary> find(UUID establishmentId, UUID studentId);
 
-    /** Les comptes à qui adresser une facture : tuteurs actifs désignés responsables financiers. */
-    List<UUID> financiallyResponsibleAccounts(UUID establishmentId, UUID studentId);
+    /**
+     * Les comptes autorisés à contribuer aux frais de l'élève. Ce droit est distinct de l'accès
+     * aux informations académiques : un contributeur peut n'avoir aucun accès au dossier.
+     */
+    List<UUID> financialContributorAccounts(UUID establishmentId, UUID studentId);
 }

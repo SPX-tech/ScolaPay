@@ -48,7 +48,7 @@ Le paquet racine d'un module est son API publique, `internal` lui est réservé.
 ## Conséquences
 
 - Le backend se construit, se teste et s'exécute sans NestJS (`core/`).
-- Les événements `StudentEnrolled` et `EnrollmentEnded` sont publiés de façon synchrone, dans la transaction. **Il n'y a pas encore d'outbox durable** : le registre de publication de Spring Modulith est le candidat à évaluer pour la facturation.
+- Les événements `StudentEnrolled` et `EnrollmentEnded` sont publiés de façon synchrone, dans la transaction. **Il n'y a pas encore d'outbox durable** : elle est exigée par la Mission 003 avant les premiers événements asynchrones critiques, et le registre de publication de Spring Modulith est le candidat à évaluer.
 - Les migrations partagent pour l'instant le pool de l'application et son `statement_timeout` de 15 secondes. Une migration longue exigera une configuration dédiée.
 
 ## Questions ouvertes

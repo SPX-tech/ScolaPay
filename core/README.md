@@ -2,7 +2,7 @@
 
 Nouveau backend de ScolaPay 2.0, en Java et Spring Boot. Il se construit, se teste et s'exécute sans le backend NestJS.
 
-Décisions : [fondation technique](../docs/decisions/0009-fondation-technique-core.md), [identité et accès](../docs/decisions/0010-identite-et-acces.md), [transition](../docs/decisions/0011-transition-depuis-nestjs.md).
+Décisions : [fondation technique](../docs/decisions/0009-fondation-technique-core.md), [identité et accès](../docs/decisions/0010-identite-et-acces.md), [transition](../docs/decisions/0011-transition-depuis-nestjs.md), [convention monétaire](../docs/decisions/0012-convention-monetaire.md), [majorité et autorisations familiales](../docs/decisions/0013-majorite-et-autorisations-familiales.md).
 
 ## Prérequis
 
@@ -46,10 +46,12 @@ Toutes les routes sont sous `/api/v2`. Les erreurs suivent la RFC 9457, avec un 
 | Créer puis ouvrir une année | `POST /establishments/{id}/academic-years`, `PATCH .../{yearId}` | Secrétariat |
 | Créer un dossier | `POST /establishments/{id}/students` | Secrétariat |
 | Inscrire | `POST /establishments/{id}/students/{studentId}/enrollments` | Secrétariat |
-| Inviter un tuteur | `POST /establishments/{id}/students/{studentId}/guardian-invitations` | Secrétariat |
+| Inviter un tiers : accès académique pour un mineur, contribution financière | `POST /establishments/{id}/students/{studentId}/third-party-invitations` | Secrétariat |
 | Inviter un étudiant majeur | `POST /establishments/{id}/students/{studentId}/self-access-invitations` | Secrétariat |
 | Voir ses établissements | `GET /me/affiliations` | Personnel |
 | Voir ses enfants ou son dossier | `GET /me/students`, `GET /me/students/{studentId}` | Famille |
+| Voir les tiers liés à son dossier | `GET /me/students/{studentId}/third-parties` | Étudiant majeur |
+| Accorder ou retirer l'accès d'un tiers | `PATCH /me/students/{studentId}/third-parties/{grantId}` | Étudiant majeur |
 
 ## Ajouter un module
 
@@ -59,3 +61,4 @@ Toutes les routes sont sous `/api/v2`. Les erreurs suivent la RFC 9457, avec un 
 4. Toute route d'établissement vit sous `/api/v2/establishments/{establishmentId}`. Le service appelle `EstablishmentAccess.require` avec la permission voulue.
 5. Une mutation sensible écrit dans `AuditTrail`, dans la même transaction.
 6. Une migration existante n'est jamais modifiée : en ajouter une nouvelle.
+7. Tout montant suit la [convention monétaire](../docs/decisions/0012-convention-monetaire.md) : entier, unité minimale ISO, devise explicite, conversions de prestataire dans leur connecteur.

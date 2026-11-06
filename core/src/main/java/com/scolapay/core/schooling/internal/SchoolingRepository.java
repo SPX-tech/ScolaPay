@@ -40,9 +40,16 @@ public class SchoolingRepository {
             UUID accountId,
             String kind,
             String relationship,
-            boolean financiallyResponsible,
+            boolean academicAccess,
+            boolean financialContributor,
+            Instant academicConsentAt,
             Instant grantedAt,
             Instant revokedAt) {}
+
+    private static final String GRANT_COLUMNS = """
+            id, establishment_id, student_record_id, account_id, kind, relationship,
+            academic_access, financial_contributor, academic_consent_at, granted_at, revoked_at
+            """;
 
     private final JdbcClient jdbc;
 
@@ -258,10 +265,10 @@ public class SchoolingRepository {
         jdbc.sql("""
                 INSERT INTO record_access_grants
                   (id, establishment_id, student_record_id, account_id, kind, relationship,
-                   financially_responsible, granted_at, granted_by)
+                   academic_access, financial_contributor, granted_at, granted_by)
                 VALUES
                   (:id, :establishmentId, :studentId, :accountId, :kind, :relationship,
-                   :financiallyResponsible, :grantedAt, :grantedBy)
+                   :academicAccess, :financialContributor, :grantedAt, :grantedBy)
                 """)
                 .param("id", grant.id())
                 .param("establishmentId", grant.establishmentId())
@@ -269,7 +276,8 @@ public class SchoolingRepository {
                 .param("accountId", grant.accountId())
                 .param("kind", grant.kind())
                 .param("relationship", grant.relationship())
-                .param("financiallyResponsible", grant.financiallyResponsible())
+                .param("academicAccess", grant.academicAccess())
+                .param("financialContributor", grant.financialContributor())
                 .param("grantedAt", Columns.timestamp(grant.grantedAt()))
                 .param("grantedBy", grantedBy)
                 .update();
@@ -290,9 +298,7 @@ public class SchoolingRepository {
     }
 
     public List<Grant> grantsOfStudent(UUID establishmentId, UUID studentId) {
-        return jdbc.sql("""
-                SELECT id, establishment_id, student_record_id, account_id, kind, relationship,
-                       financially_responsible, granted_at, revoked_at
+        return jdbc.sql("SELECT " + GRANT_COLUMNS + """
                 FROM record_access_grants
                 WHERE establishment_id = :establishmentId AND student_record_id = :studentId
                 ORDER BY granted_at, id
@@ -305,9 +311,7 @@ public class SchoolingRepository {
 
     /** Point d'entrée de la surface familles : part du compte, jamais d'un établissement fourni par le client. */
     public List<Grant> activeGrantsOfAccount(UUID accountId) {
-        return jdbc.sql("""
-                SELECT id, establishment_id, student_record_id, account_id, kind, relationship,
-                       financially_responsible, granted_at, revoked_at
+        return jdbc.sql("SELECT " + GRANT_COLUMNS + """
                 FROM record_access_grants
                 WHERE account_id = :accountId AND revoked_at IS NULL
                 ORDER BY granted_at, id
@@ -318,9 +322,7 @@ public class SchoolingRepository {
     }
 
     public Optional<Grant> activeGrant(UUID accountId, UUID studentId) {
-        return jdbc.sql("""
-                SELECT id, establishment_id, student_record_id, account_id, kind, relationship,
-                       financially_responsible, granted_at, revoked_at
+        return jdbc.sql("SELECT " + GRANT_COLUMNS + """
                 FROM record_access_grants
                 WHERE account_id = :accountId AND student_record_id = :studentId AND revoked_at IS NULL
                 """)
@@ -330,11 +332,28 @@ public class SchoolingRepository {
                 .optional();
     }
 
-    public List<UUID> financiallyResponsibleAccounts(UUID establishmentId, UUID studentId) {
+    /** Le consentement ne concerne que les tiers : le lien SELF n'en a pas besoin. */
+    public int setAcademicConsent(
+            UUID establishmentId, UUID studentId, UUID grantId, Instant consentAt, UUID consentBy) {
+        return jdbc.sql("""
+                UPDATE record_access_grants
+                SET academic_consent_at = :consentAt, academic_consent_by = :consentBy
+                WHERE establishment_id = :establishmentId AND student_record_id = :studentId
+                  AND id = :id AND kind = 'THIRD_PARTY' AND revoked_at IS NULL
+                """)
+                .param("establishmentId", establishmentId)
+                .param("studentId", studentId)
+                .param("id", grantId)
+                .param("consentAt", Columns.timestamp(consentAt))
+                .param("consentBy", consentBy)
+                .update();
+    }
+
+    public List<UUID> financialContributorAccounts(UUID establishmentId, UUID studentId) {
         return jdbc.sql("""
                 SELECT account_id FROM record_access_grants
                 WHERE establishment_id = :establishmentId AND student_record_id = :studentId
-                  AND financially_responsible AND revoked_at IS NULL
+                  AND financial_contributor AND revoked_at IS NULL
                 ORDER BY granted_at, id
                 """)
                 .param("establishmentId", establishmentId)
@@ -375,7 +394,9 @@ public class SchoolingRepository {
                 Columns.uuid(rs, "account_id"),
                 rs.getString("kind"),
                 rs.getString("relationship"),
-                rs.getBoolean("financially_responsible"),
+                rs.getBoolean("academic_access"),
+                rs.getBoolean("financial_contributor"),
+                Columns.instant(rs, "academic_consent_at"),
                 Columns.instant(rs, "granted_at"),
                 Columns.instant(rs, "revoked_at"));
     }

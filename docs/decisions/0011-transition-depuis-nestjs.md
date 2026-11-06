@@ -25,7 +25,7 @@ Aucune instance n'est en service depuis le 2026-11-06. L'ancienne instance ne co
 
 | NestJS | ScolaPay 2.0 | Remarque |
 | --- | --- | --- |
-| `Tenant` | `establishments` | Ajoute le type et l'âge de la majorité |
+| `Tenant` | `establishments` | Ajoute le type et le pays, dont découle l'âge légal de la majorité |
 | `User` | `accounts`, `account_identifiers`, `memberships`, `membership_roles` | Voir [0010](0010-identite-et-acces.md) |
 | `TENANT_ADMIN`, `CASHIER`, `ACCOUNTANT`, `AUDITOR` | `ESTABLISHMENT_ADMIN`, `CASHIER`, `ACCOUNTANT`, `AUDITOR` | Ajoute `REGISTRAR` |
 | `Student` | `student_records` | **Sans dette ni crédit** : les soldes appartiendront à la facturation |
@@ -37,7 +37,7 @@ Aucune instance n'est en service depuis le 2026-11-06. L'ancienne instance ne co
 
 Repris : isolation par établissement, journal d'audit transactionnel, montants jamais en flottant, écritures idempotentes, fermeture par défaut des prestataires.
 
-Non repris : `tenantId` dans le jeton et en-tête `x-tenant-id`, `User` rattaché à un seul établissement, solde modifiable directement par `PATCH` sur l'élève, clés étrangères simples.
+Non repris : `tenantId` dans le jeton et en-tête `x-tenant-id`, `User` rattaché à un seul établissement, solde modifiable directement par `PATCH` sur l'élève, clés étrangères simples, colonnes `*Cents` (voir [0012](0012-convention-monetaire.md)).
 
 ## Conséquences
 

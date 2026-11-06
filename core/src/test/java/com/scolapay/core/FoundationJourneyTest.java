@@ -71,15 +71,16 @@ class FoundationJourneyTest extends IntegrationTest {
         assertThat(children.body().size()).isEqualTo(1);
         JsonNode child = children.body().get(0);
         assertThat(child.path("studentId").asString()).isEqualTo(studentId.toString());
-        assertThat(child.path("access").asString()).isEqualTo("GUARDIAN");
+        assertThat(child.path("access").asString()).isEqualTo("THIRD_PARTY");
+        assertThat(child.path("academicAccess").asBoolean()).isTrue();
         assertThat(child.path("relationship").asString()).isEqualTo("MOTHER");
         assertThat(child.path("enrollments").get(0).path("level").asString()).isEqualTo("Terminale D");
         assertThat(get("/api/v2/me/students/" + studentId, parent).status()).isEqualTo(200);
         assertThat(get("/api/v2/me/affiliations", parent).body().size()).isZero();
         assertThat(get(path + "/students/" + studentId, parent).status()).isEqualTo(404);
 
-        // La frontière publiée à la facturation désigne le responsable financier.
-        assertThat(directory.financiallyResponsibleAccounts(establishmentId, studentId)).hasSize(1);
+        // La frontière publiée à la facturation désigne les contributeurs financiers.
+        assertThat(directory.financialContributorAccounts(establishmentId, studentId)).hasSize(1);
         assertThat(directory.find(establishmentId, studentId)).isPresent();
         assertThat(directory.find(UUID.randomUUID(), studentId)).isEmpty();
 
@@ -208,7 +209,7 @@ class FoundationJourneyTest extends IntegrationTest {
     }
 
     @Test
-    void unMineurOuUnAgeInconnuNOuvrePasDAccesPersonnel_etLaRegleEstCelleDeLEtablissement() {
+    void unMineurOuUnAgeInconnuNOuvrePasDAccesPersonnel() {
         Tenant tenant = newTenant();
         String selfAccess = "/self-access-invitations";
 
@@ -221,15 +222,14 @@ class FoundationJourneyTest extends IntegrationTest {
         assertThat(post(tenant.path("/students/" + inconnu + selfAccess), tenant.adminToken(), Map.of("contact", uniqueEmail())).status())
                 .isEqualTo(409);
 
-        // À 19 ans : admis à 18, puis refusé dès que l'établissement fixe la majorité à 21.
-        UUID dixNeuf = newStudent(tenant, LocalDate.now().minusYears(19));
-        Response issued = post(tenant.path("/students/" + dixNeuf + selfAccess), tenant.adminToken(), Map.of("contact", uniqueEmail()));
+        // Une invitation déjà émise est revérifiée à l'acceptation, et rien n'est créé.
+        UUID corrige = newStudent(tenant, LocalDate.now().minusYears(19));
+        Response issued = post(tenant.path("/students/" + corrige + selfAccess), tenant.adminToken(), Map.of("contact", uniqueEmail()));
         assertThat(issued.status()).isEqualTo(201);
-        assertThat(patch(tenant.path(""), tenant.adminToken(), Map.of("ageOfMajority", 21)).status()).isEqualTo(200);
-        assertThat(post(tenant.path("/students/" + dixNeuf + selfAccess), tenant.adminToken(), Map.of("contact", uniqueEmail())).status())
-                .isEqualTo(409);
-
-        // L'invitation déjà émise est revérifiée à l'acceptation, et rien n'est créé.
+        jdbc.sql("UPDATE student_records SET birth_date = :birthDate WHERE id = :id")
+                .param("id", corrige)
+                .param("birthDate", LocalDate.now().minusYears(15))
+                .update();
         Response accepted = post("/api/v2/invitations/accept", null, Map.of(
                 "token", issued.text("token"), "fullName", "Trop Jeune", "password", PASSWORD));
         assertThat(accepted.status()).as(accepted.raw()).isEqualTo(409);

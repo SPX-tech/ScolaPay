@@ -8,17 +8,18 @@ import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 @Component
-class GuardianInvitationHandler implements InvitationHandler {
+class ThirdPartyInvitationHandler implements InvitationHandler {
 
-    static final String PURPOSE = "schooling.guardian";
+    static final String PURPOSE = "schooling.third-party";
     static final String RELATIONSHIP_ATTRIBUTE = "relationship";
-    static final String FINANCIAL_ATTRIBUTE = "financiallyResponsible";
+    static final String ACADEMIC_ATTRIBUTE = "academicAccess";
+    static final String FINANCIAL_ATTRIBUTE = "financialContributor";
 
     private final SchoolingRepository repository;
     private final Establishments establishments;
     private final Clock clock;
 
-    GuardianInvitationHandler(SchoolingRepository repository, Establishments establishments, Clock clock) {
+    ThirdPartyInvitationHandler(SchoolingRepository repository, Establishments establishments, Clock clock) {
         this.repository = repository;
         this.establishments = establishments;
         this.clock = clock;
@@ -29,6 +30,10 @@ class GuardianInvitationHandler implements InvitationHandler {
         return PURPOSE;
     }
 
+    /**
+     * Si l'élève devient majeur avant l'acceptation, le lien est créé mais l'accès académique
+     * reste fermé : {@link AcademicAccess} l'applique à la lecture, sans cas particulier ici.
+     */
     @Override
     public void onAccepted(Accepted invitation) {
         boolean available = establishments.find(invitation.establishmentId())
@@ -44,9 +49,11 @@ class GuardianInvitationHandler implements InvitationHandler {
                         invitation.establishmentId(),
                         invitation.subjectId(),
                         invitation.accountId(),
-                        "GUARDIAN",
+                        "THIRD_PARTY",
                         invitation.attributes().get(RELATIONSHIP_ATTRIBUTE),
+                        Boolean.parseBoolean(invitation.attributes().get(ACADEMIC_ATTRIBUTE)),
                         Boolean.parseBoolean(invitation.attributes().get(FINANCIAL_ATTRIBUTE)),
+                        null,
                         clock.instant(),
                         null),
                 invitation.issuedBy());

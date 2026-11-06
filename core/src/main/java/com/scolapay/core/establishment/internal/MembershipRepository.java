@@ -53,9 +53,11 @@ public class MembershipRepository {
     public List<Affiliation> affiliationsOf(UUID accountId) {
         record Row(Establishment establishment, String role) {}
         List<Row> rows = jdbc.sql("""
-                SELECT e.id, e.code, e.name, e.kind, e.timezone, e.currency, e.age_of_majority, e.status, r.role
+                SELECT e.id, e.code, e.name, e.kind, e.timezone, e.currency, e.country_code,
+                       l.age_of_majority, e.status, r.role
                 FROM memberships m
                 JOIN establishments e ON e.id = m.establishment_id
+                JOIN legal_majority_rules l ON l.country_code = e.country_code
                 LEFT JOIN membership_roles r ON r.membership_id = m.id
                 WHERE m.account_id = :accountId AND m.status = 'ACTIVE' AND e.status = 'ACTIVE'
                 ORDER BY e.name, e.id
@@ -69,6 +71,7 @@ public class MembershipRepository {
                                 rs.getString("kind"),
                                 rs.getString("timezone"),
                                 rs.getString("currency"),
+                                rs.getString("country_code"),
                                 rs.getInt("age_of_majority"),
                                 rs.getString("status")),
                         rs.getString("role")))
