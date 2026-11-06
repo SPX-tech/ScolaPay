@@ -29,7 +29,6 @@ jobs:
           --health-cmd "pg_isready -U scolapay_smoke -d scolapay_smoke"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      SCOLAPAY_DB_URL: jdbc:postgresql://localhost:${{ job.services.postgres.ports[5432] }}/scolapay_smoke
       SCOLAPAY_DB_USERNAME: scolapay_smoke
       SCOLAPAY_DB_PASSWORD: isolated_ci_only
     defaults:
@@ -37,6 +36,8 @@ jobs:
         working-directory: core
     steps:
       - uses: actions/checkout@v7.0.1
+      - name: Configurer la base jetable
+        run: echo 'SCOLAPAY_DB_URL=jdbc:postgresql://localhost:${{ job.services.postgres.ports[5432] }}/scolapay_smoke' >> "$GITHUB_ENV"
       - uses: actions/setup-java@v6.2.0
         with:
           distribution: temurin
