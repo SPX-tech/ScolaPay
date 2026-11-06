@@ -5,6 +5,7 @@ import com.scolapay.core.shared.Columns;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -49,6 +50,12 @@ public class EstablishmentRepository {
                 .param("countryCode", countryCode)
                 .query(Boolean.class)
                 .single();
+    }
+
+    public List<String> countriesWithUnconfirmedLegalRule() {
+        return jdbc.sql("SELECT country_code FROM legal_majority_rules WHERE NOT legally_confirmed ORDER BY country_code")
+                .query(String.class)
+                .list();
     }
 
     public Optional<Establishment> find(UUID id) {

@@ -68,15 +68,15 @@ Prouvés par des tests sur PostgreSQL réel, sans doubles, et par des mutations 
 
 Chaque lot est une PR verte, indépendante, et met à jour `PROJECT_CONTEXT.md`.
 
-| Lot | Contenu | Dépend de |
-| --- | --- | --- |
-| 1 | Outbox durable et ses tests de sortie, contrôle de mise en service | |
-| 2 | Catalogue académique structuré dans `schooling` | |
-| 3 | Module `billing` : catalogue de frais et ses versions, publication | Lot 2 |
-| 4 | Obligations, échéances et journal, émission sans double facturation | Lots 1 et 3 |
-| 5 | Remises et ajustements, permissions, confirmation par une seconde personne, réexamen après retrait | Lot 4 |
-| 6 | Personnes physiques et morales, rôles, vues par rôle, retrait de `financial_contributor` | Lot 4 |
-| 7 | Campagne de mutations et clôture | Tous |
+| Lot | Contenu | Dépend de | État |
+| --- | --- | --- | --- |
+| 1 | Outbox durable et ses tests de sortie, contrôle de mise en service | | **Terminé** |
+| 2 | Catalogue académique structuré dans `schooling` | | À faire |
+| 3 | Module `billing` : catalogue de frais et ses versions, publication | Lot 2 | À faire |
+| 4 | Obligations, échéances et journal, émission sans double facturation | Lots 1 et 3 | À faire |
+| 5 | Remises et ajustements, permissions, confirmation par une seconde personne, réexamen après retrait | Lot 4 | À faire |
+| 6 | Personnes physiques et morales, rôles, vues par rôle, retrait de `financial_contributor` | Lot 4 | À faire |
+| 7 | Campagne de mutations et clôture | Tous | À faire |
 
 ## Décisions du propriétaire
 
@@ -95,5 +95,6 @@ Tout changement structurant ou question juridique non tranchée est remonté au 
 
 - **Règles juridiques non confirmées** : qualité de redevable, confidentialité, consentement. Elles bloquent l'ouverture du portail, pas la construction.
 - **Montants absents du catalogue actuel** : rien n'est à reprendre de NestJS, dont la convention est différente. Voir [0012](../decisions/0012-convention-monetaire.md).
-- **Outbox** : le choix technique peut changer selon les tests du lot 1.
+- **Outbox** : un listener peut s'exécuter deux fois et sans ordre garanti. Le lot 4 doit respecter les [limites établies](../decisions/0016-outbox-durable.md#limites-à-respecter).
+- **Conservation de l'archive des événements** : non tranchée, voir [0016](../decisions/0016-outbox-durable.md#question-ouverte).
 - **Numérotation légale des factures** : non tranchée, voir [0015](../decisions/0015-modele-de-facturation.md#questions-ouvertes).

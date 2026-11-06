@@ -48,12 +48,11 @@ Conséquences de cette règle, vérifiées par `FamilyAccessTest` :
 
 ## Limites et conditions
 
-- **Non confirmé juridiquement.** L'âge de 18 ans enregistré pour le Tchad est une valeur provisoire, sans validation par un juriste, et `legally_confirmed` reste à `false`. Aucun code ne s'appuie encore sur ce champ : c'est une condition à lever, à la main, avant d'ouvrir le portail.
+- **Non confirmé juridiquement.** L'âge de 18 ans enregistré pour le Tchad est une valeur provisoire, sans validation par un juriste, et `legally_confirmed` reste à `false`. L'application refuse d'ouvrir le portail tant que ce champ est faux : voir [0017](0017-controles-de-mise-en-service.md).
 - **À confirmer avec un juriste avant l'ouverture :** l'âge légal au Tchad et ses éventuelles exceptions, la portée exacte de l'autorité parentale sur les données scolaires, la forme valable du consentement, les règles de protection des données applicables.
 - **Représentation légale d'un majeur** (tutelle, par exemple) : non modélisée, et un tuteur légal d'un majeur est aujourd'hui traité comme tout autre tiers.
 - **La modification d'un lien existant** passe par sa révocation puis une nouvelle invitation : l'établissement ne peut pas changer les droits d'un lien.
 - **Le droit financier ne donne encore accès à aucun montant**, puisque la facturation n'existe pas. Ce qu'un contributeur verra est proposé dans [0015](0015-modele-de-facturation.md#ce-que-chacun-voit).
-- **Rien ne force encore la confirmation juridique** : voir [0017](0017-controles-de-mise-en-service.md).
 
 ## Questions ouvertes
 

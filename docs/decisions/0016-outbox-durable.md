@@ -1,44 +1,61 @@
 # 0016 : outbox durable
 
-- **Statut** : Besoin accepté. Évaluation du registre Spring Modulith à conclure par les tests du lot 1 de la Mission 003, avec repli justifié sur une solution PostgreSQL dédiée.
+- **Statut** : Acceptée, sur la base des tests ci-dessous
 - **Date** : 2026-11-06
-- **Implémentation** : aucune.
+- **Décideur** : propriétaire du projet, évaluation menée au lot 1 de la Mission 003
+- **Implémentation** : registre en place dans `core/`. **Aucun listener de production ne l'utilise encore** : le premier sera l'émission des obligations, au lot 4.
 
 ## Contexte
 
-`StudentEnrolled` et `EnrollmentEnded` sont publiés de façon synchrone, sans persistance. Un traitement asynchrone perdu après validation (émission d'une obligation, notification) serait une anomalie financière.
+`StudentEnrolled` et `EnrollmentEnded` étaient publiés de façon synchrone, sans persistance. Un traitement asynchrone perdu après validation serait une anomalie financière : une obligation jamais émise.
 
-## Options
+## Décision
 
-| Critère | Registre de publication Spring Modulith (JDBC) | Table maison avec `FOR UPDATE SKIP LOCKED` |
+Le **registre de publication de Spring Modulith** (JDBC, sur PostgreSQL) est retenu. Il a satisfait tous les tests prévus, et ses limites se gèrent par le code et la supervision. La solution PostgreSQL dédiée, avec `FOR UPDATE SKIP LOCKED`, reste le repli si l'une des conditions ci-dessous cessait d'être vraie.
+
+Mise en œuvre :
+
+- Schéma créé par la migration `V2`, initialisation automatique désactivée.
+- Mode de complétion `archive` : la table active ne contient que ce qui reste à traiter.
+- Publications bloquées surveillées dans les trois états, après 5 minutes. **Sans ces durées, le moniteur de la bibliothèque reste inactif et rien ne reprend après un arrêt brutal, sans aucune erreur** : un test protège leur présence.
+- `@EnableScheduling` explicite : sans lui, l'ordonnancement ne tient qu'à un effet de bord de Spring Modulith Moments, sur un fil non géré par Spring Boot.
+- Reprise par `OutboxRecovery` : délai doublé à chaque essai, plafonné à une heure, **sans nombre maximal d'essais**, car une obligation financière ne s'abandonne pas.
+- Alerte dans les journaux au-delà de 15 minutes sans traitement, calculée en SQL.
+
+## Preuves
+
+`OutboxReliabilityTest` lance de vraies JVM sur un vrai PostgreSQL et consomme le vrai événement de la vraie route d'inscription. L'arrêt brutal est un `SIGKILL`.
+
+| Condition | Scénario | Résultat |
 | --- | --- | --- |
-| Écriture dans la transaction métier | Oui, automatique pour les listeners transactionnels | Oui, explicite |
-| Code à maintenir | Faible, déjà dans la stack | Worker, reprises, purge, supervision |
-| Reprise des échecs | États `FAILED` et `RESUBMITTED`, resoumission à déclencher par nous | À écrire |
-| Plusieurs instances | Republication au redémarrage déconseillée par sa documentation : à vérifier | Sûr par construction |
-| Sérialisation | Liée aux types Java : renommer un événement affecte ceux en attente | Schéma JSON versionné, sous notre contrôle |
-| Lecture par établissement | Pas de colonne dédiée | Colonne `establishment_id` |
+| 1. Un arrêt brutal ne perd pas l'événement | Entre la validation et le traitement, puis pendant le traitement | Repris par une nouvelle instance, effet produit une fois |
+| 2. Une reprise ne crée pas de doublon | Arrêt après l'effet, avant la fin du traitement. Listener en échec | Listener rejoué, effet unique |
+| 3. Une transaction annulée ne publie rien | Échec à la validation elle-même, après la publication | Aucune ligne, aucun effet |
+| 4. Deux instances ne doublent aucun effet | Traitement plus long que le délai de blocage, donc reprise par l'autre instance pendant qu'il tourne | Exécutions réellement en double, 20 effets pour 20 événements |
+| Événement irrécupérable | Échec permanent | Jamais abandonné, n'empêche pas les autres, alerte |
+| Type d'événement disparu | Ligne d'une classe renommée | Ignorée par le registre, signalée par l'alerte |
+| Délai de reprise | Délai d'une heure | Aucun nouvel essai pendant ce délai |
 
-Ces éléments du registre viennent de sa documentation 2.1, **ils n'ont pas été testés ici**.
+Ces tests savent échouer : sur 17 défauts injectés un à un dans le lot 1, outbox et mise en service réunies, tous sont détectés. Cinq exécutions du code intact sont toutes vertes.
 
-## Décision proposée
+Une première campagne a aussi corrigé ce document : il affirmait à tort qu'aucune reprise n'aurait lieu sans `@EnableScheduling`, et un test ne démarrait même pas son instance.
 
-Utiliser le registre Spring Modulith, déjà dans la stack, plutôt qu'écrire un worker :
+## Limites à respecter
 
-- Schéma géré par Flyway, initialisation automatique désactivée.
-- Mode de complétion `archive`, pour garder la trace sans croissance de la table active.
-- Événements en records versionnés dans l'API publique des modules, jamais renommés sans migration.
-- Listeners idempotents : la livraison est « au moins une fois », un doublon ne doit rien changer. Les contraintes d'unicité de [0015](0015-modele-de-facturation.md) en sont la garantie.
-- Resoumission planifiée des échecs, bornée, et supervision de ce qui reste en attente.
+Elles viennent de la lecture du code source 2.1.2 et sont confirmées par les tests.
 
-**Condition de sortie du lot 1, sur PostgreSQL réel.** Si l'un de ces tests échoue, on bascule sur la table maison :
-
-1. Un arrêt brutal entre la validation et le traitement ne perd pas l'événement.
-2. Un listener en échec est repris sans doublon métier.
-3. Une transaction annulée ne publie rien.
-4. Deux instances simultanées ne produisent aucun effet métier en double.
+1. **Un listener peut s'exécuter deux fois, y compris en même temps.** Le registre ne l'empêche pas : `markResubmitted` ne refuse que l'état `RESUBMITTED`, et une publication `PROCESSING` peut être reprise. **Tout listener doit donc être idempotent, garanti par une contrainte PostgreSQL**, comme celle de [0015](0015-modele-de-facturation.md#empêcher-la-double-facturation). Le test 4 montre que ce cas arrive vraiment.
+2. **Aucun ordre n'est garanti.** `EnrollmentEnded` peut être traité avant `StudentEnrolled`. Le lot 4 doit relire l'état de l'inscription au lieu de se fier à l'ordre d'arrivée.
+3. **La taille de lot s'applique avant le délai de reprise.** Si plus de 1 000 publications anciennes attendent leur délai, les plus récentes en échec ne sont plus reprises. Rien n'est perdu, l'alerte se déclenche, et un test fige ce comportement.
+4. **Renommer un événement est une migration.** Le registre ignore une ligne dont la classe n'existe plus, avec un simple avertissement. Une évolution d'événement doit rester additive, car les lignes en attente restent à relire.
+5. **Un listener occupe une connexion pendant tout son traitement.** Huit fils de traitement pour dix connexions : un listener ne doit ni appeler un service externe ni attendre dans sa transaction.
 
 ## Conséquences
 
-- Aucun événement asynchrone critique n'existe avant que ces tests soient verts.
-- La livraison vers un service externe (notifications, futur service Go) devra être réévaluée le moment venu : le mode `outbox` d'externalisation du registre n'est pas évalué ici.
+- Dépendance ajoutée : `spring-modulith-starter-jdbc`, de la même famille que Spring Modulith déjà présent, sans service supplémentaire à exploiter.
+- L'alerte n'est qu'une ligne de journal : elle devra être reliée à une vraie supervision avant la mise en service.
+- La livraison vers un service externe (notifications, futur service Go) n'est pas évaluée ici. Le mode `outbox` d'externalisation du registre reste à examiner le moment venu.
+
+## Question ouverte
+
+Durée de conservation de `event_publication_archive`, qui n'est pas purgée. Elle contient des identifiants et le niveau scolaire, sans montant ni nom. À trancher par le propriétaire, avec les règles de protection des données.

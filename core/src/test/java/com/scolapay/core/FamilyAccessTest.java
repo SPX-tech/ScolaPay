@@ -255,12 +255,4 @@ class FamilyAccessTest extends IntegrationTest {
         assertThat(refused.status()).as(refused.raw()).isEqualTo(422);
         assertThat(refused.code()).isEqualTo("UNSUPPORTED_COUNTRY");
     }
-
-    @Test
-    void laRegleDuTchadResteProvisoireTantQuElleNEstPasConfirmee() {
-        Boolean confirmed = jdbc.sql("SELECT legally_confirmed FROM legal_majority_rules WHERE country_code = 'TD'")
-                .query(Boolean.class)
-                .single();
-        assertThat(confirmed).isFalse();
-    }
 }

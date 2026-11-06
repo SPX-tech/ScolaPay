@@ -18,6 +18,7 @@ import com.scolapay.core.schooling.internal.SchoolingRepository.HistoryEntry;
 import com.scolapay.core.schooling.internal.SchoolingRepository.Student;
 import com.scolapay.core.shared.ApiException;
 import com.scolapay.core.shared.PageQuery;
+import com.scolapay.core.shared.PortalProperties;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -76,6 +77,7 @@ public class SchoolingService implements StudentDirectory {
     private final CurrentActor actor;
     private final AuditTrail audit;
     private final ApplicationEventPublisher events;
+    private final PortalProperties portal;
     private final Clock clock;
 
     public SchoolingService(
@@ -87,6 +89,7 @@ public class SchoolingService implements StudentDirectory {
             CurrentActor actor,
             AuditTrail audit,
             ApplicationEventPublisher events,
+            PortalProperties portal,
             Clock clock) {
         this.repository = repository;
         this.access = access;
@@ -96,6 +99,7 @@ public class SchoolingService implements StudentDirectory {
         this.actor = actor;
         this.audit = audit;
         this.events = events;
+        this.portal = portal;
         this.clock = clock;
     }
 
@@ -235,6 +239,7 @@ public class SchoolingService implements StudentDirectory {
             boolean academicAccess,
             boolean financialContributor) {
         UUID actorId = access.require(establishmentId, Permission.GUARDIANS_MANAGE);
+        portal.requireOpen();
         Student student = requireStudent(establishmentId, studentId);
         if (!academicAccess && !financialContributor) {
             throw ApiException.invalid("NO_CAPABILITY", "Le lien doit accorder au moins un droit.");
@@ -270,6 +275,7 @@ public class SchoolingService implements StudentDirectory {
     @Transactional
     public Invitations.Issued inviteAdultStudent(UUID establishmentId, UUID studentId, String contact) {
         UUID actorId = access.require(establishmentId, Permission.GUARDIANS_MANAGE);
+        portal.requireOpen();
         Student student = requireStudent(establishmentId, studentId);
         Establishments.Establishment establishment = establishments.find(establishmentId).orElseThrow();
         if (!Majority.isReached(student.birthDate(), establishment, clock)) {

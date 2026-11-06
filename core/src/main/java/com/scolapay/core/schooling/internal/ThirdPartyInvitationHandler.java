@@ -3,6 +3,7 @@ package com.scolapay.core.schooling.internal;
 import com.scolapay.core.establishment.Establishments;
 import com.scolapay.core.identity.InvitationHandler;
 import com.scolapay.core.shared.ApiException;
+import com.scolapay.core.shared.PortalProperties;
 import java.time.Clock;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
@@ -17,11 +18,14 @@ class ThirdPartyInvitationHandler implements InvitationHandler {
 
     private final SchoolingRepository repository;
     private final Establishments establishments;
+    private final PortalProperties portal;
     private final Clock clock;
 
-    ThirdPartyInvitationHandler(SchoolingRepository repository, Establishments establishments, Clock clock) {
+    ThirdPartyInvitationHandler(
+            SchoolingRepository repository, Establishments establishments, PortalProperties portal, Clock clock) {
         this.repository = repository;
         this.establishments = establishments;
+        this.portal = portal;
         this.clock = clock;
     }
 
@@ -36,6 +40,7 @@ class ThirdPartyInvitationHandler implements InvitationHandler {
      */
     @Override
     public void onAccepted(Accepted invitation) {
+        portal.requireOpen();
         boolean available = establishments.find(invitation.establishmentId())
                         .filter(Establishments.Establishment::active)
                         .isPresent()

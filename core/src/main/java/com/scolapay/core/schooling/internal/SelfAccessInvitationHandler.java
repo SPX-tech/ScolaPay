@@ -3,6 +3,7 @@ package com.scolapay.core.schooling.internal;
 import com.scolapay.core.establishment.Establishments;
 import com.scolapay.core.identity.InvitationHandler;
 import com.scolapay.core.shared.ApiException;
+import com.scolapay.core.shared.PortalProperties;
 import java.time.Clock;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
@@ -14,11 +15,14 @@ class SelfAccessInvitationHandler implements InvitationHandler {
 
     private final SchoolingRepository repository;
     private final Establishments establishments;
+    private final PortalProperties portal;
     private final Clock clock;
 
-    SelfAccessInvitationHandler(SchoolingRepository repository, Establishments establishments, Clock clock) {
+    SelfAccessInvitationHandler(
+            SchoolingRepository repository, Establishments establishments, PortalProperties portal, Clock clock) {
         this.repository = repository;
         this.establishments = establishments;
+        this.portal = portal;
         this.clock = clock;
     }
 
@@ -30,6 +34,7 @@ class SelfAccessInvitationHandler implements InvitationHandler {
     /** La majorité est revérifiée : le dossier a pu être corrigé depuis l'émission. */
     @Override
     public void onAccepted(Accepted invitation) {
+        portal.requireOpen();
         Establishments.Establishment establishment = establishments.find(invitation.establishmentId())
                 .filter(Establishments.Establishment::active)
                 .orElseThrow(() -> ApiException.conflict("RECORD_UNAVAILABLE", "Ce dossier n'est plus disponible."));

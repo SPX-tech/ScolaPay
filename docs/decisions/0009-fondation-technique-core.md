@@ -48,7 +48,7 @@ Le paquet racine d'un module est son API publique, `internal` lui est réservé.
 ## Conséquences
 
 - Le backend se construit, se teste et s'exécute sans NestJS (`core/`).
-- Les événements `StudentEnrolled` et `EnrollmentEnded` sont publiés de façon synchrone, dans la transaction. **Il n'y a pas encore d'outbox durable** : elle est exigée avant les premiers événements asynchrones critiques, voir [0016](0016-outbox-durable.md).
+- Les événements `StudentEnrolled` et `EnrollmentEnded` sont publiés dans la transaction. Ils deviennent durables pour tout listener asynchrone, voir [0016](0016-outbox-durable.md).
 - Les migrations partagent pour l'instant le pool de l'application et son `statement_timeout` de 15 secondes. Une migration longue exigera une configuration dédiée.
 
 ## Questions ouvertes

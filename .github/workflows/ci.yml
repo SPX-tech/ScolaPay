@@ -50,7 +50,9 @@ jobs:
         if: always()
         with:
           name: core-test-reports
-          path: core/target/surefire-reports/
+          path: |
+            core/target/surefire-reports/
+            core/target/outbox-probe/
           if-no-files-found: ignore
       - name: Refuser de démarrer sans secret suffisant
         run: |
