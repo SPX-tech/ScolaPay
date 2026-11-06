@@ -3,6 +3,8 @@ package com.scolapay.core.establishment;
 import static com.scolapay.core.establishment.Permission.ACADEMIC_CATALOG_MANAGE;
 import static com.scolapay.core.establishment.Permission.ACADEMIC_YEARS_MANAGE;
 import static com.scolapay.core.establishment.Permission.AUDIT_READ;
+import static com.scolapay.core.establishment.Permission.BILLING_ADJUST;
+import static com.scolapay.core.establishment.Permission.BILLING_APPROVE;
 import static com.scolapay.core.establishment.Permission.BILLING_ISSUE;
 import static com.scolapay.core.establishment.Permission.BILLING_READ;
 import static com.scolapay.core.establishment.Permission.ENROLLMENTS_MANAGE;
@@ -21,7 +23,8 @@ public enum StaffRole {
     REGISTRAR(EnumSet.of(
             ESTABLISHMENT_READ, ACADEMIC_YEARS_MANAGE, ACADEMIC_CATALOG_MANAGE, STUDENTS_READ, STUDENTS_MANAGE, ENROLLMENTS_MANAGE, GUARDIANS_MANAGE)),
     CASHIER(EnumSet.of(ESTABLISHMENT_READ, STUDENTS_READ, BILLING_READ)),
-    ACCOUNTANT(EnumSet.of(ESTABLISHMENT_READ, STUDENTS_READ, AUDIT_READ, FEES_MANAGE, BILLING_READ, BILLING_ISSUE)),
+    ACCOUNTANT(EnumSet.of(
+            ESTABLISHMENT_READ, STUDENTS_READ, AUDIT_READ, FEES_MANAGE, BILLING_READ, BILLING_ISSUE, BILLING_ADJUST, BILLING_APPROVE)),
     AUDITOR(EnumSet.of(ESTABLISHMENT_READ, STUDENTS_READ, AUDIT_READ, BILLING_READ));
 
     private final Set<Permission> permissions;

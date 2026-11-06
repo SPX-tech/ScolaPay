@@ -221,7 +221,7 @@ public class SchoolingRepository {
 
     public Optional<EnrollmentSummary> findEnrollmentSummary(UUID establishmentId, UUID id) {
         return jdbc.sql("""
-                SELECT id, student_record_id, academic_year_id, academic_unit_id, status
+                SELECT id, student_record_id, academic_year_id, academic_unit_id, status, enrolled_at
                 FROM enrollments WHERE establishment_id = :establishmentId AND id = :id
                 """)
                 .param("establishmentId", establishmentId)
@@ -236,7 +236,7 @@ public class SchoolingRepository {
         }
         String filter = unitsOrAll == null ? "" : "AND academic_unit_id IN (:units)\n";
         JdbcClient.StatementSpec statement = jdbc.sql("""
-                SELECT id, student_record_id, academic_year_id, academic_unit_id, status
+                SELECT id, student_record_id, academic_year_id, academic_unit_id, status, enrolled_at
                 FROM enrollments
                 WHERE establishment_id = :establishmentId AND academic_year_id = :yearId AND status = 'ACTIVE'
                 """ + filter + """
@@ -258,7 +258,23 @@ public class SchoolingRepository {
                 Columns.uuid(rs, "student_record_id"),
                 Columns.uuid(rs, "academic_year_id"),
                 Columns.uuid(rs, "academic_unit_id"),
-                rs.getString("status"));
+                rs.getString("status"),
+                Columns.instant(rs, "enrolled_at"));
+    }
+
+    public List<EnrollmentSummary> enrollmentsOfYear(UUID establishmentId, UUID academicYearId, int limit) {
+        return jdbc.sql("""
+                SELECT id, student_record_id, academic_year_id, academic_unit_id, status, enrolled_at
+                FROM enrollments
+                WHERE establishment_id = :establishmentId AND academic_year_id = :yearId
+                ORDER BY id
+                LIMIT :limit
+                """)
+                .param("establishmentId", establishmentId)
+                .param("yearId", academicYearId)
+                .param("limit", limit)
+                .query(SchoolingRepository::enrollmentSummary)
+                .list();
     }
 
     public Map<UUID, Long> activeEnrollmentsByUnit(UUID establishmentId, UUID academicYearId) {

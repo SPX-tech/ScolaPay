@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Aucune route ne modifie, ne solde ni ne règle une obligation, et aucune n'écrit de montant dû. Les
- * montants circulent en chaîne décimale d'unités minimales, voir la décision 0012.
+ * ajustements sont dans {@link AdjustmentController}. Les montants circulent en chaîne décimale d'unités minimales, voir la décision 0012.
  */
 @RestController
 @RequestMapping("/api/v2/establishments/{establishmentId}/billing")
@@ -101,7 +101,7 @@ class ObligationController {
                     obligation.feeDefinitionId(), obligation.billingPeriodId(), obligation.catalogVersionId(),
                     obligation.reference(), obligation.feeCode(), obligation.label(), obligation.category(), obligation.currency(),
                     String.valueOf(obligation.issuedAmountMinor()), String.valueOf(obligation.dueMinor()),
-                    ObligationService.ObligationStatus.of(obligation.dueMinor()), obligation.source(), obligation.issuedAt());
+                    ObligationService.ObligationStatus.of(obligation), obligation.source(), obligation.issuedAt());
         }
     }
 
@@ -112,11 +112,13 @@ class ObligationController {
         }
     }
 
-    record EntryView(UUID id, String kind, String amountMinor, String reason, Instant recordedAt, UUID recordedBy) {
+    record EntryView(
+            UUID id, String kind, String amountMinor, String reason, Instant recordedAt, UUID recordedBy, UUID reversesEntryId, UUID approvedBy) {
 
         static EntryView of(Entry entry) {
             return new EntryView(
-                    entry.id(), entry.kind(), String.valueOf(entry.amountMinor()), entry.reason(), entry.recordedAt(), entry.recordedBy());
+                    entry.id(), entry.kind(), String.valueOf(entry.amountMinor()), entry.reason(), entry.recordedAt(), entry.recordedBy(),
+                    entry.reversesEntryId(), entry.approvedBy());
         }
     }
 

@@ -1,5 +1,6 @@
 package com.scolapay.core.schooling;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +27,7 @@ public interface AcademicCatalog {
         }
     }
 
-    record EnrollmentSummary(UUID id, UUID studentId, UUID academicYearId, UUID academicUnitId, String status) {
+    record EnrollmentSummary(UUID id, UUID studentId, UUID academicYearId, UUID academicUnitId, String status, Instant enrolledAt) {
 
         public boolean active() {
             return "ACTIVE".equals(status);
@@ -41,6 +42,9 @@ public interface AcademicCatalog {
 
     /** Les inscriptions actives de l'année, limitées à ces unités si elles sont indiquées. */
     List<EnrollmentSummary> activeEnrollments(UUID establishmentId, UUID academicYearId, List<UUID> unitsOrAll, int limit);
+
+    /** Toutes les inscriptions de l'année, y compris celles qui sont terminées. */
+    List<EnrollmentSummary> enrollments(UUID establishmentId, UUID academicYearId, int limit);
 
     /** Nombre d'inscriptions actives de l'année, par unité académique. */
     Map<UUID, Long> activeEnrollmentsByUnit(UUID establishmentId, UUID academicYearId);

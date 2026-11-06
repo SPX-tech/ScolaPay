@@ -53,13 +53,25 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ObligationService {
 
-    /** Déduit du journal, jamais saisi. SETTLED n'existe pas : seul le futur module de paiement pourra l'introduire. */
+    /**
+     * Déduit du journal, jamais saisi. Trois chemins peuvent mener à un dû nul sans avoir le même sens :
+     * annulée, abandonnée par remise, ou ramenée à zéro par correction. SETTLED n'existe pas : seul le
+     * futur module de paiement pourra l'introduire, sur preuve d'un règlement confirmé.
+     */
     public enum ObligationStatus {
         OPEN,
-        WAIVED;
+        CANCELLED,
+        WAIVED,
+        CORRECTED;
 
-        static ObligationStatus of(long dueMinor) {
-            return dueMinor > 0 ? OPEN : WAIVED;
+        static ObligationStatus of(Obligation obligation) {
+            if (obligation.dueMinor() > 0) {
+                return OPEN;
+            }
+            if (obligation.cancelled()) {
+                return CANCELLED;
+            }
+            return obligation.discounted() ? WAIVED : CORRECTED;
         }
     }
 
@@ -322,7 +334,7 @@ public class ObligationService {
                 .orElseThrow(() -> ApiException.notFound("OBLIGATION_NOT_FOUND", "Obligation introuvable."));
         return new Detail(
                 obligation,
-                ObligationStatus.of(obligation.dueMinor()),
+                ObligationStatus.of(obligation),
                 obligations.installments(establishmentId, obligationId),
                 obligations.entries(establishmentId, obligationId));
     }

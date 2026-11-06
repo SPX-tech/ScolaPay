@@ -61,6 +61,9 @@ scolapay:
     overdue-after: PT15M
   billing:
     max-issuance-size: 5000
+    max-review-rows: 50000
+    # Au-delà de ce cumul par rapport au montant émis, une opération exige une seconde personne.
+    sensitive-adjustment-percent: 50
   bootstrap:
     # Ne crée le premier opérateur que si ces deux valeurs sont fournies.
     operator-contact: ${SCOLAPAY_BOOTSTRAP_OPERATOR_CONTACT:}

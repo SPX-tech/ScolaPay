@@ -953,9 +953,18 @@ class ObligationTest extends IntegrationTest {
     }
 
     private void appendEntry(School school, UUID obligation, String kind, long amount, String reason) {
+        appendEntry(school, obligation, kind, amount, reason, null);
+    }
+
+    /** Amener le dû à zéro exige en base la confirmation d'une seconde personne. */
+    private UUID secondPerson(School school) {
+        return get("/api/v2/me", newStaff(school.tenant(), "ACCOUNTANT")).id("id");
+    }
+
+    private void appendEntry(School school, UUID obligation, String kind, long amount, String reason, UUID approvedBy) {
         jdbc.sql("""
-                INSERT INTO obligation_entries (id, establishment_id, obligation_id, kind, amount_minor, reason, idempotency_key, recorded_at, recorded_by)
-                VALUES (gen_random_uuid(), :establishment, :obligation, :kind, :amount, :reason, :key, now(), :actor)
+                INSERT INTO obligation_entries (id, establishment_id, obligation_id, kind, amount_minor, reason, idempotency_key, recorded_at, recorded_by, approved_by)
+                VALUES (gen_random_uuid(), :establishment, :obligation, :kind, :amount, :reason, :key, now(), :actor, :approvedBy)
                 """)
                 .param("establishment", school.tenant().id())
                 .param("obligation", obligation)
@@ -964,6 +973,7 @@ class ObligationTest extends IntegrationTest {
                 .param("reason", reason)
                 .param("key", UUID.randomUUID().toString())
                 .param("actor", accountOf(school.tenant()))
+                .param("approvedBy", approvedBy)
                 .update();
     }
 
@@ -977,7 +987,7 @@ class ObligationTest extends IntegrationTest {
         UUID obligation = issuedObligation(school);
 
         appendEntry(school, obligation, "DISCOUNT", -5_000, "Bourse");
-        appendEntry(school, obligation, "ADJUSTMENT", 1_000, "Correction");
+        appendEntry(school, obligation, "CORRECTION", 1_000, "Correction");
 
         assertThat(obligationView(school, obligation).path("dueMinor").asString()).isEqualTo("21000");
         assertThat(obligationView(school, obligation).path("issuedAmountMinor").asString()).as("Le montant émis ne change pas").isEqualTo("25000");
@@ -989,7 +999,7 @@ class ObligationTest extends IntegrationTest {
         School school = school();
         UUID obligation = issuedObligation(school);
 
-        appendEntry(school, obligation, "DISCOUNT", -25_000, "Bourse totale");
+        appendEntry(school, obligation, "DISCOUNT", -25_000, "Bourse totale", secondPerson(school));
 
         JsonNode view = obligationView(school, obligation);
         assertThat(view.path("dueMinor").asString()).isEqualTo("0");
@@ -1005,7 +1015,7 @@ class ObligationTest extends IntegrationTest {
                 .as("Le règlement n'existe pas tant que le module de paiement n'est pas là")
                 .isInstanceOf(DataIntegrityViolationException.class);
         assertThatThrownBy(() -> appendEntry(school, obligation, "DISCOUNT", -1_000, null)).isInstanceOf(DataAccessException.class);
-        assertThatThrownBy(() -> appendEntry(school, obligation, "ADJUSTMENT", 1_000, null)).isInstanceOf(DataAccessException.class);
+        assertThatThrownBy(() -> appendEntry(school, obligation, "CORRECTION", 1_000, null)).isInstanceOf(DataAccessException.class);
         assertThatThrownBy(() -> appendEntry(school, obligation, "DISCOUNT", 1_000, "Remise positive")).isInstanceOf(DataAccessException.class);
         assertThatThrownBy(() -> appendEntry(school, obligation, "ISSUED", 1_000, null)).as("Une seule émission").isInstanceOf(DataAccessException.class);
     }
@@ -1049,18 +1059,20 @@ class ObligationTest extends IntegrationTest {
         School school = school();
         UUID obligation = issuedObligation(school);
         UUID actor = accountOf(school.tenant());
+        UUID second = secondPerson(school);
 
         try (java.sql.Connection first = dataSource.getConnection();
                 java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newSingleThreadExecutor()) {
             first.setAutoCommit(false);
             try (java.sql.PreparedStatement discount = first.prepareStatement("""
-                    INSERT INTO obligation_entries (id, establishment_id, obligation_id, kind, amount_minor, reason, idempotency_key, recorded_at, recorded_by)
-                    VALUES (gen_random_uuid(), ?, ?, 'DISCOUNT', -25000, 'Remise totale', ?, now(), ?)
+                    INSERT INTO obligation_entries (id, establishment_id, obligation_id, kind, amount_minor, reason, idempotency_key, recorded_at, recorded_by, approved_by)
+                    VALUES (gen_random_uuid(), ?, ?, 'DISCOUNT', -25000, 'Remise totale', ?, now(), ?, ?)
                     """)) {
                 discount.setObject(1, school.tenant().id());
                 discount.setObject(2, obligation);
                 discount.setString(3, UUID.randomUUID().toString());
                 discount.setObject(4, actor);
+                discount.setObject(5, second);
                 assertThat(discount.executeUpdate()).isEqualTo(1);
             }
 
@@ -1218,7 +1230,7 @@ class ObligationTest extends IntegrationTest {
         assertThat(balance.path("dueMinor").asString()).isEqualTo("20000");
         assertThat(LocalDate.parse(balance.path("nextDueOn").asString())).isEqualTo(LocalDate.of(2099, 1, 15));
 
-        appendEntry(school, obligation, "DISCOUNT", -20_000, "Solde de la bourse");
+        appendEntry(school, obligation, "DISCOUNT", -20_000, "Solde de la bourse", secondPerson(school));
         JsonNode cleared = get(tenant.path("/billing/students/" + student + "/balances"), tenant.adminToken()).body().get(0);
         assertThat(cleared.path("dueMinor").asString()).isEqualTo("0");
         assertThat(cleared.path("nextDueOn").isNull()).as("Plus rien n'est dû, donc plus d'échéance").isTrue();
@@ -1257,7 +1269,10 @@ class ObligationTest extends IntegrationTest {
             }
         }
         assertThat(billing).as("Le test porte bien sur de vraies routes").isNotEmpty();
-        assertThat(billing).filteredOn(route -> route.contains("/obligations/") && route.contains("POST")).isEmpty();
+        // Seules ces opérations ajoutent quelque chose à une obligation, et toutes passent par le journal.
+        assertThat(billing)
+                .filteredOn(route -> route.contains("/obligations/") && route.contains("POST"))
+                .allSatisfy(route -> assertThat(route).containsAnyOf("/discounts", "/corrections", "/cancellation", "/reversal"));
     }
 
     // Permissions

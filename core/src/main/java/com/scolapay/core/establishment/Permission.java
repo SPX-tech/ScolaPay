@@ -14,5 +14,7 @@ public enum Permission {
     FEES_MANAGE,
     FEES_PUBLISH,
     BILLING_READ,
-    BILLING_ISSUE
+    BILLING_ISSUE,
+    BILLING_ADJUST,
+    BILLING_APPROVE
 }

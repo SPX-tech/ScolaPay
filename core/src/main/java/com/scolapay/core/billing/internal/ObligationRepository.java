@@ -33,6 +33,8 @@ public class ObligationRepository {
             String currency,
             long issuedAmountMinor,
             long dueMinor,
+            boolean cancelled,
+            boolean discounted,
             String source,
             Instant issuedAt) {}
 
@@ -57,7 +59,8 @@ public class ObligationRepository {
 
     public record InstallmentRow(int seq, LocalDate dueOn, long amountMinor) {}
 
-    public record Entry(UUID id, String kind, long amountMinor, String reason, Instant recordedAt, UUID recordedBy) {}
+    public record Entry(
+            UUID id, String kind, long amountMinor, String reason, Instant recordedAt, UUID recordedBy, UUID reversesEntryId, UUID approvedBy) {}
 
     public record Balance(String currency, long issuedMinor, long dueMinor, LocalDate nextDueOn) {}
 
@@ -68,6 +71,12 @@ public class ObligationRepository {
             SELECT o.id, o.academic_year_id, o.student_record_id, o.enrollment_id, o.fee_definition_id, d.billing_period_id,
                    o.catalog_version_id, o.reference, o.fee_code, o.label, o.category, o.currency, o.issued_amount_minor,
                    (SELECT COALESCE(sum(e.amount_minor), 0) FROM obligation_entries e WHERE e.obligation_id = o.id) AS due_minor,
+                   EXISTS (
+                     SELECT 1 FROM obligation_entries e WHERE e.obligation_id = o.id AND e.kind = 'CANCELLATION'
+                       AND NOT EXISTS (SELECT 1 FROM obligation_entries r WHERE r.reverses_entry_id = e.id)) AS cancelled,
+                   EXISTS (
+                     SELECT 1 FROM obligation_entries e WHERE e.obligation_id = o.id AND e.kind = 'DISCOUNT'
+                       AND NOT EXISTS (SELECT 1 FROM obligation_entries r WHERE r.reverses_entry_id = e.id)) AS discounted,
                    o.source, o.issued_at
             FROM obligations o
             JOIN fee_definitions d ON d.establishment_id = o.establishment_id AND d.id = o.fee_definition_id
@@ -231,6 +240,19 @@ public class ObligationRepository {
         return statement.query(ObligationRepository::obligation).list();
     }
 
+    public List<Obligation> listForReview(UUID establishmentId, UUID academicYearId, int limit) {
+        return jdbc.sql(SELECT + """
+                WHERE o.establishment_id = :establishmentId AND o.academic_year_id = :yearId
+                ORDER BY o.issued_at, o.id
+                LIMIT :limit
+                """)
+                .param("establishmentId", establishmentId)
+                .param("yearId", academicYearId)
+                .param("limit", limit)
+                .query(ObligationRepository::obligation)
+                .list();
+    }
+
     public List<InstallmentRow> installments(UUID establishmentId, UUID obligationId) {
         return jdbc.sql("""
                 SELECT seq, due_on, amount_minor FROM obligation_installments
@@ -246,7 +268,7 @@ public class ObligationRepository {
 
     public List<Entry> entries(UUID establishmentId, UUID obligationId) {
         return jdbc.sql("""
-                SELECT id, kind, amount_minor, reason, recorded_at, recorded_by FROM obligation_entries
+                SELECT id, kind, amount_minor, reason, recorded_at, recorded_by, reverses_entry_id, approved_by FROM obligation_entries
                 WHERE establishment_id = :establishmentId AND obligation_id = :id
                 ORDER BY recorded_at, id
                 """)
@@ -258,7 +280,9 @@ public class ObligationRepository {
                         rs.getLong("amount_minor"),
                         rs.getString("reason"),
                         Columns.instant(rs, "recorded_at"),
-                        Columns.uuid(rs, "recorded_by")))
+                        Columns.uuid(rs, "recorded_by"),
+                        Columns.uuid(rs, "reverses_entry_id"),
+                        Columns.uuid(rs, "approved_by")))
                 .list();
     }
 
@@ -308,6 +332,8 @@ public class ObligationRepository {
                 rs.getString("currency"),
                 rs.getLong("issued_amount_minor"),
                 rs.getLong("due_minor"),
+                rs.getBoolean("cancelled"),
+                rs.getBoolean("discounted"),
                 rs.getString("source"),
                 Columns.instant(rs, "issued_at"));
     }
