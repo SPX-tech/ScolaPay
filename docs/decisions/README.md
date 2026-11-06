@@ -6,14 +6,14 @@ Une décision mérite une entrée ici lorsqu'elle est coûteuse à inverser ou q
 
 | N° | Décision | Statut | Implémentation |
 | --- | --- | --- | --- |
-| [D-001](../architecture-scolapay-2.md#décision-001--conserver-le-monolithe-modulaire) | Monolithe modulaire | Acceptée, choix de NestJS pour les futurs domaines remplacé par 0006 | En place |
+| [D-001](../architecture-scolapay-2.md#décision-001--conserver-le-monolithe-modulaire) | Monolithe modulaire | Acceptée, monolithe modulaire conservé, choix de NestJS pour les futurs domaines remplacé par 0006 | En place |
 | [D-002](../architecture-scolapay-2.md#décision-002--isolation-explicite-par-établissement) | Isolation explicite par établissement | Acceptée | Partielle : contrôle applicatif, contraintes composites à venir |
 | [D-003](../architecture-scolapay-2.md#décision-003--conserver-les-unités-financières-historiques) | Unités financières historiques | Acceptée | En place |
 | [D-004](../architecture-scolapay-2.md#décision-004--prestataires-financiers-fermés-par-défaut) | Prestataires fermés par défaut | Acceptée | En place |
 | [D-005](../architecture-scolapay-2.md#décision-005--migrations-séparées-du-démarrage) | Migrations séparées du démarrage | Acceptée | En place |
-| [0006](0006-backend-java-spring-boot.md) | Backend cible en Java/Spring Boot | Orientation validée | Non démarrée |
-| [0007](0007-portail-familles-avant-apk.md) | Portail web des familles avant une APK | Orientation validée | Non démarrée |
-| [0008](0008-go-services-paiement.md) | Go pour des services de paiement spécialisés | Orientation validée, usage éventuel | Non démarrée |
+| [0006](0006-backend-java-spring-boot.md) | Cœur métier ScolaPay 2.0 en Java/Spring Boot, NestJS conservé pendant la transition | Acceptée | Non démarrée |
+| [0007](0007-portail-familles-avant-apk.md) | Portail web des familles avant une application Android | Acceptée | Non démarrée |
+| [0008](0008-go-services-paiement.md) | Go pour de futurs services financiers spécialisés | Orientation validée, introduction non prévue immédiatement | Non démarrée |
 
 ## Statuts
 

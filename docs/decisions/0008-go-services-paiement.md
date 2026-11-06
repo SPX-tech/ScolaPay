@@ -1,6 +1,6 @@
-# 0008 : Go pour des services de paiement spécialisés
+# 0008 : Go pour de futurs services financiers spécialisés
 
-- **Statut** : Orientation validée, usage éventuel
+- **Statut** : Orientation validée, introduction non prévue immédiatement
 - **Date** : 2026-11-06
 - **Décideur** : propriétaire du projet
 - **Remplace** : aucune
@@ -11,15 +11,15 @@ Les paiements numériques sont aujourd'hui du code NestJS derrière l'interface 
 
 ## Décision
 
-Go pourra être utilisé pour des services spécialisés liés aux paiements. Cette possibilité n'engage aucun service à ce stade.
+Go reste une technologie envisagée pour de futurs services financiers spécialisés, notamment les intégrations avec les prestataires de paiement. Son introduction n'est pas prévue immédiatement.
 
 ## Conséquences
 
-- Le backend principal reste la source de vérité des soldes. Un service spécialisé ne modifie pas directement ces tables, conformément à [D-001](../architecture-scolapay-2.md#décision-001--conserver-le-monolithe-modulaire).
+- Un service spécialisé ne devient pas une seconde source de vérité : il n'écrit pas directement les soldes, conformément à [0006](0006-backend-java-spring-boot.md).
 - Créer un tel service demande une nouvelle décision, fondée sur un besoin mesuré ou un contrat de prestataire connu.
 
 ## Questions ouvertes
 
 - Quels services, et selon quels critères les extraire.
-- Contrat avec le backend principal : API synchrone, événements de l'outbox ou autre.
+- Contrat avec le cœur métier : API synchrone, événements ou autre.
 - Hébergement, secrets et conformité des échanges avec les prestataires.
