@@ -26,9 +26,21 @@ public interface AcademicCatalog {
         }
     }
 
+    record EnrollmentSummary(UUID id, UUID studentId, UUID academicYearId, UUID academicUnitId, String status) {
+
+        public boolean active() {
+            return "ACTIVE".equals(status);
+        }
+    }
+
     Optional<YearSummary> findYear(UUID establishmentId, UUID academicYearId);
 
     List<UnitSummary> units(UUID establishmentId);
+
+    Optional<EnrollmentSummary> findEnrollment(UUID establishmentId, UUID enrollmentId);
+
+    /** Les inscriptions actives de l'année, limitées à ces unités si elles sont indiquées. */
+    List<EnrollmentSummary> activeEnrollments(UUID establishmentId, UUID academicYearId, List<UUID> unitsOrAll, int limit);
 
     /** Nombre d'inscriptions actives de l'année, par unité académique. */
     Map<UUID, Long> activeEnrollmentsByUnit(UUID establishmentId, UUID academicYearId);

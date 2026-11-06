@@ -44,7 +44,7 @@ class SchoolingController {
             @NotBlank @Size(min = 2, max = 200) String fullName,
             LocalDate birthDate) {}
 
-    record EnrollRequest(@NotNull UUID academicYearId, @NotNull UUID academicUnitId) {}
+    record EnrollRequest(@NotNull UUID academicYearId, @NotNull UUID academicUnitId, UUID confirmedFeeCatalogVersionId) {}
 
     record EndEnrollmentRequest(@NotBlank @Size(max = 20) String status, @Size(max = 500) String reason) {}
 
@@ -107,7 +107,8 @@ class SchoolingController {
             @PathVariable UUID establishmentId,
             @PathVariable UUID studentId,
             @Valid @RequestBody EnrollRequest request) {
-        return schooling.enroll(establishmentId, studentId, request.academicYearId(), request.academicUnitId());
+        return schooling.enroll(
+                establishmentId, studentId, request.academicYearId(), request.academicUnitId(), request.confirmedFeeCatalogVersionId());
     }
 
     @GetMapping(STUDENT + "/enrollments")

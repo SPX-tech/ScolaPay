@@ -726,19 +726,15 @@ class FeeCatalogTest extends IntegrationTest {
         UUID level = newLevel(tenant);
         enrollOk(tenant, year, level);
         int eventsBefore = events.published.size();
-        List<String> tablesBefore = tables();
         UUID version = draft(tenant, year);
         addOk(tenant, version, fee("SCOLARITE", period(tenant, year, "ANNEE"), level, 25_000));
 
         publishOk(tenant, version);
 
         assertThat(events.published.size()).isEqualTo(eventsBefore);
-        assertThat(jdbc.sql("SELECT count(*) FROM event_publication").query(Long.class).single()).isZero();
-        assertThat(tables()).as("Aucune table de dette n'existe à ce stade").isEqualTo(tablesBefore).noneMatch(table -> table.contains("obligation"));
-    }
-
-    private List<String> tables() {
-        return jdbc.sql("SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename").query(String.class).list();
+        assertThat(jdbc.sql("SELECT count(*) FROM obligations WHERE establishment_id = :id").param("id", tenant.id()).query(Long.class).single())
+                .as("Publier ne crée aucune dette")
+                .isZero();
     }
 
     // Validation des montants

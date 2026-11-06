@@ -25,20 +25,19 @@ Un module `billing`, au-dessus de `schooling`. Il ne lit ni n'écrit les tables 
 | Concept | Rôle | Écriture |
 | --- | --- | --- |
 | `fee_catalogs`, `fee_items` | Versions de frais d'une année, par [unité académique](0018-catalogue-academique.md) ou pour tous, avec leur plan d'échéances et leur [période de facturation](0020-catalogue-de-frais-et-periodes.md). Chaque frais renvoie à une identité stable d'une version à l'autre | Modifiables en brouillon, figés à la publication |
-| `obligations` | Ce qu'un dossier doit pour une année. **Ce n'est pas une facture**, voir [0019](0019-nature-des-documents-et-numerotation.md). Porte une référence interne unique, stable et non réutilisable | Immuable après émission, hors statut |
-| `obligation_lines` | Copie figée d'un frais facturé : identité de la charge, code et libellé du moment, montant et version de catalogue d'origine | Ajout seul, jamais modifiée |
+| `obligations` | Ce qu'un dossier doit pour une charge, avec une copie figée du code, du libellé et du montant : voir [0021](0021-obligations-et-journal.md). **Ce n'est pas une facture**, voir [0019](0019-nature-des-documents-et-numerotation.md). Porte une référence interne unique, stable et non réutilisable | Immuable après émission |
 | `installments` | Échéances datées d'une obligation. La somme égale le montant émis, l'arrondi va sur la dernière | Immuables, un rééchelonnement crée une nouvelle version |
 | `obligation_entries` | Journal immuable : `ISSUED`, `DISCOUNT`, `ADJUSTMENT`, et `SETTLEMENT` réservé au futur module de paiement | Ajout seul, trigger d'immuabilité |
 | `billing_parties` | Personnes physiques ou morales pouvant être liées à une obligation, avec ou sans compte | Ajout et correction tracée |
 | `obligation_parties` | Personnes liées à une obligation et leur rôle | Ajout et révocation, jamais d'effacement |
 
-**Montant dû** = somme des écritures de l'obligation. Une remise totale donne un dû nul et le statut `WAIVED`, **jamais** `SETTLED`. Le statut `SETTLED` n'est atteignable qu'avec des écritures `SETTLEMENT`, qu'aucun code de la Mission 003 ne peut créer.
+**Montant dû** = somme des écritures de l'obligation. Une remise totale donne un dû nul et le statut `WAIVED`, **jamais** `SETTLED`. `SETTLEMENT` et `SETTLED` n'existent pas encore : le module de paiement les introduira, avec une preuve d'encaissement, voir [0021](0021-obligations-et-journal.md).
 
 Une écriture porte une clé d'idempotence unique. Le verrou de ligne porte sur l'obligation.
 
 ### Empêcher la double facturation
 
-La garantie est une **contrainte PostgreSQL**, pas une vérification applicative : `UNIQUE (establishment_id, student_record_id, fee_definition_id)` sur `obligation_lines`, où `fee_definition_id` est l'[identité stable de la charge](0020-catalogue-de-frais-et-periodes.md#lidentité-dune-charge).
+La garantie est une **contrainte PostgreSQL**, pas une vérification applicative : `UNIQUE (establishment_id, student_record_id, fee_definition_id)` sur `obligations`, où `fee_definition_id` est l'[identité stable de la charge](0020-catalogue-de-frais-et-periodes.md#lidentité-dune-charge).
 
 | Situation | Effet |
 | --- | --- |
@@ -99,7 +98,7 @@ Ce booléen de `record_access_grants` devient insuffisant. Il sera remplacé par
 
 ### Événements
 
-`StudentEnrolled` déclenche l'émission, via l'[outbox durable](0016-outbox-durable.md). **`EnrollmentEnded` ne supprime ni n'annule aucune obligation** : elle passe en réexamen, et toute modification financière passe par un ajustement autorisé, justifié et tracé.
+`StudentEnrolled` déclenche l'émission via l'[outbox durable](0016-outbox-durable.md), uniquement si le personnel a confirmé les frais : voir [0021](0021-obligations-et-journal.md). **`EnrollmentEnded` ne supprime ni n'annule aucune obligation** : elle passe en réexamen, et toute modification financière passe par un ajustement autorisé, justifié et tracé.
 
 ### Exclusions
 

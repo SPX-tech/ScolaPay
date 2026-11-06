@@ -24,8 +24,9 @@ Une décision mérite une entrée ici lorsqu'elle est coûteuse à inverser ou q
 | [0016](0016-outbox-durable.md) | Outbox durable | Acceptée, registre Spring Modulith prouvé par les tests | En place, sans listener de production |
 | [0017](0017-controles-de-mise-en-service.md) | Contrôles de mise en service | Acceptée | En place, portail fermé |
 | [0018](0018-catalogue-academique.md) | Catalogue académique | Acceptée | En place |
-| [0019](0019-nature-des-documents-et-numerotation.md) | Nature des documents et numérotation, étude de la FEN | Principes acceptés, traitement fiscal à valider | Aucune, lot 4 |
-| [0020](0020-catalogue-de-frais-et-periodes.md) | Catalogue de frais, périodes de facturation et identité des charges | Acceptée | En place, sans aucune dette |
+| [0019](0019-nature-des-documents-et-numerotation.md) | Nature des documents et numérotation, étude de la FEN | Principes acceptés, traitement fiscal à valider | Référence interne seulement |
+| [0020](0020-catalogue-de-frais-et-periodes.md) | Catalogue de frais, périodes de facturation et identité des charges | Acceptée | En place |
+| [0021](0021-obligations-et-journal.md) | Obligations, échéanciers et journal | Orientations validées, résultats en revue | En place, sans aucun encaissement |
 
 ## Statuts
 

@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.AfterEach;
@@ -231,6 +232,60 @@ class OutboxReliabilityTest {
         await("l'alerte", () -> instance.log().contains("Outbox : 3 publication(s) non traitée(s)"));
     }
 
+    /** Le vrai listener de production, et non la sonde : l'obligation confirmée survit à un arrêt brutal. */
+    @Test
+    void uneObligationConfirmeeSurvitAUnArretBrutalEtNestEmiseQuUneFois() {
+        Instance first = start("emission", List.of("--probe.drop-dispatch=true"));
+        School school = first.api().newSchool();
+        UUID version = publishTariff(first.api(), school);
+        UUID student = school.newStudent();
+
+        TestApi.Reply enrolled = first.api().post(school.path("/students/" + student + "/enrollments"), school.adminToken(), Map.of(
+                "academicYearId", school.yearId().toString(),
+                "academicUnitId", school.levelId().toString(),
+                "confirmedFeeCatalogVersionId", version.toString()));
+        assertThat(enrolled.status()).as(enrolled.raw()).isEqualTo(201);
+        first.kill();
+        assertThat(obligations(student)).as("L'arrêt survient avant l'émission").isZero();
+
+        start("reprise-emission", FAST_RECOVERY);
+
+        await("l'obligation après la reprise", () -> obligations(student) == 1);
+        await("la fin de la publication", () -> jdbc.sql("SELECT count(*) FROM event_publication").query(Long.class).single() == 0);
+        assertThat(obligations(student)).isEqualTo(1);
+        assertThat(jdbc.sql("SELECT count(*) FROM obligation_entries e JOIN obligations o ON o.id = e.obligation_id WHERE o.student_record_id = :student")
+                        .param("student", student).query(Long.class).single())
+                .isEqualTo(1);
+    }
+
+    private UUID publishTariff(TestApi api, School school) {
+        TestApi.Reply period = api.post(school.path("/billing/periods"), school.adminToken(), Map.of(
+                "academicYearId", school.yearId().toString(), "code", "ANNEE", "name", "Année", "startsOn", "2026-09-01", "endsOn", "2027-07-15"));
+        assertThat(period.status()).as(period.raw()).isEqualTo(201);
+        TestApi.Reply charge = api.post(school.path("/billing/fee-definitions"), school.adminToken(), Map.of(
+                "academicYearId", school.yearId().toString(), "billingPeriodId", period.text("id"), "name", "Scolarité"));
+        assertThat(charge.status()).as(charge.raw()).isEqualTo(201);
+        TestApi.Reply draft = api.post(school.path("/billing/fee-catalogs"), school.adminToken(), Map.of("academicYearId", school.yearId().toString()));
+        assertThat(draft.status()).as(draft.raw()).isEqualTo(201);
+        String catalog = school.path("/billing/fee-catalogs/" + draft.text("id"));
+        TestApi.Reply item = api.post(catalog + "/items", school.adminToken(), Map.of(
+                "feeDefinitionId", charge.text("id"),
+                "feeCode", "SCOLARITE",
+                "label", "Scolarité",
+                "category", "TUITION",
+                "application", "AUTOMATIC",
+                "amountMinor", "25000",
+                "installments", List.of(Map.of("dueOn", "2026-10-01", "amountMinor", "25000"))));
+        assertThat(item.status()).as(item.raw()).isEqualTo(201);
+        TestApi.Reply published = api.post(catalog + "/publish", school.adminToken(), Map.of());
+        assertThat(published.status()).as(published.raw()).isEqualTo(200);
+        return draft.id("id");
+    }
+
+    private long obligations(UUID student) {
+        return jdbc.sql("SELECT count(*) FROM obligations WHERE student_record_id = :student").param("student", student).query(Long.class).single();
+    }
+
     /** Un service en panne ne doit pas être sollicité à chaque passage de la reprise. */
     @Test
     void leDelaiDeRepriseEspaceLesEssais() throws InterruptedException {
@@ -282,16 +337,19 @@ class OutboxReliabilityTest {
                 .update();
     }
 
+    /** L'émission des obligations écoute aussi l'inscription : on ne compte ici que la sonde. */
+    private static final String NOT_BILLING = " WHERE listener_id NOT LIKE 'com.scolapay.core.billing%'";
+
     private String statusOfTheOnlyPublication() {
-        return jdbc.sql("SELECT status FROM event_publication").query(String.class).single();
+        return jdbc.sql("SELECT status FROM event_publication" + NOT_BILLING).query(String.class).single();
     }
 
     private long active() {
-        return jdbc.sql("SELECT count(*) FROM event_publication").query(Long.class).single();
+        return jdbc.sql("SELECT count(*) FROM event_publication" + NOT_BILLING).query(Long.class).single();
     }
 
     private long archived() {
-        return jdbc.sql("SELECT count(*) FROM event_publication_archive").query(Long.class).single();
+        return jdbc.sql("SELECT count(*) FROM event_publication_archive" + NOT_BILLING).query(Long.class).single();
     }
 
     private long attempts(UUID student) {

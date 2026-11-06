@@ -36,6 +36,18 @@ class AcademicCatalogService implements AcademicCatalog {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<EnrollmentSummary> findEnrollment(UUID establishmentId, UUID enrollmentId) {
+        return schooling.findEnrollmentSummary(establishmentId, enrollmentId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EnrollmentSummary> activeEnrollments(UUID establishmentId, UUID academicYearId, List<UUID> unitsOrAll, int limit) {
+        return schooling.activeEnrollments(establishmentId, academicYearId, unitsOrAll, limit);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Map<UUID, Long> activeEnrollmentsByUnit(UUID establishmentId, UUID academicYearId) {
         return schooling.activeEnrollmentsByUnit(establishmentId, academicYearId);
     }

@@ -9,6 +9,7 @@ import com.scolapay.core.identity.CurrentActor;
 import com.scolapay.core.identity.Identifier;
 import com.scolapay.core.identity.Invitations;
 import com.scolapay.core.schooling.EnrollmentEnded;
+import com.scolapay.core.schooling.EnrollmentFeeConfirmation;
 import com.scolapay.core.schooling.StudentDirectory;
 import com.scolapay.core.schooling.StudentEnrolled;
 import com.scolapay.core.schooling.internal.AcademicUnitRepository.AcademicUnit;
@@ -72,6 +73,7 @@ public class SchoolingService implements StudentDirectory {
 
     private final SchoolingRepository repository;
     private final AcademicUnitRepository units;
+    private final EnrollmentFeeConfirmation feeConfirmation;
     private final EstablishmentAccess access;
     private final Establishments establishments;
     private final Invitations invitations;
@@ -85,6 +87,7 @@ public class SchoolingService implements StudentDirectory {
     public SchoolingService(
             SchoolingRepository repository,
             AcademicUnitRepository units,
+            EnrollmentFeeConfirmation feeConfirmation,
             EstablishmentAccess access,
             Establishments establishments,
             Invitations invitations,
@@ -96,6 +99,7 @@ public class SchoolingService implements StudentDirectory {
             Clock clock) {
         this.repository = repository;
         this.units = units;
+        this.feeConfirmation = feeConfirmation;
         this.access = access;
         this.establishments = establishments;
         this.invitations = invitations;
@@ -173,8 +177,13 @@ public class SchoolingService implements StudentDirectory {
 
     // Inscriptions
 
+    /**
+     * Le personnel consulte d'abord les frais, puis confirme en citant la version du tarif vue. Sans cette
+     * confirmation, l'inscription reste valable mais ne génère aucune dette.
+     */
     @Transactional
-    public Enrollment enroll(UUID establishmentId, UUID studentId, UUID academicYearId, UUID academicUnitId) {
+    public Enrollment enroll(
+            UUID establishmentId, UUID studentId, UUID academicYearId, UUID academicUnitId, UUID confirmedFeeCatalogVersionId) {
         UUID actorId = access.require(establishmentId, Permission.ENROLLMENTS_MANAGE);
         Student student = requireStudent(establishmentId, studentId);
         if (!"ACTIVE".equals(student.status())) {
@@ -186,6 +195,9 @@ public class SchoolingService implements StudentDirectory {
             throw ApiException.conflict("ACADEMIC_YEAR_NOT_OPEN", "Cette année académique n'est pas ouverte aux inscriptions.");
         }
         AcademicUnit unit = requireEnrollableUnit(establishmentId, academicUnitId);
+        if (confirmedFeeCatalogVersionId != null) {
+            feeConfirmation.verify(establishmentId, academicYearId, confirmedFeeCatalogVersionId);
+        }
         UUID enrollmentId = UUID.randomUUID();
         Instant now = clock.instant();
         // L'index unique partiel tranche les doubles inscriptions concurrentes : le perdant reçoit un 409.
@@ -193,8 +205,12 @@ public class SchoolingService implements StudentDirectory {
         repository.appendHistory(establishmentId, enrollmentId, null, "ACTIVE", null, actorId, now);
         audit.record(
                 establishmentId, actorId, "schooling.enrollment.created", "enrollment", enrollmentId,
-                Map.of("studentId", studentId, "academicYearId", academicYearId));
-        events.publishEvent(new StudentEnrolled(establishmentId, studentId, enrollmentId, academicYearId, unit.id(), unit.name(), now));
+                Map.of(
+                        "studentId", studentId,
+                        "academicYearId", academicYearId,
+                        "feesConfirmed", confirmedFeeCatalogVersionId != null));
+        events.publishEvent(new StudentEnrolled(
+                establishmentId, studentId, enrollmentId, academicYearId, unit.id(), unit.name(), confirmedFeeCatalogVersionId, actorId, now));
         return repository.listEnrollments(establishmentId, studentId).stream()
                 .filter(enrollment -> enrollment.id().equals(enrollmentId))
                 .findFirst()

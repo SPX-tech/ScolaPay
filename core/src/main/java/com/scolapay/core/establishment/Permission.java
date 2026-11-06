@@ -12,5 +12,7 @@ public enum Permission {
     GUARDIANS_MANAGE,
     AUDIT_READ,
     FEES_MANAGE,
-    FEES_PUBLISH
+    FEES_PUBLISH,
+    BILLING_READ,
+    BILLING_ISSUE
 }
