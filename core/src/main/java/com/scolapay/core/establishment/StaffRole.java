@@ -1,5 +1,6 @@
 package com.scolapay.core.establishment;
 
+import static com.scolapay.core.establishment.Permission.ACADEMIC_CATALOG_MANAGE;
 import static com.scolapay.core.establishment.Permission.ACADEMIC_YEARS_MANAGE;
 import static com.scolapay.core.establishment.Permission.AUDIT_READ;
 import static com.scolapay.core.establishment.Permission.ENROLLMENTS_MANAGE;
@@ -15,7 +16,7 @@ import java.util.Set;
 public enum StaffRole {
     ESTABLISHMENT_ADMIN(EnumSet.allOf(Permission.class)),
     REGISTRAR(EnumSet.of(
-            ESTABLISHMENT_READ, ACADEMIC_YEARS_MANAGE, STUDENTS_READ, STUDENTS_MANAGE, ENROLLMENTS_MANAGE, GUARDIANS_MANAGE)),
+            ESTABLISHMENT_READ, ACADEMIC_YEARS_MANAGE, ACADEMIC_CATALOG_MANAGE, STUDENTS_READ, STUDENTS_MANAGE, ENROLLMENTS_MANAGE, GUARDIANS_MANAGE)),
     CASHIER(EnumSet.of(ESTABLISHMENT_READ, STUDENTS_READ)),
     ACCOUNTANT(EnumSet.of(ESTABLISHMENT_READ, STUDENTS_READ, AUDIT_READ)),
     AUDITOR(EnumSet.of(ESTABLISHMENT_READ, STUDENTS_READ, AUDIT_READ));

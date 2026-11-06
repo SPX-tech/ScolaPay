@@ -35,7 +35,7 @@ record TestApi(int port) {
     }
 
     /** Un établissement de test, avec son administrateur et une année ouverte. */
-    record School(TestApi api, UUID id, String adminToken, UUID yearId) {
+    record School(TestApi api, UUID id, String adminToken, UUID yearId, UUID levelId) {
 
         String path(String suffix) {
             return "/api/v2/establishments/" + id + suffix;
@@ -57,7 +57,7 @@ record TestApi(int port) {
         Reply enroll(UUID studentId) {
             return api.post(path("/students/" + studentId + "/enrollments"), adminToken, Map.of(
                     "academicYearId", yearId.toString(),
-                    "level", "Sixième"));
+                    "academicUnitId", levelId.toString()));
         }
     }
 
@@ -117,7 +117,10 @@ record TestApi(int port) {
         assertThat(year.status()).as(year.raw()).isEqualTo(201);
         Reply opened = patch(years + "/" + year.id("id"), admin, Map.of("status", "OPEN"));
         assertThat(opened.status()).as(opened.raw()).isEqualTo(200);
-        return new School(this, id, admin, year.id("id"));
+        Reply level = post("/api/v2/establishments/" + id + "/academic-units", admin, Map.of(
+                "kind", "LEVEL", "code", "SIXIEME", "name", "Sixième"));
+        assertThat(level.status()).as(level.raw()).isEqualTo(201);
+        return new School(this, id, admin, year.id("id"), level.id("id"));
     }
 
     private Reply exchange(String method, String path, String token, String body) {

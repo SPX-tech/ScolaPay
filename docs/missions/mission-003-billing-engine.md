@@ -71,7 +71,7 @@ Chaque lot est une PR verte, indépendante, et met à jour `PROJECT_CONTEXT.md`.
 | Lot | Contenu | Dépend de | État |
 | --- | --- | --- | --- |
 | 1 | Outbox durable et ses tests de sortie, contrôle de mise en service | | **Terminé** |
-| 2 | Catalogue académique structuré dans `schooling` | | À faire |
+| 2 | Catalogue académique structuré dans `schooling`, voir [0018](../decisions/0018-catalogue-academique.md) | | **Terminé** |
 | 3 | Module `billing` : catalogue de frais et ses versions, publication | Lot 2 | À faire |
 | 4 | Obligations, échéances et journal, émission sans double facturation | Lots 1 et 3 | À faire |
 | 5 | Remises et ajustements, permissions, confirmation par une seconde personne, réexamen après retrait | Lot 4 | À faire |

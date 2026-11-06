@@ -19,11 +19,12 @@ class ConcurrencyTest extends IntegrationTest {
         Tenant tenant = newTenant();
         UUID student = newStudent(tenant);
         UUID year = openYear(tenant);
+        UUID level = newLevel(tenant);
 
         List<Response> responses = concurrently(8, () -> post(
                 tenant.path("/students/" + student + "/enrollments"),
                 tenant.adminToken(),
-                Map.of("academicYearId", year.toString(), "level", "Sixième")));
+                Map.of("academicYearId", year.toString(), "academicUnitId", level.toString())));
 
         assertThat(countStatus(responses, 201)).as(responses.toString()).isEqualTo(1);
         assertThat(countStatus(responses, 409)).as(responses.toString()).isEqualTo(7);

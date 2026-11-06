@@ -9,5 +9,6 @@ public record StudentEnrolled(
         UUID studentId,
         UUID enrollmentId,
         UUID academicYearId,
+        UUID academicUnitId,
         String level,
         Instant occurredAt) {}

@@ -29,7 +29,7 @@ class FamilyAccessTest extends IntegrationTest {
     private Enrolled enrolledStudent(Tenant tenant, LocalDate birthDate) {
         UUID studentId = newStudent(tenant, birthDate);
         Response enrolled = post(tenant.path("/students/" + studentId + "/enrollments"), tenant.adminToken(), Map.of(
-                "academicYearId", openYear(tenant).toString(), "level", "Niveau-Confidentiel"));
+                "academicYearId", openYear(tenant).toString(), "academicUnitId", newLevel(tenant, "Niveau-Confidentiel").toString()));
         assertThat(enrolled.status()).as(enrolled.raw()).isEqualTo(201);
         String number = get(tenant.path("/students/" + studentId), tenant.adminToken()).text("studentNumber");
         return new Enrolled(studentId, number);

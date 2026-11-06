@@ -26,6 +26,7 @@ class StaffRoleTest {
             assertThat(role.grants(Permission.STUDENTS_MANAGE)).as(role.name()).isFalse();
             assertThat(role.grants(Permission.ENROLLMENTS_MANAGE)).as(role.name()).isFalse();
             assertThat(role.grants(Permission.GUARDIANS_MANAGE)).as(role.name()).isFalse();
+            assertThat(role.grants(Permission.ACADEMIC_CATALOG_MANAGE)).as(role.name()).isFalse();
         }
     }
 }

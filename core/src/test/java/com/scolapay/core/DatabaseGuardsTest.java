@@ -26,17 +26,20 @@ class DatabaseGuardsTest extends IntegrationTest {
         Tenant b = newTenant();
         UUID studentA = newStudent(a);
         UUID yearB = openYear(b);
+        UUID levelB = newLevel(b);
 
         assertThatThrownBy(() -> jdbc.sql("""
-                INSERT INTO enrollments (id, establishment_id, student_record_id, academic_year_id, level, enrolled_at)
-                VALUES (:id, :establishmentId, :studentId, :yearId, 'Sixième', now())
+                INSERT INTO enrollments (id, establishment_id, student_record_id, academic_year_id, academic_unit_id, level, enrolled_at)
+                VALUES (:id, :establishmentId, :studentId, :yearId, :unitId, 'Sixième', now())
                 """)
                 .param("id", UUID.randomUUID())
                 .param("establishmentId", b.id())
                 .param("studentId", studentA)
                 .param("yearId", yearB)
+                .param("unitId", levelB)
                 .update())
-                .isInstanceOf(DataIntegrityViolationException.class);
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("enrollments_establishment_id_student_record_id_fkey");
     }
 
     @Test
@@ -113,7 +116,7 @@ class DatabaseGuardsTest extends IntegrationTest {
         UUID student = newStudent(tenant);
         UUID year = openYear(tenant);
         post(tenant.path("/students/" + student + "/enrollments"), tenant.adminToken(), Map.of(
-                "academicYearId", year.toString(), "level", "Sixième"));
+                "academicYearId", year.toString(), "academicUnitId", newLevel(tenant).toString()));
 
         assertThatThrownBy(() -> jdbc.sql("DELETE FROM enrollment_history WHERE establishment_id = :id")
                 .param("id", tenant.id()).update())

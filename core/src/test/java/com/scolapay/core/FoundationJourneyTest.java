@@ -48,9 +48,11 @@ class FoundationJourneyTest extends IntegrationTest {
         assertThat(student.status()).as(student.raw()).isEqualTo(201);
         UUID studentId = student.id("id");
 
-        // Inscription, avec son historique et l'événement destiné à la facturation.
+        // Le catalogue, puis l'inscription, avec son historique et l'événement destiné à la facturation.
+        Response terminale = post(path + "/academic-units", admin, Map.of("kind", "LEVEL", "code", "TERMINALE-D", "name", "Terminale D"));
+        assertThat(terminale.status()).as(terminale.raw()).isEqualTo(201);
         Response enrollment = post(path + "/students/" + studentId + "/enrollments", admin, Map.of(
-                "academicYearId", yearId.toString(), "level", "Terminale D"));
+                "academicYearId", yearId.toString(), "academicUnitId", terminale.text("id")));
         assertThat(enrollment.status()).as(enrollment.raw()).isEqualTo(201);
         assertThat(enrollment.text("status")).isEqualTo("ACTIVE");
         assertThat(enrollment.text("academicYearLabel")).isEqualTo("2026-2027");
@@ -96,7 +98,7 @@ class FoundationJourneyTest extends IntegrationTest {
 
         // Une nouvelle inscription sur la même année redevient possible.
         assertThat(post(path + "/students/" + studentId + "/enrollments", admin, Map.of(
-                "academicYearId", yearId.toString(), "level", "Terminale D")).status()).isEqualTo(201);
+                "academicYearId", yearId.toString(), "academicUnitId", terminale.text("id"))).status()).isEqualTo(201);
 
         // Chaque étape sensible est dans le journal d'audit de l'établissement.
         List<String> actions = new ArrayList<>();
@@ -273,7 +275,7 @@ class FoundationJourneyTest extends IntegrationTest {
         Response planned = post(tenant.path("/academic-years"), tenant.adminToken(), Map.of(
                 "label", "Prévue", "startsOn", "2027-09-01", "endsOn", "2028-07-15"));
         Response enroll = post(tenant.path("/students/" + student + "/enrollments"), tenant.adminToken(), Map.of(
-                "academicYearId", planned.text("id"), "level", "Sixième"));
+                "academicYearId", planned.text("id"), "academicUnitId", newLevel(tenant).toString()));
         assertThat(enroll.status()).as(enroll.raw()).isEqualTo(409);
         assertThat(enroll.code()).isEqualTo("ACADEMIC_YEAR_NOT_OPEN");
 

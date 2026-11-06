@@ -158,24 +158,25 @@ class TenantIsolationTest extends IntegrationTest {
         UUID studentB = newStudent(b);
         UUID yearB = openYear(b);
         Response enrollmentA = post(a.path("/students/" + studentA + "/enrollments"), a.adminToken(), Map.of(
-                "academicYearId", yearA.toString(), "level", "Sixième"));
+                "academicYearId", yearA.toString(), "academicUnitId", newLevel(a).toString()));
         String grantHolder = uniqueEmail();
         acceptAsNewAccount(inviteGuardian(a, studentA, grantHolder, false), "Tuteur");
         String grantA = get(a.path("/students/" + studentA + "/access-grants"), a.adminToken()).body().get(0).path("id").asString();
         String token = b.adminToken();
+        String levelB = newLevel(b).toString();
 
         // Lecture et écriture sur le dossier de A, en passant par l'établissement B.
         assertThat(get(b.path("/students/" + studentA), token).status()).isEqualTo(404);
         assertThat(get(b.path("/students/" + studentA + "/enrollments"), token).status()).isEqualTo(404);
         assertThat(get(b.path("/students/" + studentA + "/access-grants"), token).status()).isEqualTo(404);
         assertThat(post(b.path("/students/" + studentA + "/enrollments"), token, Map.of(
-                "academicYearId", yearB.toString(), "level", "Sixième")).status()).isEqualTo(404);
+                "academicYearId", yearB.toString(), "academicUnitId", levelB)).status()).isEqualTo(404);
         assertThat(post(b.path("/students/" + studentA + "/third-party-invitations"), token, Map.of(
                 "contact", uniqueEmail(), "relationship", "OTHER", "academicAccess", false, "financialContributor", true)).status()).isEqualTo(404);
 
         // Mélanger un dossier de B avec une année de A.
         assertThat(post(b.path("/students/" + studentB + "/enrollments"), token, Map.of(
-                "academicYearId", yearA.toString(), "level", "Sixième")).status()).isEqualTo(404);
+                "academicYearId", yearA.toString(), "academicUnitId", levelB)).status()).isEqualTo(404);
 
         // Agir sur les objets de A avec un identifiant deviné.
         assertThat(post(b.path("/students/" + studentA + "/enrollments/" + enrollmentA.text("id") + "/end"), token, Map.of(
