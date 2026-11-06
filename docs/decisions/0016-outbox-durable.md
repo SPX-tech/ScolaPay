@@ -36,6 +36,10 @@ Mise en œuvre :
 | Type d'événement disparu | Ligne d'une classe renommée | Ignorée par le registre, signalée par l'alerte |
 | Délai de reprise | Délai d'une heure | Aucun nouvel essai pendant ce délai |
 
+Ces tests savent échouer : sur 17 défauts injectés un à un dans le lot 1, outbox et mise en service réunies, tous sont détectés. Cinq exécutions du code intact sont toutes vertes.
+
+Une première campagne a aussi corrigé ce document : il affirmait à tort qu'aucune reprise n'aurait lieu sans `@EnableScheduling`, et un test ne démarrait même pas son instance.
+
 ## Limites à respecter
 
 Elles viennent de la lecture du code source 2.1.2 et sont confirmées par les tests.
