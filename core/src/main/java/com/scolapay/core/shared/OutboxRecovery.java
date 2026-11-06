@@ -9,19 +9,18 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.modulith.events.EventPublication;
 import org.springframework.modulith.events.FailedEventPublications;
 import org.springframework.modulith.events.ResubmissionOptions;
-import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
  * Reprend les publications en échec. Une obligation financière ne peut pas être abandonnée : il n'y
- * a pas de nombre maximal d'essais, seulement un délai croissant et une alerte. {@code @EnableScheduling}
- * active aussi le moniteur de Spring Modulith, sans lequel une publication interrompue par un arrêt
- * brutal resterait en attente sans jamais être reprise.
+ * a pas de nombre maximal d'essais, seulement un délai croissant et une alerte.
+ *
+ * <p>{@code @EnableScheduling} est explicite car, sans lui, l'ordonnancement ne tiendrait qu'à un effet
+ * de bord de Spring Modulith Moments, sur un fil que Spring Boot ne gère pas.
  */
 @Component
-@EnableAsync
 @EnableScheduling
 class OutboxRecovery {
 

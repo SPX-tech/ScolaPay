@@ -234,7 +234,9 @@ class OutboxReliabilityTest {
     /** Un service en panne ne doit pas être sollicité à chaque passage de la reprise. */
     @Test
     void leDelaiDeRepriseEspaceLesEssais() throws InterruptedException {
+        // Une option répétée serait fusionnée par Spring en une valeur invalide : on la remplace.
         List<String> longDelay = new ArrayList<>(FAST_RECOVERY);
+        longDelay.removeIf(argument -> argument.contains("retry-delay"));
         longDelay.add("--scolapay.outbox.retry-delay=PT1H");
         longDelay.add("--scolapay.outbox.max-retry-delay=PT1H");
         Instance instance = start("delai", longDelay);

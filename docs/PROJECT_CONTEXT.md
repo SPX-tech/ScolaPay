@@ -205,7 +205,7 @@ La CI GitHub (`.github/workflows/ci.yml`) est la source de preuve : `core` avec 
 
 Le poste de développement (8 Go) est réservé aux éditions légères. Les commandes locales figurent dans le [README](../README.md).
 
-Derniers résultats : 110 tests pour `core/`, dont des JVM réellement tuées pour l'outbox, et 23 mutations toutes détectées à la [Mission 002](mission-002-validation.md) ; 190 tests unitaires et 35 E2E pour le backend NestJS, 47 tests Playwright, compilation et lancement Android ([Mission 001](mission-001-validation.md#résultats-finaux)).
+Derniers résultats : 111 tests pour `core/`, dont des JVM réellement tuées pour l'outbox, et 23 mutations toutes détectées à la [Mission 002](mission-002-validation.md) ; 190 tests unitaires et 35 E2E pour le backend NestJS, 47 tests Playwright, compilation et lancement Android ([Mission 001](mission-001-validation.md#résultats-finaux)).
 
 ## Carte de la documentation
 

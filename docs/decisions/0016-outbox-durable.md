@@ -17,7 +17,8 @@ Mise en œuvre :
 
 - Schéma créé par la migration `V2`, initialisation automatique désactivée.
 - Mode de complétion `archive` : la table active ne contient que ce qui reste à traiter.
-- Publications bloquées surveillées dans les trois états, après 5 minutes. **Sans cela et sans `@EnableScheduling`, rien ne reprendrait après un arrêt brutal, sans aucune erreur.**
+- Publications bloquées surveillées dans les trois états, après 5 minutes. **Sans ces durées, le moniteur de la bibliothèque reste inactif et rien ne reprend après un arrêt brutal, sans aucune erreur** : un test protège leur présence.
+- `@EnableScheduling` explicite : sans lui, l'ordonnancement ne tient qu'à un effet de bord de Spring Modulith Moments, sur un fil non géré par Spring Boot.
 - Reprise par `OutboxRecovery` : délai doublé à chaque essai, plafonné à une heure, **sans nombre maximal d'essais**, car une obligation financière ne s'abandonne pas.
 - Alerte dans les journaux au-delà de 15 minutes sans traitement, calculée en SQL.
 
