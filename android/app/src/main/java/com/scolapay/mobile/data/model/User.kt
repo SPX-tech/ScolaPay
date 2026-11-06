@@ -11,6 +11,9 @@ data class User(
     val role: String,
     val status: String
 ) {
+    val firstName: String get() = fullName.substringBefore(' ')
+    val lastName: String get() = fullName.substringAfter(' ', "")
+    val isActive: Boolean get() = status == "ACTIVE"
     val roleLabel: String
         get() = when (role) {
             "TENANT_ADMIN" -> "Administrateur"

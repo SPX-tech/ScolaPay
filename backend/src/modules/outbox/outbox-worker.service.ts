@@ -50,23 +50,23 @@ export class OutboxWorkerService {
 
           if (event.eventType === 'cash-payment.recorded') {
             await this.notificationsService.queueCashPaymentNotification(
-              event.payload as Record<string, unknown>,
+              event.payload,
             );
           } else if (event.eventType === 'withdrawal.completed') {
             await this.notificationsService.queueWithdrawalCompletedNotification(
-              event.payload as Record<string, unknown>,
+              event.payload,
             );
           } else if (event.eventType === 'withdrawal.failed') {
             await this.notificationsService.queueWithdrawalFailedNotification(
-              event.payload as Record<string, unknown>,
+              event.payload,
             );
           } else if (event.eventType === 'mobile-payment.confirmed') {
             await this.notificationsService.queueMobilePaymentConfirmedNotification(
-              event.payload as Record<string, unknown>,
+              event.payload,
             );
           } else if (event.eventType === 'mobile-payment.failed') {
             await this.notificationsService.queueMobilePaymentFailedNotification(
-              event.payload as Record<string, unknown>,
+              event.payload,
             );
           }
 
@@ -79,7 +79,9 @@ export class OutboxWorkerService {
           });
 
           processed++;
-          this.logger.log(`Event ${event.id} (${event.eventType}) processed successfully.`);
+          this.logger.log(
+            `Event ${event.id} (${event.eventType}) processed successfully.`,
+          );
         } catch (error) {
           this.logger.error(
             `Failed to process event ${event.id}: ${(error as Error).message}`,
@@ -88,16 +90,21 @@ export class OutboxWorkerService {
           await this.prisma.outboxEvent.update({
             where: { id: event.id },
             data: {
-              status: event.attempts + 1 >= this.MAX_RETRIES ? 'FAILED' : 'PENDING',
+              status:
+                event.attempts + 1 >= this.MAX_RETRIES ? 'FAILED' : 'PENDING',
               lastError: (error as Error).message,
-              availableAt: new Date(Date.now() + 60_000 * Math.pow(2, event.attempts)),
+              availableAt: new Date(
+                Date.now() + 60_000 * Math.pow(2, event.attempts),
+              ),
             },
           });
         }
       }
 
       if (pendingEvents.length > 0) {
-        this.logger.log(`Processed ${processed}/${pendingEvents.length} outbox events.`);
+        this.logger.log(
+          `Processed ${processed}/${pendingEvents.length} outbox events.`,
+        );
       }
 
       return { processed, total: pendingEvents.length };

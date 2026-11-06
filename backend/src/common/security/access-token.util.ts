@@ -28,13 +28,18 @@ export function signAccessToken(
     exp: nowInSeconds + expiresInSeconds,
   };
 
-  const payloadBase64 = Buffer.from(JSON.stringify(claims)).toString('base64url');
+  const payloadBase64 = Buffer.from(JSON.stringify(claims)).toString(
+    'base64url',
+  );
   const signature = signPayload(payloadBase64, secret);
 
   return `${payloadBase64}${TOKEN_SEPARATOR}${signature}`;
 }
 
-export function verifyAccessToken(token: string, secret: string): AccessTokenClaims {
+export function verifyAccessToken(
+  token: string,
+  secret: string,
+): AccessTokenClaims {
   const parts = token.split(TOKEN_SEPARATOR);
   if (parts.length !== 2) {
     throw new Error('Malformed access token.');

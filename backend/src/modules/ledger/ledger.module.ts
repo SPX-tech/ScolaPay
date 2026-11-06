@@ -12,8 +12,18 @@ import { DashboardService } from './dashboard.service';
 import { DashboardController } from './dashboard.controller';
 
 @Module({
-  imports: [PrismaModule, OutboxModule, AuditModule, FinanceModule, PaymentModule],
-  controllers: [LedgerController, PaymentsWebhookController, DashboardController],
+  imports: [
+    PrismaModule,
+    OutboxModule,
+    AuditModule,
+    FinanceModule,
+    PaymentModule,
+  ],
+  controllers: [
+    LedgerController,
+    PaymentsWebhookController,
+    DashboardController,
+  ],
   providers: [LedgerService, ReceiptService, DashboardService],
   exports: [LedgerService, ReceiptService, DashboardService],
 })

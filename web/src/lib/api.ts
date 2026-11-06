@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -71,7 +71,7 @@ export const transactionsApi = {
 
 // Ledger API
 export const ledgerApi = {
-  recordCashPayment: (data: { studentId: string; amountCents: number; idempotencyKey?: string; note?: string }) =>
+  recordCashPayment: (data: { studentId: string; amountCents: string; idempotencyKey?: string; note?: string }) =>
     api.post('/ledger/record-cash-payment', data),
   getReceipt: (transactionId: string) => api.get(`/ledger/receipts/${transactionId}`),
 };

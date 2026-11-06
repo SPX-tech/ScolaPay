@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Patch,
-  Post,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { ReqContext } from '../../common/decorators/request-context.decorator';
 import type { RequestContext } from '../../common/types/request-context.type';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -45,7 +38,12 @@ export class UsersController {
     @Param('userId') userId: string,
     @Body() dto: UpdateUserDto,
   ) {
-    return this.usersService.updateUser(context.tenantId, context.userId, userId, dto);
+    return this.usersService.updateUser(
+      context.tenantId,
+      context.userId,
+      userId,
+      dto,
+    );
   }
 
   @Post(':userId/suspend')
@@ -53,7 +51,11 @@ export class UsersController {
     @ReqContext() context: RequestContext,
     @Param('userId') userId: string,
   ) {
-    return this.usersService.suspendUser(context.tenantId, context.userId, userId);
+    return this.usersService.suspendUser(
+      context.tenantId,
+      context.userId,
+      userId,
+    );
   }
 
   @Post(':userId/activate')
@@ -61,6 +63,10 @@ export class UsersController {
     @ReqContext() context: RequestContext,
     @Param('userId') userId: string,
   ) {
-    return this.usersService.activateUser(context.tenantId, context.userId, userId);
+    return this.usersService.activateUser(
+      context.tenantId,
+      context.userId,
+      userId,
+    );
   }
 }

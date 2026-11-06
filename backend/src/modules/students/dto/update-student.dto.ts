@@ -1,4 +1,12 @@
-import { IsObject, IsOptional, IsString, Length, Matches, MinLength } from 'class-validator';
+import {
+  IsObject,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  MinLength,
+} from 'class-validator';
+import { IsMoneyString } from '../../../common/validation/is-money-string';
 
 export class UpdateStudentDto {
   @IsOptional()
@@ -35,9 +43,11 @@ export class UpdateStudentDto {
 
   @IsOptional()
   @IsString()
+  @IsMoneyString(true)
   debtCents?: string;
 
   @IsOptional()
   @IsString()
+  @IsMoneyString(true)
   creditCents?: string;
 }

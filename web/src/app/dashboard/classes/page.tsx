@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { startTransition, useState, useEffect } from 'react';
 import { classesApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { BookOpen, Loader2, Plus, Trash2 } from 'lucide-react';
@@ -21,7 +21,7 @@ export default function ClassesPage() {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchClasses(); }, []);
+  useEffect(() => { startTransition(() => { void fetchClasses(); }); }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

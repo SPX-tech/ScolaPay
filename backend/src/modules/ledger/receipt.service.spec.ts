@@ -111,7 +111,18 @@ describe('ReceiptService', () => {
       const payload = service.generateReceiptQRPayload(transaction);
       const parsed = JSON.parse(payload);
 
-      const requiredFields = ['v', 'rn', 'rh', 'ti', 'sn', 'am', 'pd', 'nd', 'cur', 'at'];
+      const requiredFields = [
+        'v',
+        'rn',
+        'rh',
+        'ti',
+        'sn',
+        'am',
+        'pd',
+        'nd',
+        'cur',
+        'at',
+      ];
       requiredFields.forEach((field) => {
         expect(parsed).toHaveProperty(field);
       });
@@ -147,9 +158,18 @@ describe('ReceiptService', () => {
       const parsed = JSON.parse(data);
 
       const expectedFields = [
-        'version', 'receiptNumber', 'hash', 'transactionId',
-        'studentName', 'studentNumber', 'amount', 'previousDebt',
-        'newDebt', 'currency', 'recordedAt', 'recordedBy',
+        'version',
+        'receiptNumber',
+        'hash',
+        'transactionId',
+        'studentName',
+        'studentNumber',
+        'amount',
+        'previousDebt',
+        'newDebt',
+        'currency',
+        'recordedAt',
+        'recordedBy',
       ];
       expectedFields.forEach((field) => {
         expect(parsed).toHaveProperty(field);
@@ -159,20 +179,14 @@ describe('ReceiptService', () => {
 
   describe('generateQRCodeImage', () => {
     it('should return data when QR code generation works', async () => {
-      // Mock dynamic import of qrcode
-      const originalImport = jest.requireActual('qrcode');
-      jest.isolateModules(() => {
-        // In test environment, dynamic import may fail, testing the fallback
-      });
       const result = await service.generateQRCodeImage('test-data');
-      expect(typeof result).toBe('string');
+      expect(result).toMatch(/^data:image\/png;base64,/);
     });
 
-    it('should handle qrcode module gracefully and return fallback data', async () => {
-      const result = await service.generateQRCodeImage('hello-world');
-      expect(typeof result).toBe('string');
-      // When qrcode dynamic import fails, it returns the input data as fallback
-      expect(result).toBe('hello-world');
+    it('should return the input when QR encoding fails for oversized data', async () => {
+      const data = 'x'.repeat(10_000);
+      const result = await service.generateQRCodeImage(data);
+      expect(result).toBe(data);
     });
   });
 });

@@ -1,4 +1,10 @@
-import { Controller, Inject, Post, Req, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Inject,
+  Post,
+  Req,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
 import { Public } from '../../common/decorators/public.decorator';
@@ -40,11 +46,12 @@ export class PaymentsWebhookController {
   @Public()
   @Post('webhook-kadryza')
   async handleKadryzaWebhook(@Req() request: RawBodyRequest<Request>) {
-    const rawBody = request.rawBody ?? Buffer.from(JSON.stringify(request.body ?? {}));
+    const rawBody =
+      request.rawBody ?? Buffer.from(JSON.stringify(request.body ?? {}));
 
     const isValid = this.paymentProvider.verifyWebhookSignature(
       rawBody,
-      request.headers as Record<string, string | string[] | undefined>,
+      request.headers,
     );
 
     if (!isValid) {

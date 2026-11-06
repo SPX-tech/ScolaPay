@@ -31,9 +31,9 @@
     <string name="month_collected">Ce mois-ci</string>
     <string name="active_students">Élèves actifs</string>
     <string name="total_classes">Classes</string>
-    <string name="today_transactions">Transactions aujourd'hui</string>
+    <string name="today_transactions">Transactions aujourd\'hui</string>
     <string name="record_payment">Encaisser</string>
-    <string name="student_name">Nom de l'élève</string>
+    <string name="student_name">Nom de l\'élève</string>
     <string name="amount">Montant</string>
     <string name="note">Note</string>
     <string name="receipt">Reçu</string>

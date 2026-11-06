@@ -11,16 +11,16 @@ class AuthRepository {
     private val api = ApiClient.getApiService()
     private val authInterceptor = ApiClient.getAuthInterceptor()
 
-    suspend fun login(email: String, password: String): Result<LoginResponse> =
+    suspend fun login(tenantCode: String, email: String, password: String): Result<LoginResponse> =
         withContext(Dispatchers.IO) {
             try {
-                val response = api.login(LoginRequest(email, password))
+                val response = api.login(LoginRequest(tenantCode, email, password))
                 if (response.isSuccessful) {
                     val loginResponse = response.body()!!
                     authInterceptor.saveToken(loginResponse.accessToken)
                     authInterceptor.saveUserInfo(
                         loginResponse.user.id,
-                        "${loginResponse.user.firstName} ${loginResponse.user.lastName}",
+                        loginResponse.user.fullName,
                         loginResponse.user.role
                     )
                     Result.success(loginResponse)

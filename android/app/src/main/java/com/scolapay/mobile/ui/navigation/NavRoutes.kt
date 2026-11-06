@@ -13,10 +13,10 @@ sealed class Screen(
     data object Dashboard : Screen("dashboard", "Accueil", Icons.Filled.Home)
     data object StudentsList : Screen("students", "Élèves", Icons.Filled.People)
     data object StudentDetail : Screen("students/{studentId}", "Détail élève") {
-        fun createRoute(studentId: Long) = "students/$studentId"
+        fun createRoute(studentId: String) = "students/$studentId"
     }
     data object StudentForm : Screen("students/form?studentId={studentId}", "Nouvel élève") {
-        fun createRoute(studentId: Long? = null) =
+        fun createRoute(studentId: String? = null) =
             if (studentId != null) "students/form?studentId=$studentId"
             else "students/form"
     }

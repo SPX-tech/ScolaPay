@@ -35,7 +35,7 @@ describe('PaymentModule (sélection du provider)', () => {
     expect(module.get(PAYMENT_PROVIDER)).toBeInstanceOf(MockPaymentProvider);
   });
 
-  it("sélectionne KadryzaPaymentProvider quand PAYMENT_PROVIDER=kadryza", async () => {
+  it('sélectionne KadryzaPaymentProvider quand PAYMENT_PROVIDER=kadryza', async () => {
     process.env.PAYMENT_PROVIDER = 'kadryza';
 
     const module: TestingModule = await Test.createTestingModule({

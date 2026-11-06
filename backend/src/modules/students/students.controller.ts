@@ -27,7 +27,11 @@ export class StudentsController {
     @ReqContext() context: RequestContext,
     @Body() dto: CreateStudentDto,
   ) {
-    return this.studentsService.createStudent(context.tenantId, context.userId, dto);
+    return this.studentsService.createStudent(
+      context.tenantId,
+      context.userId,
+      dto,
+    );
   }
 
   @Get()
@@ -53,7 +57,12 @@ export class StudentsController {
     @Param('studentId') studentId: string,
     @Body() dto: UpdateStudentDto,
   ) {
-    return this.studentsService.updateStudent(context.tenantId, context.userId, studentId, dto);
+    return this.studentsService.updateStudent(
+      context.tenantId,
+      context.userId,
+      studentId,
+      dto,
+    );
   }
 
   @Roles('TENANT_ADMIN', 'ACCOUNTANT')
@@ -62,7 +71,11 @@ export class StudentsController {
     @ReqContext() context: RequestContext,
     @Param('studentId') studentId: string,
   ) {
-    return this.studentsService.deleteStudent(context.tenantId, context.userId, studentId);
+    return this.studentsService.deleteStudent(
+      context.tenantId,
+      context.userId,
+      studentId,
+    );
   }
 
   @Roles('TENANT_ADMIN', 'ACCOUNTANT')
@@ -71,6 +84,10 @@ export class StudentsController {
     @ReqContext() context: RequestContext,
     @Body() dto: ImportStudentsDto,
   ) {
-    return this.studentsService.importStudents(context.tenantId, context.userId, dto);
+    return this.studentsService.importStudents(
+      context.tenantId,
+      context.userId,
+      dto,
+    );
   }
 }

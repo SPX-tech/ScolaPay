@@ -6,7 +6,10 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { signAccessToken } from '../../common/security/access-token.util';
-import { hashPassword, verifyPassword } from '../../common/security/password.util';
+import {
+  hashPassword,
+  verifyPassword,
+} from '../../common/security/password.util';
 
 @Injectable()
 export class AuthService {
@@ -39,10 +42,14 @@ export class AuthService {
 
     const secret = process.env.ACCESS_TOKEN_SECRET;
     if (!secret) {
-      throw new InternalServerErrorException('ACCESS_TOKEN_SECRET is not configured.');
+      throw new InternalServerErrorException(
+        'ACCESS_TOKEN_SECRET is not configured.',
+      );
     }
 
-    const expiresInSeconds = Number(process.env.ACCESS_TOKEN_EXPIRY_SECONDS ?? 60 * 60 * 8);
+    const expiresInSeconds = Number(
+      process.env.ACCESS_TOKEN_EXPIRY_SECONDS ?? 60 * 60 * 8,
+    );
     const accessToken = signAccessToken(
       {
         sub: user.id,
@@ -57,7 +64,9 @@ export class AuthService {
       where: { id: user.id },
       data: {
         lastLoginAt: new Date(),
-        ...(isLegacyPasswordHash ? { passwordHash: hashPassword(dto.password) } : {}),
+        ...(isLegacyPasswordHash
+          ? { passwordHash: hashPassword(dto.password) }
+          : {}),
       },
     });
 
@@ -73,5 +82,4 @@ export class AuthService {
       },
     };
   }
-
 }

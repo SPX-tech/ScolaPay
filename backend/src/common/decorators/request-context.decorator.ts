@@ -4,7 +4,10 @@ import {
   ExecutionContext,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { REQUEST_CONTEXT_KEY, RequestContext } from '../types/request-context.type';
+import {
+  REQUEST_CONTEXT_KEY,
+  RequestContext,
+} from '../types/request-context.type';
 
 type RequestWithContext = Request & {
   [REQUEST_CONTEXT_KEY]?: RequestContext;

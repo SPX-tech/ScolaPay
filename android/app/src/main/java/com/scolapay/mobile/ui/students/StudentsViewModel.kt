@@ -16,9 +16,9 @@ data class StudentsListUiState(
     val students: List<Student> = emptyList(),
     val classes: List<SchoolClass> = emptyList(),
     val searchQuery: String = "",
-    val selectedClassId: Long? = null,
+    val selectedClassId: String? = null,
     val error: String? = null,
-    val currentPage: Int = 0,
+    val currentPage: Int = 1,
     val totalPages: Int = 1
 )
 
@@ -34,9 +34,9 @@ data class StudentFormUiState(
     val classes: List<SchoolClass> = emptyList(),
     val firstName: String = "",
     val lastName: String = "",
-    val email: String = "",
+    val guardianName: String = "",
     val phone: String = "",
-    val classId: Long? = null,
+    val classId: String? = null,
     val matricule: String = "",
     val error: String? = null,
     val isSaved: Boolean = false
@@ -84,12 +84,12 @@ class StudentsViewModel @Inject constructor(
         loadStudents()
     }
 
-    fun onClassFilterChanged(classId: Long?) {
-        _listState.value = _listState.value.copy(selectedClassId = classId, currentPage = 0)
+    fun onClassFilterChanged(classId: String?) {
+        _listState.value = _listState.value.copy(selectedClassId = classId, currentPage = 1)
         loadStudents()
     }
 
-    fun loadStudent(id: Long) {
+    fun loadStudent(id: String) {
         viewModelScope.launch {
             _detailState.value = StudentDetailUiState(isLoading = true)
             val result = studentRepo.getStudent(id)
@@ -101,7 +101,7 @@ class StudentsViewModel @Inject constructor(
         }
     }
 
-    fun loadForm(studentId: Long? = null) {
+    fun loadForm(studentId: String? = null) {
         viewModelScope.launch {
             val classesResult = classRepo.getClasses()
             _formState.value = _formState.value.copy(classes = classesResult.getOrNull() ?: emptyList())
@@ -113,7 +113,7 @@ class StudentsViewModel @Inject constructor(
                         isEditing = true,
                         firstName = student.firstName,
                         lastName = student.lastName,
-                        email = student.email ?: "",
+                        guardianName = student.guardianName ?: "",
                         phone = student.phone ?: "",
                         classId = student.classId,
                         matricule = student.matricule ?: ""
@@ -125,15 +125,15 @@ class StudentsViewModel @Inject constructor(
 
     fun onFirstNameChanged(value: String) { _formState.value = _formState.value.copy(firstName = value, error = null) }
     fun onLastNameChanged(value: String) { _formState.value = _formState.value.copy(lastName = value, error = null) }
-    fun onEmailChanged(value: String) { _formState.value = _formState.value.copy(email = value) }
+    fun onGuardianNameChanged(value: String) { _formState.value = _formState.value.copy(guardianName = value) }
     fun onPhoneChanged(value: String) { _formState.value = _formState.value.copy(phone = value) }
-    fun onClassChanged(classId: Long) { _formState.value = _formState.value.copy(classId = classId) }
+    fun onClassChanged(classId: String) { _formState.value = _formState.value.copy(classId = classId) }
     fun onMatriculeChanged(value: String) { _formState.value = _formState.value.copy(matricule = value) }
 
     fun saveStudent() {
         val state = _formState.value
-        if (state.firstName.isBlank() || state.lastName.isBlank() || state.classId == null) {
-            _formState.value = state.copy(error = "Prénom, nom et classe sont requis")
+        if (state.firstName.isBlank() || state.lastName.isBlank() || state.classId == null || state.matricule.trim().length < 3) {
+            _formState.value = state.copy(error = "Prénom, nom, classe et matricule sont requis")
             return
         }
 
@@ -144,12 +144,12 @@ class StudentsViewModel @Inject constructor(
             } else {
                 studentRepo.createStudent(
                     CreateStudentRequest(
-                        firstName = state.firstName,
-                        lastName = state.lastName,
-                        email = state.email.ifBlank { null },
-                        phone = state.phone.ifBlank { null },
+                        fullName = "${state.firstName} ${state.lastName}".trim(),
+                        
+                        guardianName = state.guardianName.ifBlank { null },
+                        guardianPhone = state.phone.ifBlank { null },
                         classId = state.classId!!,
-                        matricule = state.matricule.ifBlank { null }
+                        studentNumber = state.matricule
                     )
                 )
             }
@@ -160,18 +160,19 @@ class StudentsViewModel @Inject constructor(
         }
     }
 
-    fun updateStudent(studentId: Long) {
+    fun updateStudent(studentId: String) {
         val state = _formState.value
         viewModelScope.launch {
             _formState.value = _formState.value.copy(isLoading = true, error = null)
             val result = studentRepo.updateStudent(
                 studentId,
                 UpdateStudentRequest(
-                    firstName = state.firstName.ifBlank { null },
-                    lastName = state.lastName.ifBlank { null },
-                    email = state.email.ifBlank { null },
-                    phone = state.phone.ifBlank { null },
-                    classId = state.classId
+                    fullName = "${state.firstName} ${state.lastName}".trim(),
+                    
+                    guardianName = state.guardianName.ifBlank { null },
+                    guardianPhone = state.phone.ifBlank { null },
+                    classId = state.classId,
+                    studentNumber = state.matricule
                 )
             )
             result.fold(
@@ -181,7 +182,7 @@ class StudentsViewModel @Inject constructor(
         }
     }
 
-    fun deleteStudent(id: Long) {
+    fun deleteStudent(id: String) {
         viewModelScope.launch {
             studentRepo.deleteStudent(id)
             loadStudents()

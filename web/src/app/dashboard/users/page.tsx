@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { startTransition, useState, useEffect } from 'react';
 import { usersApi } from '@/lib/api';
 import { formatDate, getStatusColor, cn } from '@/lib/utils';
 import { Loader2, Plus, UserPlus, UserX, UserCheck } from 'lucide-react';
@@ -25,7 +25,7 @@ export default function UsersPage() {
     }
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => { startTransition(() => { void fetchUsers(); }); }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

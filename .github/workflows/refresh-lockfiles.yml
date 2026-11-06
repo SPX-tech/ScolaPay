@@ -1,0 +1,44 @@
+name: Refresh lockfiles
+on:
+  workflow_dispatch:
+  push:
+    branches: ['mission001/ci-baseline']
+    paths: ['backend/package.json', 'web/package.json', '.github/workflows/refresh-lockfiles.yml']
+permissions:
+  contents: read
+jobs:
+  refresh:
+    if: >-
+      github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'build: refresh')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - name: Résoudre les versions compatibles et figer les dépendances directes
+        run: |
+          for app in backend web; do
+            (cd "$app" && npm install --strict-peer-deps && npm update --strict-peer-deps)
+            node scripts/pin-dependencies.mjs "$app"
+            (cd "$app" && npm install --package-lock-only)
+          done
+      - name: Normaliser le formatage backend
+        run: |
+          cd backend
+          npx --no-install prettier --write 'src/**/*.ts' 'test/**/*.ts' prisma.config.ts
+          cd ..
+          tar -czf formatted.tar.gz backend/src backend/test backend/prisma.config.ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: manifests
+          path: |
+            backend/package.json
+            backend/package-lock.json
+            web/package.json
+            web/package-lock.json
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: formatted
+          path: formatted.tar.gz

@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
-type AuditTarget = 'user' | 'student' | 'transaction' | 'class' | 'outbox' | 'withdrawal';
+type AuditTarget =
+  'user' | 'student' | 'transaction' | 'class' | 'outbox' | 'withdrawal';
 
 type PrismaClientLike = PrismaService | Prisma.TransactionClient;
 
@@ -35,9 +36,10 @@ export class AuditService {
         action: input.action,
         targetType: input.targetType,
         targetId: input.targetId,
-        before: toAuditJson(input.before) as any,
-        after: toAuditJson(input.after) as any,
-        metadata: toAuditJson(input.metadata) as any,
+        before: toAuditJson(input.before) as Prisma.InputJsonValue | undefined,
+        after: toAuditJson(input.after) as Prisma.InputJsonValue | undefined,
+        metadata: toAuditJson(input.metadata) as
+          Prisma.InputJsonValue | undefined,
       },
     });
   }
@@ -48,7 +50,12 @@ function toAuditJson(value: unknown): unknown {
     return undefined;
   }
 
-  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
     return value;
   }
 
@@ -72,5 +79,5 @@ function toAuditJson(value: unknown): unknown {
     );
   }
 
-  return String(value);
+  return undefined;
 }

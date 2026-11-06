@@ -1,13 +1,13 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { formatMoney } from './money';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export function formatCurrency(cents: bigint | number | string, currency = 'XAF'): string {
-  const amount = typeof cents === 'bigint' ? Number(cents) : Number(cents);
-  return `${(amount / 100).toLocaleString('fr-FR')} ${currency}`;
+  return formatMoney(cents, currency);
 }
 
 export function formatDate(date: string | Date): string {

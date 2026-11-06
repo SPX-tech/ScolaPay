@@ -1,19 +1,25 @@
 package com.scolapay.mobile.data.model
 
 data class DashboardSummary(
-    val totalStudents: Int = 0,
-    val activeStudents: Int = 0,
-    val totalClasses: Int = 0,
-    val totalCollectedCents: String = "0",
-    val currentMonthCents: String = "0",
-    val todayTransactions: Int = 0,
-    val pendingVoidRequests: Int = 0,
+    val students: DashboardStudents,
+    val transactions: DashboardTransactions,
+    val cashCollected: CashCollected,
     val recentTransactions: List<RecentTransaction> = emptyList()
-)
+) {
+    val activeStudents: Int get() = students.active
+    val totalStudents: Int get() = students.total
+    val totalTransactions: Int get() = transactions.total
+    val totalRevenue: java.math.BigDecimal get() = cashCollected.thisMonthCents.toBigDecimal().movePointLeft(2)
+    val totalDebts: java.math.BigDecimal get() = students.totalDebtCents.toBigDecimal().movePointLeft(2)
+}
+
+data class DashboardStudents(val total: Int, val active: Int, val withDebt: Int, val totalDebtCents: String, val totalCreditCents: String)
+data class DashboardTransactions(val total: Int, val today: Int, val thisMonth: Int)
+data class CashCollected(val todayCents: String, val thisMonthCents: String)
 
 data class RecentTransaction(
     val id: String,
-    val studentName: String,
+    val student: TransactionStudent?,
     val amountCents: Long,
     val status: String,
     val recordedAt: String
@@ -28,7 +34,7 @@ data class Receipt(
 
 data class RecordCashPaymentRequest(
     val studentId: String,
-    val amountCents: Int,
+    val amountCents: String,
     val idempotencyKey: String? = null,
     val note: String? = null
 )

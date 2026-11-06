@@ -14,13 +14,13 @@ data class UsersUiState(
     val isLoading: Boolean = true,
     val users: List<User> = emptyList(),
     val error: String? = null,
-    val isDeleting: Long? = null
+    val isDeleting: String? = null
 )
 
 data class UserFormUiState(
     val isVisible: Boolean = false,
     val isEditing: Boolean = false,
-    val editUserId: Long? = null,
+    val editUserId: String? = null,
     val isLoading: Boolean = false,
     val firstName: String = "",
     val lastName: String = "",
@@ -95,8 +95,7 @@ class UsersViewModel @Inject constructor(
             _formState.value = _formState.value.copy(isLoading = true, error = null)
             val result = if (state.isEditing) {
                 repo.updateUser(state.editUserId!!, UpdateUserRequest(
-                    firstName = state.firstName,
-                    lastName = state.lastName,
+                    fullName = "${state.firstName} ${state.lastName}".trim(),
                     email = state.email,
                     password = state.password.ifBlank { null },
                     role = state.role
@@ -105,8 +104,7 @@ class UsersViewModel @Inject constructor(
                 repo.createUser(CreateUserRequest(
                     email = state.email,
                     password = state.password,
-                    firstName = state.firstName,
-                    lastName = state.lastName,
+                    fullName = "${state.firstName} ${state.lastName}".trim(),
                     role = state.role
                 ))
             }
@@ -120,7 +118,7 @@ class UsersViewModel @Inject constructor(
         }
     }
 
-    fun deleteUser(id: Long) {
+    fun deleteUser(id: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isDeleting = id)
             repo.deleteUser(id)

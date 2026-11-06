@@ -92,11 +92,12 @@ const PAGE_SIZE = 10;
 function withdrawalFormSchema(availableCents: number) {
   return z.object({
     method: z.enum(['MOBILE_MONEY', 'BANK_TRANSFER'], {
-      required_error: 'Choisissez un mode de retrait',
+      error: 'Choisissez un mode de retrait',
     }),
-    amountFcfa: z.coerce
-      .number({ invalid_type_error: 'Montant invalide' })
+    amountFcfa: z
+      .number({ error: 'Montant invalide' })
       .positive('Le montant doit être positif')
+      .refine((value) => Number.isSafeInteger(Math.round(value * 100)), 'Montant trop élevé')
       .refine((value) => Math.round(value * 100) <= availableCents, {
         message: 'Le montant dépasse le solde disponible',
       }),

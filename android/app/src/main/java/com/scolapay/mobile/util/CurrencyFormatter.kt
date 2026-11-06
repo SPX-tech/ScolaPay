@@ -2,6 +2,7 @@ package com.scolapay.mobile.util
 
 import java.text.NumberFormat
 import java.util.Locale
+import java.math.BigDecimal
 
 object CurrencyFormatter {
     private val format = NumberFormat.getNumberInstance(Locale("fr", "FR")).apply {
@@ -14,7 +15,7 @@ object CurrencyFormatter {
     }
 
     fun formatCents(cents: Long): String {
-        val amount = cents / 100.0
+        val amount = cents.toBigDecimal().movePointLeft(2)
         return "${format.format(amount)} ${Constants.DEFAULT_CURRENCY}"
     }
 
@@ -23,5 +24,12 @@ object CurrencyFormatter {
         return formatCents(intValue)
     }
 
-    fun parseAmount(amount: Double): Int = (amount * 100).toInt()
+    fun format(amount: BigDecimal): String = "${format.format(amount)} ${Constants.DEFAULT_CURRENCY}"
+
+    fun parseAmountCents(amount: String): String? {
+        if (amount.length > 22 || !Regex("^[0-9]+([.,][0-9]{1,2})?$").matches(amount)) return null
+        val cents = amount.replace(',', '.').toBigDecimal().movePointRight(2).toBigIntegerExact()
+        if (cents.signum() <= 0 || cents > java.math.BigInteger.valueOf(Long.MAX_VALUE)) return null
+        return cents.toString()
+    }
 }

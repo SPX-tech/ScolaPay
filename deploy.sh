@@ -9,11 +9,12 @@ set -euo pipefail
 cd "$(dirname "$0")"          # se placer à la racine du projet
 BRANCH="main"
 
-# Compose v2 (docker compose) avec repli sur v1 (docker-compose)
+# Les dépendances de migration nécessitent Docker Compose v2.
 if docker compose version >/dev/null 2>&1; then
   COMPOSE="docker compose"
 else
-  COMPOSE="docker-compose"
+  echo "Docker Compose v2 est requis."
+  exit 1
 fi
 
 log() { printf '\n\033[1;34m=== %s ===\033[0m\n' "$1"; }
@@ -44,17 +45,13 @@ echo " prêt."
 # `migrate deploy` applique uniquement les migrations en attente : pas de
 # reset, pas de prompt, pas de suppression de données.
 log "Migrations Prisma (migrate deploy)"
-$COMPOSE run --rm backend npx prisma migrate deploy
+$COMPOSE run --rm migrate
 
 # 6) Redémarrer proprement les services applicatifs --------------------------
 # `up -d` recrée uniquement les conteneurs dont l'image/config a changé et
 # conserve le volume `postgres_data` (aucune perte de données).
 log "Redémarrage des services (backend, web, nginx)"
 $COMPOSE up -d --remove-orphans
-
-# 7) Nettoyage des images obsolètes (optionnel) ------------------------------
-log "Nettoyage des images Docker inutilisées"
-docker image prune -f >/dev/null || true
 
 # 8) Vérification de santé ---------------------------------------------------
 log "État des services"

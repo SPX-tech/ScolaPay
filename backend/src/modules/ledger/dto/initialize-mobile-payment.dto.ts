@@ -1,4 +1,5 @@
-import { IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsString, MaxLength, MinLength } from 'class-validator';
+import { IsMoneyString } from '../../../common/validation/is-money-string';
 
 export class InitializeMobilePaymentDto {
   @IsString()
@@ -6,7 +7,7 @@ export class InitializeMobilePaymentDto {
   studentId!: string;
 
   @IsString()
-  @Matches(/^[1-9]\d*$/)
+  @IsMoneyString()
   amountCents!: string;
 
   /** Numéro mobile money qui sera débité (push USSD). */

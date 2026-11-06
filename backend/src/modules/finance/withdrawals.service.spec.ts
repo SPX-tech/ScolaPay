@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { WithdrawalStatus } from '@prisma/client';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
+import { WithdrawalStatus } from '../../generated/prisma/client';
 import { WithdrawalsService } from './withdrawals.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { VirtualAccountService } from './virtual-account.service';
@@ -27,7 +31,11 @@ describe('WithdrawalsService', () => {
   };
   let mockPrisma: {
     $transaction: jest.Mock;
-    withdrawalRequest: { findUnique: jest.Mock; findMany: jest.Mock; count: jest.Mock };
+    withdrawalRequest: {
+      findUnique: jest.Mock;
+      findMany: jest.Mock;
+      count: jest.Mock;
+    };
   };
   let mockVirtualAccount: {
     reserveForWithdrawal: jest.Mock;
@@ -42,7 +50,11 @@ describe('WithdrawalsService', () => {
     verifyWebhookSignature: jest.Mock;
   };
 
-  const requester = { id: USER, fullName: 'Jean Testeur', phone: '+23566000000' };
+  const requester = {
+    id: USER,
+    fullName: 'Jean Testeur',
+    phone: '+23566000000',
+  };
 
   const withdrawalRow = (overrides: Record<string, unknown> = {}) => ({
     id: WITHDRAWAL_ID,
@@ -72,7 +84,11 @@ describe('WithdrawalsService', () => {
     };
     mockPrisma = {
       $transaction: jest.fn(),
-      withdrawalRequest: { findUnique: jest.fn(), findMany: jest.fn(), count: jest.fn() },
+      withdrawalRequest: {
+        findUnique: jest.fn(),
+        findMany: jest.fn(),
+        count: jest.fn(),
+      },
     };
     mockVirtualAccount = {
       reserveForWithdrawal: jest.fn(),
@@ -81,7 +97,11 @@ describe('WithdrawalsService', () => {
     };
     mockAuditService = { record: jest.fn() };
     mockOutboxService = { createEvent: jest.fn() };
-    mockPaymentProvider = { collect: jest.fn(), payout: jest.fn(), verifyWebhookSignature: jest.fn() };
+    mockPaymentProvider = {
+      collect: jest.fn(),
+      payout: jest.fn(),
+      verifyWebhookSignature: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -98,7 +118,9 @@ describe('WithdrawalsService', () => {
     jest.clearAllMocks();
     // Simule prisma.$transaction(async (tx) => ...) en rejouant tout de
     // suite le callback avec le même mockTx (pas de vraie base en jeu).
-    mockPrisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(mockTx));
+    mockPrisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) =>
+      fn(mockTx),
+    );
   });
 
   describe('initiate', () => {
@@ -115,7 +137,11 @@ describe('WithdrawalsService', () => {
 
       const result = await service.initiate(TENANT, USER, dto);
 
-      expect(mockVirtualAccount.reserveForWithdrawal).toHaveBeenCalledWith(TENANT, 5_000n, mockTx);
+      expect(mockVirtualAccount.reserveForWithdrawal).toHaveBeenCalledWith(
+        TENANT,
+        5_000n,
+        mockTx,
+      );
       expect(mockTx.withdrawalRequest.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           tenantId: TENANT,
@@ -128,10 +154,14 @@ describe('WithdrawalsService', () => {
       expect(result).toEqual(created);
     });
 
-    it("ne crée pas la demande si le blocage des fonds échoue (pas de demande sans blocage)", async () => {
-      mockVirtualAccount.reserveForWithdrawal.mockRejectedValue(new Error('Solde insuffisant'));
+    it('ne crée pas la demande si le blocage des fonds échoue (pas de demande sans blocage)', async () => {
+      mockVirtualAccount.reserveForWithdrawal.mockRejectedValue(
+        new Error('Solde insuffisant'),
+      );
 
-      await expect(service.initiate(TENANT, USER, dto)).rejects.toThrow('Solde insuffisant');
+      await expect(service.initiate(TENANT, USER, dto)).rejects.toThrow(
+        'Solde insuffisant',
+      );
       expect(mockTx.withdrawalRequest.create).not.toHaveBeenCalled();
     });
   });
@@ -149,9 +179,13 @@ describe('WithdrawalsService', () => {
         orderBy: { createdAt: 'desc' },
         skip: 0,
         take: 20,
-        include: { requestedBy: { select: { id: true, fullName: true, phone: true } } },
+        include: {
+          requestedBy: { select: { id: true, fullName: true, phone: true } },
+        },
       });
-      expect(mockPrisma.withdrawalRequest.count).toHaveBeenCalledWith({ where: { tenantId: TENANT } });
+      expect(mockPrisma.withdrawalRequest.count).toHaveBeenCalledWith({
+        where: { tenantId: TENANT },
+      });
       expect(result).toEqual({
         data: [row],
         meta: { total: 1, page: 1, limit: 20, totalPages: 1 },
@@ -167,7 +201,12 @@ describe('WithdrawalsService', () => {
       expect(mockPrisma.withdrawalRequest.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ skip: 40, take: 20 }),
       );
-      expect(result.meta).toEqual({ total: 45, page: 3, limit: 20, totalPages: 3 });
+      expect(result.meta).toEqual({
+        total: 45,
+        page: 3,
+        limit: 20,
+        totalPages: 3,
+      });
     });
 
     it('applique les valeurs par défaut page=1/limit=50 si omises', async () => {
@@ -196,7 +235,11 @@ describe('WithdrawalsService', () => {
       const result = await service.process(TENANT, USER, WITHDRAWAL_ID);
 
       expect(mockTx.withdrawalRequest.updateMany).toHaveBeenCalledWith({
-        where: { id: WITHDRAWAL_ID, tenantId: TENANT, status: WithdrawalStatus.PENDING },
+        where: {
+          id: WITHDRAWAL_ID,
+          tenantId: TENANT,
+          status: WithdrawalStatus.PENDING,
+        },
         data: { status: WithdrawalStatus.PROCESSING },
       });
       expect(mockAuditService.record).toHaveBeenCalledWith(
@@ -216,8 +259,10 @@ describe('WithdrawalsService', () => {
         reference: 'WD-abc',
       });
       // Le virement est déclenché après que la transition PROCESSING a commité.
-      const updateManyOrder = mockTx.withdrawalRequest.updateMany.mock.invocationCallOrder[0];
-      const payoutOrder = mockPaymentProvider.payout.mock.invocationCallOrder[0];
+      const updateManyOrder =
+        mockTx.withdrawalRequest.updateMany.mock.invocationCallOrder[0];
+      const payoutOrder =
+        mockPaymentProvider.payout.mock.invocationCallOrder[0];
       expect(updateManyOrder).toBeLessThan(payoutOrder);
 
       expect(mockVirtualAccount.reserveForWithdrawal).not.toHaveBeenCalled();
@@ -229,11 +274,13 @@ describe('WithdrawalsService', () => {
 
     it('rejette (Conflict) et ne tente jamais le virement si la demande n’est plus PENDING (idempotence)', async () => {
       mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 0 });
-      mockTx.withdrawalRequest.findFirst.mockResolvedValue({ status: WithdrawalStatus.PROCESSING });
+      mockTx.withdrawalRequest.findFirst.mockResolvedValue({
+        status: WithdrawalStatus.PROCESSING,
+      });
 
-      await expect(service.process(TENANT, USER, WITHDRAWAL_ID)).rejects.toBeInstanceOf(
-        ConflictException,
-      );
+      await expect(
+        service.process(TENANT, USER, WITHDRAWAL_ID),
+      ).rejects.toBeInstanceOf(ConflictException);
       expect(mockAuditService.record).not.toHaveBeenCalled();
       expect(mockPaymentProvider.payout).not.toHaveBeenCalled();
     });
@@ -242,13 +289,13 @@ describe('WithdrawalsService', () => {
       mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 0 });
       mockTx.withdrawalRequest.findFirst.mockResolvedValue(null);
 
-      await expect(service.process(TENANT, USER, WITHDRAWAL_ID)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.process(TENANT, USER, WITHDRAWAL_ID),
+      ).rejects.toBeInstanceOf(NotFoundException);
       expect(mockPaymentProvider.payout).not.toHaveBeenCalled();
     });
 
-    it("rejette (NotFound) si la demande appartient à un autre tenant (isolation multi-tenant)", async () => {
+    it('rejette (NotFound) si la demande appartient à un autre tenant (isolation multi-tenant)', async () => {
       mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 0 });
       mockTx.withdrawalRequest.findFirst.mockResolvedValue(null);
 
@@ -256,7 +303,11 @@ describe('WithdrawalsService', () => {
         service.process(OTHER_TENANT, USER, WITHDRAWAL_ID),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(mockTx.withdrawalRequest.updateMany).toHaveBeenCalledWith({
-        where: { id: WITHDRAWAL_ID, tenantId: OTHER_TENANT, status: WithdrawalStatus.PENDING },
+        where: {
+          id: WITHDRAWAL_ID,
+          tenantId: OTHER_TENANT,
+          status: WithdrawalStatus.PENDING,
+        },
         data: { status: WithdrawalStatus.PROCESSING },
       });
     });
@@ -269,16 +320,27 @@ describe('WithdrawalsService', () => {
       mockPaymentProvider.payout.mockRejectedValue(new Error('network down'));
       mockVirtualAccount.releaseWithdrawal.mockResolvedValue({});
 
-      await expect(service.process(TENANT, USER, WITHDRAWAL_ID)).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(
+        service.process(TENANT, USER, WITHDRAWAL_ID),
+      ).rejects.toBeInstanceOf(BadRequestException);
 
       // Le rollback réutilise fail() : même garde de transition, mêmes effets.
       expect(mockTx.withdrawalRequest.updateMany).toHaveBeenCalledWith({
-        where: { id: WITHDRAWAL_ID, tenantId: TENANT, status: WithdrawalStatus.PROCESSING },
-        data: { status: WithdrawalStatus.FAILED, failureReason: expect.stringContaining('network down') },
+        where: {
+          id: WITHDRAWAL_ID,
+          tenantId: TENANT,
+          status: WithdrawalStatus.PROCESSING,
+        },
+        data: {
+          status: WithdrawalStatus.FAILED,
+          failureReason: expect.stringContaining('network down'),
+        },
       });
-      expect(mockVirtualAccount.releaseWithdrawal).toHaveBeenCalledWith(TENANT, 5_000n, mockTx);
+      expect(mockVirtualAccount.releaseWithdrawal).toHaveBeenCalledWith(
+        TENANT,
+        5_000n,
+        mockTx,
+      );
       expect(mockOutboxService.createEvent).toHaveBeenCalledWith(
         expect.objectContaining({ eventType: 'withdrawal.failed' }),
       );
@@ -299,15 +361,26 @@ describe('WithdrawalsService', () => {
       });
       mockVirtualAccount.releaseWithdrawal.mockResolvedValue({});
 
-      await expect(service.process(TENANT, USER, WITHDRAWAL_ID)).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(
+        service.process(TENANT, USER, WITHDRAWAL_ID),
+      ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(mockTx.withdrawalRequest.updateMany).toHaveBeenCalledWith({
-        where: { id: WITHDRAWAL_ID, tenantId: TENANT, status: WithdrawalStatus.PROCESSING },
-        data: { status: WithdrawalStatus.FAILED, failureReason: 'RIB invalide' },
+        where: {
+          id: WITHDRAWAL_ID,
+          tenantId: TENANT,
+          status: WithdrawalStatus.PROCESSING,
+        },
+        data: {
+          status: WithdrawalStatus.FAILED,
+          failureReason: 'RIB invalide',
+        },
       });
-      expect(mockVirtualAccount.releaseWithdrawal).toHaveBeenCalledWith(TENANT, 5_000n, mockTx);
+      expect(mockVirtualAccount.releaseWithdrawal).toHaveBeenCalledWith(
+        TENANT,
+        5_000n,
+        mockTx,
+      );
       expect(mockOutboxService.createEvent).toHaveBeenCalledWith(
         expect.objectContaining({ eventType: 'withdrawal.failed' }),
       );
@@ -320,15 +393,25 @@ describe('WithdrawalsService', () => {
     it('débite le compte virtuel, journalise l’audit et planifie la notification, dans une seule transaction', async () => {
       mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 1 });
       mockTx.withdrawalRequest.findFirstOrThrow.mockResolvedValue(
-        withdrawalRow({ status: WithdrawalStatus.COMPLETED, externalReference: dto.externalReference }),
+        withdrawalRow({
+          status: WithdrawalStatus.COMPLETED,
+          externalReference: dto.externalReference,
+        }),
       );
       mockVirtualAccount.completeWithdrawal.mockResolvedValue({});
 
       const result = await service.complete(TENANT, USER, WITHDRAWAL_ID, dto);
 
       expect(mockTx.withdrawalRequest.updateMany).toHaveBeenCalledWith({
-        where: { id: WITHDRAWAL_ID, tenantId: TENANT, status: WithdrawalStatus.PROCESSING },
-        data: { status: WithdrawalStatus.COMPLETED, externalReference: dto.externalReference },
+        where: {
+          id: WITHDRAWAL_ID,
+          tenantId: TENANT,
+          status: WithdrawalStatus.PROCESSING,
+        },
+        data: {
+          status: WithdrawalStatus.COMPLETED,
+          externalReference: dto.externalReference,
+        },
       });
       expect(mockVirtualAccount.completeWithdrawal).toHaveBeenCalledWith(
         TENANT,
@@ -370,18 +453,22 @@ describe('WithdrawalsService', () => {
 
       await service.complete(TENANT, USER, WITHDRAWAL_ID, dto);
 
-      const updateManyOrder = mockTx.withdrawalRequest.updateMany.mock.invocationCallOrder[0];
-      const completeOrder = mockVirtualAccount.completeWithdrawal.mock.invocationCallOrder[0];
+      const updateManyOrder =
+        mockTx.withdrawalRequest.updateMany.mock.invocationCallOrder[0];
+      const completeOrder =
+        mockVirtualAccount.completeWithdrawal.mock.invocationCallOrder[0];
       expect(updateManyOrder).toBeLessThan(completeOrder);
     });
 
     it('ne débite jamais deux fois : un second appel sur une demande déjà COMPLETED échoue (idempotence)', async () => {
       mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 0 });
-      mockTx.withdrawalRequest.findFirst.mockResolvedValue({ status: WithdrawalStatus.COMPLETED });
+      mockTx.withdrawalRequest.findFirst.mockResolvedValue({
+        status: WithdrawalStatus.COMPLETED,
+      });
 
-      await expect(service.complete(TENANT, USER, WITHDRAWAL_ID, dto)).rejects.toBeInstanceOf(
-        ConflictException,
-      );
+      await expect(
+        service.complete(TENANT, USER, WITHDRAWAL_ID, dto),
+      ).rejects.toBeInstanceOf(ConflictException);
       expect(mockVirtualAccount.completeWithdrawal).not.toHaveBeenCalled();
       expect(mockAuditService.record).not.toHaveBeenCalled();
       expect(mockOutboxService.createEvent).not.toHaveBeenCalled();
@@ -389,11 +476,13 @@ describe('WithdrawalsService', () => {
 
     it('rejette (Conflict) une demande encore PENDING (jamais passée par process)', async () => {
       mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 0 });
-      mockTx.withdrawalRequest.findFirst.mockResolvedValue({ status: WithdrawalStatus.PENDING });
+      mockTx.withdrawalRequest.findFirst.mockResolvedValue({
+        status: WithdrawalStatus.PENDING,
+      });
 
-      await expect(service.complete(TENANT, USER, WITHDRAWAL_ID, dto)).rejects.toBeInstanceOf(
-        ConflictException,
-      );
+      await expect(
+        service.complete(TENANT, USER, WITHDRAWAL_ID, dto),
+      ).rejects.toBeInstanceOf(ConflictException);
       expect(mockVirtualAccount.completeWithdrawal).not.toHaveBeenCalled();
     });
 
@@ -401,9 +490,9 @@ describe('WithdrawalsService', () => {
       mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 0 });
       mockTx.withdrawalRequest.findFirst.mockResolvedValue(null);
 
-      await expect(service.complete(TENANT, USER, WITHDRAWAL_ID, dto)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.complete(TENANT, USER, WITHDRAWAL_ID, dto),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
@@ -413,17 +502,28 @@ describe('WithdrawalsService', () => {
     it('libère le blocage, journalise l’audit et planifie la notification, dans une seule transaction', async () => {
       mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 1 });
       mockTx.withdrawalRequest.findFirstOrThrow.mockResolvedValue(
-        withdrawalRow({ status: WithdrawalStatus.FAILED, failureReason: dto.reason }),
+        withdrawalRow({
+          status: WithdrawalStatus.FAILED,
+          failureReason: dto.reason,
+        }),
       );
       mockVirtualAccount.releaseWithdrawal.mockResolvedValue({});
 
       const result = await service.fail(TENANT, USER, WITHDRAWAL_ID, dto);
 
       expect(mockTx.withdrawalRequest.updateMany).toHaveBeenCalledWith({
-        where: { id: WITHDRAWAL_ID, tenantId: TENANT, status: WithdrawalStatus.PROCESSING },
+        where: {
+          id: WITHDRAWAL_ID,
+          tenantId: TENANT,
+          status: WithdrawalStatus.PROCESSING,
+        },
         data: { status: WithdrawalStatus.FAILED, failureReason: dto.reason },
       });
-      expect(mockVirtualAccount.releaseWithdrawal).toHaveBeenCalledWith(TENANT, 5_000n, mockTx);
+      expect(mockVirtualAccount.releaseWithdrawal).toHaveBeenCalledWith(
+        TENANT,
+        5_000n,
+        mockTx,
+      );
       expect(mockVirtualAccount.completeWithdrawal).not.toHaveBeenCalled();
       expect(mockAuditService.record).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -451,11 +551,13 @@ describe('WithdrawalsService', () => {
 
     it('ne libère jamais deux fois : un second appel sur une demande déjà FAILED échoue (idempotence)', async () => {
       mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 0 });
-      mockTx.withdrawalRequest.findFirst.mockResolvedValue({ status: WithdrawalStatus.FAILED });
+      mockTx.withdrawalRequest.findFirst.mockResolvedValue({
+        status: WithdrawalStatus.FAILED,
+      });
 
-      await expect(service.fail(TENANT, USER, WITHDRAWAL_ID, dto)).rejects.toBeInstanceOf(
-        ConflictException,
-      );
+      await expect(
+        service.fail(TENANT, USER, WITHDRAWAL_ID, dto),
+      ).rejects.toBeInstanceOf(ConflictException);
       expect(mockVirtualAccount.releaseWithdrawal).not.toHaveBeenCalled();
       expect(mockAuditService.record).not.toHaveBeenCalled();
       expect(mockOutboxService.createEvent).not.toHaveBeenCalled();
@@ -463,11 +565,13 @@ describe('WithdrawalsService', () => {
 
     it('rejette (Conflict) une demande déjà COMPLETED (transition terminale)', async () => {
       mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 0 });
-      mockTx.withdrawalRequest.findFirst.mockResolvedValue({ status: WithdrawalStatus.COMPLETED });
+      mockTx.withdrawalRequest.findFirst.mockResolvedValue({
+        status: WithdrawalStatus.COMPLETED,
+      });
 
-      await expect(service.fail(TENANT, USER, WITHDRAWAL_ID, dto)).rejects.toBeInstanceOf(
-        ConflictException,
-      );
+      await expect(
+        service.fail(TENANT, USER, WITHDRAWAL_ID, dto),
+      ).rejects.toBeInstanceOf(ConflictException);
       expect(mockVirtualAccount.releaseWithdrawal).not.toHaveBeenCalled();
     });
 
@@ -475,9 +579,9 @@ describe('WithdrawalsService', () => {
       mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 0 });
       mockTx.withdrawalRequest.findFirst.mockResolvedValue(null);
 
-      await expect(service.fail(TENANT, USER, WITHDRAWAL_ID, dto)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.fail(TENANT, USER, WITHDRAWAL_ID, dto),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
@@ -485,7 +589,10 @@ describe('WithdrawalsService', () => {
     it('retourne not_found si aucune demande ne correspond à la référence', async () => {
       mockPrisma.withdrawalRequest.findUnique.mockResolvedValue(null);
 
-      const result = await service.confirmPayout({ reference: 'WD-unknown', status: 'SUCCESS' });
+      const result = await service.confirmPayout({
+        reference: 'WD-unknown',
+        status: 'SUCCESS',
+      });
 
       expect(result).toEqual({ outcome: 'not_found' });
       expect(mockPrisma.$transaction).not.toHaveBeenCalled();
@@ -496,7 +603,10 @@ describe('WithdrawalsService', () => {
         withdrawalRow({ status: WithdrawalStatus.COMPLETED }),
       );
 
-      const result = await service.confirmPayout({ reference: 'WD-abc', status: 'SUCCESS' });
+      const result = await service.confirmPayout({
+        reference: 'WD-abc',
+        status: 'SUCCESS',
+      });
 
       expect(result).toEqual({ outcome: 'already_processed' });
       expect(mockPrisma.$transaction).not.toHaveBeenCalled();
@@ -508,7 +618,10 @@ describe('WithdrawalsService', () => {
       );
       mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 1 });
       mockTx.withdrawalRequest.findFirstOrThrow.mockResolvedValue(
-        withdrawalRow({ status: WithdrawalStatus.COMPLETED, externalReference: 'KZ-PAYOUT-1' }),
+        withdrawalRow({
+          status: WithdrawalStatus.COMPLETED,
+          externalReference: 'KZ-PAYOUT-1',
+        }),
       );
       mockVirtualAccount.completeWithdrawal.mockResolvedValue({});
 
@@ -519,8 +632,15 @@ describe('WithdrawalsService', () => {
       });
 
       expect(mockTx.withdrawalRequest.updateMany).toHaveBeenCalledWith({
-        where: { id: WITHDRAWAL_ID, tenantId: TENANT, status: WithdrawalStatus.PROCESSING },
-        data: { status: WithdrawalStatus.COMPLETED, externalReference: 'KZ-PAYOUT-1' },
+        where: {
+          id: WITHDRAWAL_ID,
+          tenantId: TENANT,
+          status: WithdrawalStatus.PROCESSING,
+        },
+        data: {
+          status: WithdrawalStatus.COMPLETED,
+          externalReference: 'KZ-PAYOUT-1',
+        },
       });
       expect(mockVirtualAccount.completeWithdrawal).toHaveBeenCalledWith(
         TENANT,
@@ -541,7 +661,10 @@ describe('WithdrawalsService', () => {
       );
       mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 1 });
       mockTx.withdrawalRequest.findFirstOrThrow.mockResolvedValue(
-        withdrawalRow({ status: WithdrawalStatus.FAILED, failureReason: 'Compte bancaire clôturé' }),
+        withdrawalRow({
+          status: WithdrawalStatus.FAILED,
+          failureReason: 'Compte bancaire clôturé',
+        }),
       );
       mockVirtualAccount.releaseWithdrawal.mockResolvedValue({});
 
@@ -552,10 +675,21 @@ describe('WithdrawalsService', () => {
       });
 
       expect(mockTx.withdrawalRequest.updateMany).toHaveBeenCalledWith({
-        where: { id: WITHDRAWAL_ID, tenantId: TENANT, status: WithdrawalStatus.PROCESSING },
-        data: { status: WithdrawalStatus.FAILED, failureReason: 'Compte bancaire clôturé' },
+        where: {
+          id: WITHDRAWAL_ID,
+          tenantId: TENANT,
+          status: WithdrawalStatus.PROCESSING,
+        },
+        data: {
+          status: WithdrawalStatus.FAILED,
+          failureReason: 'Compte bancaire clôturé',
+        },
       });
-      expect(mockVirtualAccount.releaseWithdrawal).toHaveBeenCalledWith(TENANT, 5_000n, mockTx);
+      expect(mockVirtualAccount.releaseWithdrawal).toHaveBeenCalledWith(
+        TENANT,
+        5_000n,
+        mockTx,
+      );
       expect(mockVirtualAccount.completeWithdrawal).not.toHaveBeenCalled();
       expect(mockOutboxService.createEvent).toHaveBeenCalledWith(
         expect.objectContaining({ eventType: 'withdrawal.failed' }),
@@ -572,9 +706,14 @@ describe('WithdrawalsService', () => {
       // plus rien, et le diagnostic interne de transitionOrThrow constate
       // que la demande est déjà COMPLETED.
       mockTx.withdrawalRequest.updateMany.mockResolvedValue({ count: 0 });
-      mockTx.withdrawalRequest.findFirst.mockResolvedValue({ status: WithdrawalStatus.COMPLETED });
+      mockTx.withdrawalRequest.findFirst.mockResolvedValue({
+        status: WithdrawalStatus.COMPLETED,
+      });
 
-      const result = await service.confirmPayout({ reference: 'WD-abc', status: 'SUCCESS' });
+      const result = await service.confirmPayout({
+        reference: 'WD-abc',
+        status: 'SUCCESS',
+      });
 
       expect(result).toEqual({ outcome: 'already_processed' });
       expect(mockVirtualAccount.completeWithdrawal).not.toHaveBeenCalled();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { startTransition, useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import {
@@ -76,8 +76,10 @@ export default function ReportsPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'collections') fetchCollections();
-    else fetchDebts();
+    startTransition(() => {
+      if (activeTab === 'collections') void fetchCollections();
+      else void fetchDebts();
+    });
   }, [activeTab, fetchCollections, fetchDebts]);
 
   const exportCSV = () => {

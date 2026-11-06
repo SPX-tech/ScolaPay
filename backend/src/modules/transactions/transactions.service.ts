@@ -1,8 +1,12 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ListTransactionsQueryDto } from './dto/list-transactions-query.dto';
 import { VoidTransactionDto } from './dto/void-transaction.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../../generated/prisma/client';
 import { AuditService } from '../audit/audit.service';
 
 @Injectable()
@@ -12,11 +16,22 @@ export class TransactionsService {
     private readonly auditService: AuditService,
   ) {}
 
-  async listTenantTransactions(tenantId: string, query: ListTransactionsQueryDto) {
-    const { page = 1, limit = 50, type, status, studentId, startDate, endDate } = query;
+  async listTenantTransactions(
+    tenantId: string,
+    query: ListTransactionsQueryDto,
+  ) {
+    const {
+      page = 1,
+      limit = 50,
+      type,
+      status,
+      studentId,
+      startDate,
+      endDate,
+    } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = { tenantId };
+    const where: Prisma.TransactionWhereInput = { tenantId };
 
     if (type) where.type = type;
     if (status) where.status = status;
@@ -76,11 +91,15 @@ export class TransactionsService {
     return transaction;
   }
 
-  async listStudentTransactions(tenantId: string, studentId: string, query: ListTransactionsQueryDto) {
+  async listStudentTransactions(
+    tenantId: string,
+    studentId: string,
+    query: ListTransactionsQueryDto,
+  ) {
     const { page = 1, limit = 50 } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = { tenantId, studentId };
+    const where: Prisma.TransactionWhereInput = { tenantId, studentId };
 
     const [transactions, total] = await Promise.all([
       this.prisma.transaction.findMany({
@@ -112,7 +131,9 @@ export class TransactionsService {
   ) {
     const allowedRoles = ['TENANT_ADMIN', 'ACCOUNTANT'];
     if (!allowedRoles.includes(userRole)) {
-      throw new ForbiddenException('Only admins and accountants can void transactions.');
+      throw new ForbiddenException(
+        'Only admins and accountants can void transactions.',
+      );
     }
 
     const transaction = await this.prisma.transaction.findFirst({
@@ -152,33 +173,33 @@ export class TransactionsService {
     const previousDebtCents = BigInt(transaction.previousDebtCents);
     const currentCreditCents = BigInt(student.creditCents);
     const overpaymentCents =
-      amountCents > previousDebtCents
-        ? amountCents - previousDebtCents
-        : 0n;
+      amountCents > previousDebtCents ? amountCents - previousDebtCents : 0n;
     const newCreditCents = currentCreditCents - overpaymentCents;
 
-    const result = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // Void the transaction
-      const voidedTransaction = await tx.transaction.update({
-        where: { id: transactionId },
-        data: {
-          status: 'VOIDED',
-          voidedAt: new Date(),
-          voidReason: dto.reason,
-        },
-      });
+    const result = await this.prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        // Void the transaction
+        const voidedTransaction = await tx.transaction.update({
+          where: { id: transactionId },
+          data: {
+            status: 'VOIDED',
+            voidedAt: new Date(),
+            voidReason: dto.reason,
+          },
+        });
 
-      // Restore student balance
-      await tx.student.update({
-        where: { id: student.id },
-        data: {
-          debtCents: previousDebtCents,
-          creditCents: newCreditCents < 0n ? 0n : newCreditCents,
-        },
-      });
+        // Restore student balance
+        await tx.student.update({
+          where: { id: student.id },
+          data: {
+            debtCents: previousDebtCents,
+            creditCents: newCreditCents < 0n ? 0n : newCreditCents,
+          },
+        });
 
-      return voidedTransaction;
-    });
+        return voidedTransaction;
+      },
+    );
 
     await this.auditService.record({
       tenantId,
@@ -192,7 +213,8 @@ export class TransactionsService {
         reason: dto.reason,
         studentId: student.id,
         restoredDebtCents: previousDebtCents.toString(),
-        restoredCreditCents: newCreditCents < 0n ? '0' : newCreditCents.toString(),
+        restoredCreditCents:
+          newCreditCents < 0n ? '0' : newCreditCents.toString(),
       },
     });
 

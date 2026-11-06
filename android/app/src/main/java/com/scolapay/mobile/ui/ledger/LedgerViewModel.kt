@@ -12,14 +12,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import java.util.UUID
+import com.scolapay.mobile.util.CurrencyFormatter
 
 data class LedgerUiState(
     val isLoading: Boolean = true,
     val isSubmitting: Boolean = false,
     val students: List<Student> = emptyList(),
     val classes: List<SchoolClass> = emptyList(),
-    val selectedClassId: Long? = null,
-    val selectedStudentId: Long? = null,
+    val selectedClassId: String? = null,
+    val selectedStudentId: String? = null,
     val amount: String = "",
     val description: String = "",
     val error: String? = null,
@@ -33,6 +35,7 @@ class LedgerViewModel @Inject constructor(
     private val studentRepo: StudentRepository,
     private val classRepo: ClassRepository
 ) : ViewModel() {
+    private var paymentIntent: Pair<String, String>? = null
 
     private val _uiState = MutableStateFlow(LedgerUiState())
     val uiState: StateFlow<LedgerUiState> = _uiState
@@ -52,11 +55,11 @@ class LedgerViewModel @Inject constructor(
         }
     }
 
-    fun onClassFilterChanged(classId: Long?) {
+    fun onClassFilterChanged(classId: String?) {
         _uiState.value = _uiState.value.copy(selectedClassId = classId, selectedStudentId = null)
     }
 
-    fun onStudentSelected(studentId: Long) {
+    fun onStudentSelected(studentId: String) {
         _uiState.value = _uiState.value.copy(selectedStudentId = studentId)
     }
 
@@ -96,21 +99,25 @@ class LedgerViewModel @Inject constructor(
             _uiState.value = state.copy(error = "Veuillez sélectionner un élève")
             return
         }
-        val amount = state.amount.toDoubleOrNull()
-        if (amount == null || amount <= 0) {
+        val amountCents = CurrencyFormatter.parseAmountCents(state.amount)
+        if (amountCents == null) {
             _uiState.value = state.copy(error = "Montant invalide")
             return
         }
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSubmitting = true, error = null)
+            val fingerprint = "${state.selectedStudentId}:$amountCents:${state.description}"
+            if (paymentIntent?.first != fingerprint) paymentIntent = fingerprint to UUID.randomUUID().toString()
             val result = ledgerRepo.recordCashPayment(
                 studentId = state.selectedStudentId!!,
-                amount = amount,
+                amountCents = amountCents,
+                idempotencyKey = paymentIntent!!.second,
                 description = state.description.ifBlank { null }
             )
             result.fold(
                 onSuccess = {
+                    paymentIntent = null
                     _uiState.value = LedgerUiState(
                         isLoading = false,
                         students = state.students,

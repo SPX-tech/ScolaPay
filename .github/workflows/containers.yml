@@ -1,0 +1,51 @@
+name: Containers
+on:
+  pull_request:
+  push:
+    branches: [main, 'mission001/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: containers-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      ACCESS_TOKEN_SECRET: isolated-container-verification-only
+      POSTGRES_USER: scolapay_test
+      POSTGRES_PASSWORD: isolated_ci_only
+      POSTGRES_DB: scolapay_test
+      DATABASE_URL: postgresql://scolapay_test:isolated_ci_only@postgres:5432/scolapay_test?schema=public
+      POSTGRES_HOST_PORT: '15432'
+      NGINX_PORT: '18080'
+      NEXT_PUBLIC_API_URL: /api/v1
+      PAYMENT_PROVIDER: disabled
+      OUTBOX_POLLING_ENABLED: 'false'
+      COMPOSE_PROJECT_NAME: scolapay-ci-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - run: docker compose config --quiet
+      - run: docker compose build backend
+      - run: docker compose build migrate
+      - run: docker compose build web
+      - run: docker compose up --detach --no-build
+      - name: Vérifier le proxy, l'API et le web
+        run: |
+          curl --fail --silent --show-error --retry 20 --retry-delay 2 --retry-all-errors http://127.0.0.1:18080/api/v1/health
+          curl --fail --silent --show-error http://127.0.0.1:18080/ > /tmp/scolapay-page.html
+          grep -q ScolaPay /tmp/scolapay-page.html
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:18080/api/v1/students)" = 401
+      - name: Collecter les journaux
+        if: always()
+        run: docker compose logs --no-color > container-logs.txt
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: container-logs
+          path: container-logs.txt
+      - name: Supprimer les ressources jetables
+        if: always()
+        run: docker compose down --volumes --remove-orphans

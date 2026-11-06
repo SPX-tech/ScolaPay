@@ -9,12 +9,19 @@ import { map } from 'rxjs/operators';
 
 @Injectable()
 export class BigIntSerializerInterceptor implements NestInterceptor {
-  intercept(_context: ExecutionContext, next: CallHandler): Observable<unknown> {
+  intercept(
+    _context: ExecutionContext,
+    next: CallHandler,
+  ): Observable<unknown> {
     return next.handle().pipe(map((value: unknown) => serializeBigInt(value)));
   }
 }
 
 function serializeBigInt(value: unknown): unknown {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
   if (typeof value === 'bigint') {
     return value.toString();
   }

@@ -16,13 +16,6 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideApiClient(@ApplicationContext context: Context): ApiClient {
-        ApiClient.initialize(context)
-        return ApiClient
-    }
-
-    @Provides
-    @Singleton
     fun provideAuthRepository(): AuthRepository = AuthRepository()
 
     @Provides

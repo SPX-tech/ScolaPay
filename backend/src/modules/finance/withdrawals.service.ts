@@ -6,7 +6,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, WithdrawalStatus } from '@prisma/client';
+import { Prisma, WithdrawalStatus } from '../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { VirtualAccountService } from './virtual-account.service';
 import { AuditService } from '../audit/audit.service';
@@ -19,11 +19,14 @@ import { PAYMENT_PROVIDER } from '../payment/payment-provider.interface';
 import type { PaymentProvider } from '../payment/payment-provider.interface';
 
 type WithdrawalWithRequester = Prisma.WithdrawalRequestGetPayload<{
-  include: { requestedBy: { select: { id: true; fullName: true; phone: true } } };
+  include: {
+    requestedBy: { select: { id: true; fullName: true; phone: true } };
+  };
 }>;
 
 /** Résultat d'une confirmation webhook, distingué pour un logging/monitoring clair. */
-type ConfirmPayoutOutcome = 'completed' | 'failed' | 'already_processed' | 'not_found';
+type ConfirmPayoutOutcome =
+  'completed' | 'failed' | 'already_processed' | 'not_found';
 
 @Injectable()
 export class WithdrawalsService {
@@ -103,7 +106,11 @@ export class WithdrawalsService {
    * exactement ce qu'il faut (libération du blocage, audit, notification),
    * sans dupliquer cette logique ici.
    */
-  async process(tenantId: string, userId: string, id: string): Promise<WithdrawalWithRequester> {
+  async process(
+    tenantId: string,
+    userId: string,
+    id: string,
+  ): Promise<WithdrawalWithRequester> {
     const withdrawal = await this.prisma.$transaction(async (tx) => {
       const w = await this.transitionOrThrow(tx, {
         id,
@@ -146,7 +153,8 @@ export class WithdrawalsService {
     }
 
     if (payoutResult.status === 'FAILED') {
-      const reason = payoutResult.failureReason ?? 'Provider rejected the payout request.';
+      const reason =
+        payoutResult.failureReason ?? 'Provider rejected the payout request.';
       await this.fail(tenantId, userId, id, { reason });
       throw new BadRequestException(reason);
     }
@@ -233,7 +241,11 @@ export class WithdrawalsService {
         data: { failureReason: dto.reason },
       });
 
-      await this.virtualAccount.releaseWithdrawal(tenantId, withdrawal.amountCents, tx);
+      await this.virtualAccount.releaseWithdrawal(
+        tenantId,
+        withdrawal.amountCents,
+        tx,
+      );
 
       await this.auditService.record(
         {
@@ -254,7 +266,9 @@ export class WithdrawalsService {
         aggregateType: 'withdrawal',
         aggregateId: withdrawal.id,
         eventType: 'withdrawal.failed',
-        payload: this.buildNotificationPayload(withdrawal, { reason: dto.reason }),
+        payload: this.buildNotificationPayload(withdrawal, {
+          reason: dto.reason,
+        }),
       });
 
       return withdrawal;
@@ -293,15 +307,26 @@ export class WithdrawalsService {
 
     try {
       if (input.status === 'FAILED') {
-        await this.fail(withdrawal.tenantId, withdrawal.requestedById, withdrawal.id, {
-          reason: input.failureReason ?? 'Payout declined by provider.',
-        });
+        await this.fail(
+          withdrawal.tenantId,
+          withdrawal.requestedById,
+          withdrawal.id,
+          {
+            reason: input.failureReason ?? 'Payout declined by provider.',
+          },
+        );
         return { outcome: 'failed' };
       }
 
-      await this.complete(withdrawal.tenantId, withdrawal.requestedById, withdrawal.id, {
-        externalReference: input.providerTransactionId ?? withdrawal.reference,
-      });
+      await this.complete(
+        withdrawal.tenantId,
+        withdrawal.requestedById,
+        withdrawal.id,
+        {
+          externalReference:
+            input.providerTransactionId ?? withdrawal.reference,
+        },
+      );
       return { outcome: 'completed' };
     } catch (error) {
       if (error instanceof ConflictException) {

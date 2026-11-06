@@ -24,6 +24,10 @@ data class Student(
     val hasCredit: Boolean get() = creditCents > 0
     val isActive: Boolean get() = status == "ACTIVE"
     val displayClassName: String? get() = classInfo?.name ?: className
+    val firstName: String get() = fullName.substringBefore(' ')
+    val lastName: String get() = fullName.substringAfter(' ', "")
+    val matricule: String get() = studentNumber
+    val phone: String? get() = guardianPhone
 }
 
 data class ClassInfo(
@@ -33,11 +37,9 @@ data class ClassInfo(
 
 data class StudentListResponse(
     val data: List<Student>,
-    val total: Int,
-    val page: Int,
-    val limit: Int
+    val meta: PaginationMeta
 ) {
-    val hasMore: Boolean get() = page * limit < total
+    val hasMore: Boolean get() = meta.page < meta.totalPages
 }
 
 data class CreateStudentRequest(
@@ -45,7 +47,7 @@ data class CreateStudentRequest(
     val fullName: String,
     val guardianPhone: String? = null,
     val guardianName: String? = null,
-    val enrolledAt: String? = null
+    val studentNumber: String
 )
 
 data class UpdateStudentRequest(
@@ -53,7 +55,8 @@ data class UpdateStudentRequest(
     val fullName: String? = null,
     val guardianPhone: String? = null,
     val guardianName: String? = null,
-    val status: String? = null
+    val status: String? = null,
+    val studentNumber: String? = null
 )
 
 data class ImportStudentsRequest(

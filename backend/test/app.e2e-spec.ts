@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
+import { configureApp } from '../src/configure-app';
 
 describe('ScolaPay E2E Tests', () => {
   let app: INestApplication;
@@ -12,14 +13,7 @@ describe('ScolaPay E2E Tests', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
-    app.setGlobalPrefix('api/v1');
+    configureApp(app);
     await app.init();
   });
 
@@ -34,6 +28,25 @@ describe('ScolaPay E2E Tests', () => {
   });
 
   describe('Authentication', () => {
+    it('authentifie et retourne un jeton utilisable', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          tenantCode: 'DEMO001',
+          email: 'admin@demo.td',
+          password: 'admin123',
+        })
+        .expect(201);
+      expect(typeof response.body.accessToken).toBe('string');
+      expect(typeof response.body.expiresInSeconds).toBe('number');
+      expect(response.body.user.role).toBe('TENANT_ADMIN');
+      const tenant = await request(app.getHttpServer())
+        .get('/api/v1/tenants/me')
+        .auth(response.body.accessToken, { type: 'bearer' })
+        .expect(200);
+      expect(tenant.body.code).toBe('DEMO001');
+    });
+
     it('POST /api/v1/auth/login without body should return 400', () => {
       return request(app.getHttpServer())
         .post('/api/v1/auth/login')
@@ -47,7 +60,7 @@ describe('ScolaPay E2E Tests', () => {
         .send({
           tenantCode: 'NONEXISTENT',
           email: 'test@test.com',
-          password: 'wrong',
+          password: 'wrong-password',
         })
         .expect(401);
     });

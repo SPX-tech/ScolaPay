@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import africastalkingFactory from 'africastalking';
+import africastalkingFactory from './sms-client';
 
 type AfricastalkingInstance = ReturnType<typeof africastalkingFactory>;
 
@@ -198,7 +198,9 @@ export class NotificationsService {
     ]);
   }
 
-  async queueMobilePaymentConfirmedNotification(eventPayload: unknown): Promise<{
+  async queueMobilePaymentConfirmedNotification(
+    eventPayload: unknown,
+  ): Promise<{
     status: string;
     provider: string;
     payload: unknown;

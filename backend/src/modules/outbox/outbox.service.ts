@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 type CreateOutboxEventInput = {
@@ -16,7 +16,8 @@ export class OutboxService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createEvent(input: CreateOutboxEventInput) {
-    const { tx, tenantId, aggregateType, aggregateId, eventType, payload } = input;
+    const { tx, tenantId, aggregateType, aggregateId, eventType, payload } =
+      input;
 
     return tx.outboxEvent.create({
       data: {

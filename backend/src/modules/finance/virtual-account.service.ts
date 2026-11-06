@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { LedgerEntryType, Prisma } from '@prisma/client';
+import { LedgerEntryType, Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /**
@@ -79,7 +79,10 @@ export class VirtualAccountService {
   }
 
   /** Liste paginée du grand livre du tenant, plus récent en premier. */
-  async listLedgerEntries(tenantId: string, query: { page?: number; limit?: number }) {
+  async listLedgerEntries(
+    tenantId: string,
+    query: { page?: number; limit?: number },
+  ) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 50;
     const skip = (page - 1) * limit;
@@ -157,7 +160,7 @@ export class VirtualAccountService {
     fn: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
     if (tx) {
-      return fn(tx as Prisma.TransactionClient);
+      return fn(tx);
     }
     return this.prisma.$transaction((trx) => fn(trx));
   }

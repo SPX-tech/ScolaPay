@@ -1,4 +1,9 @@
-import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import {
+  createHash,
+  randomBytes,
+  scryptSync,
+  timingSafeEqual,
+} from 'node:crypto';
 
 const SCRYPT_PREFIX = 'scrypt';
 const SCRYPT_KEY_LENGTH = 64;
@@ -24,7 +29,9 @@ function verifyScryptPassword(password: string, storedHash: string): boolean {
     return false;
   }
 
-  const candidate = scryptSync(password, salt, SCRYPT_KEY_LENGTH).toString('hex');
+  const candidate = scryptSync(password, salt, SCRYPT_KEY_LENGTH).toString(
+    'hex',
+  );
   return safeEqual(candidate, key);
 }
 

@@ -9,8 +9,10 @@ import { KadryzaPaymentProvider } from './kadryza-payment.provider';
     KadryzaPaymentProvider,
     {
       provide: PAYMENT_PROVIDER,
-      useFactory: (mock: MockPaymentProvider, kadryza: KadryzaPaymentProvider) =>
-        process.env.PAYMENT_PROVIDER === 'kadryza' ? kadryza : mock,
+      useFactory: (
+        mock: MockPaymentProvider,
+        kadryza: KadryzaPaymentProvider,
+      ) => (process.env.PAYMENT_PROVIDER === 'kadryza' ? kadryza : mock),
       inject: [MockPaymentProvider, KadryzaPaymentProvider],
     },
   ],

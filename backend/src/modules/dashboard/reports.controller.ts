@@ -9,9 +9,7 @@ type StudentInfo = { id: string; fullName: string; studentNumber: string };
 
 @Controller('dashboard')
 export class ReportsController {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   @Get('reports/collections')
   async getCollectionsReport(
@@ -20,7 +18,9 @@ export class ReportsController {
     @Query('endDate') endDate?: string,
   ) {
     const tenantId = context.tenantId;
-    const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const start = startDate
+      ? new Date(startDate)
+      : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const end = endDate ? new Date(endDate) : new Date();
 
     // Daily collections
@@ -67,20 +67,30 @@ export class ReportsController {
     });
 
     // Resolve student names for top payers
-    const studentIds = topStudents.map((s: { studentId: string }) => s.studentId);
+    const studentIds = topStudents.map(
+      (s: { studentId: string }) => s.studentId,
+    );
     const students = await this.prisma.student.findMany({
       where: { id: { in: studentIds } },
       select: { id: true, fullName: true, studentNumber: true },
     });
-    const studentMap = new Map<string, StudentInfo>(students.map((s: StudentInfo) => [s.id, s]));
+    const studentMap = new Map<string, StudentInfo>(
+      students.map((s: StudentInfo) => [s.id, s]),
+    );
 
-    const topPayers = topStudents.map((s: { studentId: string; _sum: { amountCents: bigint | null }; _count: number }) => ({
-      studentId: s.studentId,
-      fullName: studentMap.get(s.studentId)?.fullName || 'N/A',
-      studentNumber: studentMap.get(s.studentId)?.studentNumber || 'N/A',
-      totalCents: s._sum.amountCents || 0n,
-      transactionCount: s._count,
-    }));
+    const topPayers = topStudents.map(
+      (s: {
+        studentId: string;
+        _sum: { amountCents: bigint | null };
+        _count: number;
+      }) => ({
+        studentId: s.studentId,
+        fullName: studentMap.get(s.studentId)?.fullName || 'N/A',
+        studentNumber: studentMap.get(s.studentId)?.studentNumber || 'N/A',
+        totalCents: s._sum.amountCents || 0n,
+        transactionCount: s._count,
+      }),
+    );
 
     // Debt overview
     const debtStats = await this.prisma.student.aggregate({
@@ -130,15 +140,26 @@ export class ReportsController {
       },
     });
 
-    return students.map((s: { id: string; studentNumber: string; fullName: string; class: { name: string } | null; debtCents: bigint; creditCents: bigint; guardianPhone: string | null; status: string }) => ({
-      id: s.id,
-      studentNumber: s.studentNumber,
-      fullName: s.fullName,
-      className: s.class?.name || null,
-      debtCents: s.debtCents,
-      creditCents: s.creditCents,
-      guardianPhone: s.guardianPhone,
-      status: s.status,
-    }));
+    return students.map(
+      (s: {
+        id: string;
+        studentNumber: string;
+        fullName: string;
+        class: { name: string } | null;
+        debtCents: bigint;
+        creditCents: bigint;
+        guardianPhone: string | null;
+        status: string;
+      }) => ({
+        id: s.id,
+        studentNumber: s.studentNumber,
+        fullName: s.fullName,
+        className: s.class?.name || null,
+        debtCents: s.debtCents,
+        creditCents: s.creditCents,
+        guardianPhone: s.guardianPhone,
+        status: s.status,
+      }),
+    );
   }
 }

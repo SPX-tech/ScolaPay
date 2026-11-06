@@ -15,7 +15,7 @@ object ApiClient {
 
     fun initialize(context: Context, baseUrl: String = Constants.DEFAULT_API_URL) {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = HttpLoggingInterceptor.Level.NONE
         }
 
         authInterceptor = AuthInterceptor(context)
@@ -23,9 +23,11 @@ object ApiClient {
         val client = OkHttpClient.Builder()
             .addInterceptor(authInterceptor!!)
             .addInterceptor(logging)
+            .addInterceptor(ResponseLimitInterceptor())
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
+            .callTimeout(30, TimeUnit.SECONDS)
             .build()
 
         val retrofit = Retrofit.Builder()

@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OutboxService } from '../outbox/outbox.service';
 import { ReceiptService } from './receipt.service';
@@ -44,10 +44,7 @@ type InitializeMobilePaymentResult = {
 
 /** Résultat d'une confirmation webhook, distingué pour un logging/monitoring clair. */
 type ConfirmMobilePaymentOutcome =
-  | 'credited'
-  | 'already_processed'
-  | 'failed'
-  | 'not_found';
+  'credited' | 'already_processed' | 'failed' | 'not_found';
 
 @Injectable()
 export class LedgerService {
@@ -85,7 +82,9 @@ export class LedgerService {
       });
 
       if (existing) {
-        throw new ConflictException('Transaction already recorded (idempotent).');
+        throw new ConflictException(
+          'Transaction already recorded (idempotent).',
+        );
       }
     }
 
@@ -119,7 +118,9 @@ export class LedgerService {
       newDebtCents = zero;
     }
 
-    const receiptNumber = this.receiptService.generateReceiptNumber(tenant.code);
+    const receiptNumber = this.receiptService.generateReceiptNumber(
+      tenant.code,
+    );
     const receiptHash = this.receiptService.generateReceiptHash({
       tenantId,
       studentId: student.id,
@@ -142,65 +143,70 @@ export class LedgerService {
       newDebtCents,
       currency: tenant.currency,
       recordedAt: new Date(),
-      student: { fullName: student.fullName, studentNumber: student.studentNumber },
+      student: {
+        fullName: student.fullName,
+        studentNumber: student.studentNumber,
+      },
       recordedBy: { fullName: 'pending' },
     });
 
     // Execute ACID transaction
     try {
-      const result = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        const transaction = await tx.transaction.create({
-          data: {
+      const result = await this.prisma.$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          const transaction = await tx.transaction.create({
+            data: {
+              tenantId,
+              studentId: student.id,
+              recordedByUserId: userId,
+              type: 'CASH_PAYMENT',
+              status: 'POSTED',
+              amountCents,
+              previousDebtCents,
+              newDebtCents,
+              currency: tenant.currency,
+              receiptNumber,
+              receiptHash,
+              qrCodeData,
+              idempotencyKey: dto.idempotencyKey,
+              note: dto.note,
+              metadata: dto.metadata as Prisma.InputJsonObject | undefined,
+              recordedAt: new Date(),
+            },
+          });
+
+          await tx.student.update({
+            where: { id: student.id },
+            data: {
+              debtCents: newDebtCents,
+              creditCents: newCreditCents,
+              lastPaymentAt: new Date(),
+            },
+          });
+
+          // Outbox event for notification
+          await this.outboxService.createEvent({
+            tx,
             tenantId,
-            studentId: student.id,
-            recordedByUserId: userId,
-            type: 'CASH_PAYMENT',
-            status: 'POSTED',
-            amountCents,
-            previousDebtCents,
-            newDebtCents,
-            currency: tenant.currency,
-            receiptNumber,
-            receiptHash,
-            qrCodeData,
-            idempotencyKey: dto.idempotencyKey,
-            note: dto.note,
-            metadata: dto.metadata as any,
-            recordedAt: new Date(),
-          },
-        });
+            aggregateType: 'transaction',
+            aggregateId: transaction.id,
+            eventType: 'cash-payment.recorded',
+            payload: {
+              transactionId: transaction.id,
+              tenantId,
+              studentId: student.id,
+              studentName: student.fullName,
+              guardianPhone: student.guardianPhone,
+              guardianName: student.guardianName,
+              amountCents: amountCents.toString(),
+              receiptNumber,
+              recordedAt: transaction.recordedAt.toISOString(),
+            },
+          });
 
-        await tx.student.update({
-          where: { id: student.id },
-          data: {
-            debtCents: newDebtCents,
-            creditCents: newCreditCents,
-            lastPaymentAt: new Date(),
-          },
-        });
-
-        // Outbox event for notification
-        await this.outboxService.createEvent({
-          tx,
-          tenantId,
-          aggregateType: 'transaction',
-          aggregateId: transaction.id,
-          eventType: 'cash-payment.recorded',
-          payload: {
-            transactionId: transaction.id,
-            tenantId,
-            studentId: student.id,
-            studentName: student.fullName,
-            guardianPhone: student.guardianPhone,
-            guardianName: student.guardianName,
-            amountCents: amountCents.toString(),
-            receiptNumber,
-            recordedAt: transaction.recordedAt.toISOString(),
-          },
-        });
-
-        return transaction;
-      });
+          return transaction;
+        },
+      );
 
       const response = {
         transactionId: result.id,
@@ -233,9 +239,16 @@ export class LedgerService {
       });
 
       return response;
-    } catch (error: any) {
-      if (error?.code === 'P2002') {
-        throw new ConflictException('Transaction already recorded (duplicate).');
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'Transaction already recorded (duplicate).',
+        );
       }
       throw error;
     }
@@ -262,7 +275,9 @@ export class LedgerService {
       );
     }
 
-    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+    });
     if (!tenant) {
       throw new NotFoundException('Tenant not found.');
     }
@@ -319,8 +334,14 @@ export class LedgerService {
     }
 
     if (collectResult.status === 'FAILED') {
-      const reason = collectResult.failureReason ?? 'Provider rejected the collection request.';
-      await this.markMobilePaymentInitiationFailed(transaction.id, tenantId, reason);
+      const reason =
+        collectResult.failureReason ??
+        'Provider rejected the collection request.';
+      await this.markMobilePaymentInitiationFailed(
+        transaction.id,
+        tenantId,
+        reason,
+      );
       throw new BadRequestException(reason);
     }
 
@@ -426,7 +447,9 @@ export class LedgerService {
       return { outcome: failedThisCall ? 'failed' : 'already_processed' };
     }
 
-    const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+    const tenant = await this.prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+    });
     const amountCents = transaction.amountCents;
     let creditedThisCall = false;
 
@@ -447,7 +470,9 @@ export class LedgerService {
         newDebtCents = zero;
       }
 
-      const receiptNumber = this.receiptService.generateReceiptNumber(tenant.code);
+      const receiptNumber = this.receiptService.generateReceiptNumber(
+        tenant.code,
+      );
       const receiptHash = this.receiptService.generateReceiptHash({
         tenantId,
         studentId: student.id,
@@ -468,7 +493,10 @@ export class LedgerService {
         newDebtCents,
         currency: tenant.currency,
         recordedAt: transaction.recordedAt,
-        student: { fullName: student.fullName, studentNumber: student.studentNumber },
+        student: {
+          fullName: student.fullName,
+          studentNumber: student.studentNumber,
+        },
         recordedBy: { fullName: 'Mobile payment (Kadryza)' },
       });
 

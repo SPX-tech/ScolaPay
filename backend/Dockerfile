@@ -1,7 +1,10 @@
 # ============================================================
 # STAGE 1: Install ALL dependencies (including devDependencies)
 # ============================================================
-FROM node:20-alpine AS deps
+FROM node:24.22.1-alpine AS base
+RUN npm install --global npm@11.19.1
+
+FROM base AS deps
 
 WORKDIR /app
 
@@ -12,7 +15,7 @@ RUN npm ci
 # ============================================================
 # STAGE 2: Build the application
 # ============================================================
-FROM node:20-alpine AS build
+FROM base AS build
 
 WORKDIR /app
 
@@ -20,7 +23,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Generate Prisma client
-RUN npx prisma generate
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npm run prisma:generate
 
 # Build NestJS
 RUN npm run build
@@ -28,7 +31,7 @@ RUN npm run build
 # ============================================================
 # STAGE 3: Production image
 # ============================================================
-FROM node:20-alpine AS production
+FROM base AS production
 
 WORKDIR /app
 
@@ -36,8 +39,6 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-# Copy Prisma generated client from build stage
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/prisma ./prisma
 
 # Copy built application
@@ -52,5 +53,8 @@ RUN chown -R node:node /app
 # Use non-root user for security
 USER node
 
-# Run database migrations and start the server
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]
+# Les migrations s'exécutent dans l'image dédiée avant le démarrage des réplicas.
+CMD ["node", "dist/src/main.js"]
+
+FROM build AS migration
+CMD ["npm", "run", "prisma:migrate:deploy"]

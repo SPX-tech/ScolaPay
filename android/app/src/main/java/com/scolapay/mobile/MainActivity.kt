@@ -26,9 +26,9 @@ class MainActivity : ComponentActivity() {
             ScolaPayTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     var startDestination by remember { mutableStateOf<String?>(null) }
+                    val loginViewModel: LoginViewModel = hiltViewModel()
 
                     LaunchedEffect(Unit) {
-                        val loginViewModel: LoginViewModel = hiltViewModel()
                         startDestination = if (loginViewModel.checkAuth()) {
                             Screen.Dashboard.route
                         } else {
