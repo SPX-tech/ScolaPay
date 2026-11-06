@@ -2,7 +2,7 @@
 
 Nouveau backend de ScolaPay 2.0, en Java et Spring Boot. Il se construit, se teste et s'exécute sans le backend NestJS.
 
-Décisions : [fondation technique](../docs/decisions/0009-fondation-technique-core.md), [identité et accès](../docs/decisions/0010-identite-et-acces.md), [transition](../docs/decisions/0011-transition-depuis-nestjs.md), [convention monétaire](../docs/decisions/0012-convention-monetaire.md), [majorité et autorisations familiales](../docs/decisions/0013-majorite-et-autorisations-familiales.md), [outbox durable](../docs/decisions/0016-outbox-durable.md), [contrôles de mise en service](../docs/decisions/0017-controles-de-mise-en-service.md).
+Décisions : [fondation technique](../docs/decisions/0009-fondation-technique-core.md), [identité et accès](../docs/decisions/0010-identite-et-acces.md), [transition](../docs/decisions/0011-transition-depuis-nestjs.md), [convention monétaire](../docs/decisions/0012-convention-monetaire.md), [majorité et autorisations familiales](../docs/decisions/0013-majorite-et-autorisations-familiales.md), [outbox durable](../docs/decisions/0016-outbox-durable.md), [contrôles de mise en service](../docs/decisions/0017-controles-de-mise-en-service.md), [catalogue académique](../docs/decisions/0018-catalogue-academique.md).
 
 ## Prérequis
 
@@ -46,8 +46,9 @@ Toutes les routes sont sous `/api/v2`. Les erreurs suivent la RFC 9457, avec un 
 | Accepter une invitation | `POST /invitations/accept` | Destinataire |
 | Inviter du personnel | `POST /establishments/{id}/invitations` | Administrateur |
 | Créer puis ouvrir une année | `POST /establishments/{id}/academic-years`, `PATCH .../{yearId}` | Secrétariat |
+| Définir le catalogue : programmes et niveaux | `POST /establishments/{id}/academic-units`, `PATCH .../{unitId}` | Secrétariat |
 | Créer un dossier | `POST /establishments/{id}/students` | Secrétariat |
-| Inscrire | `POST /establishments/{id}/students/{studentId}/enrollments` | Secrétariat |
+| Inscrire sur un niveau | `POST /establishments/{id}/students/{studentId}/enrollments` | Secrétariat |
 | Inviter un tiers : accès académique pour un mineur, contribution financière (portail ouvert) | `POST /establishments/{id}/students/{studentId}/third-party-invitations` | Secrétariat |
 | Inviter un étudiant majeur (portail ouvert) | `POST /establishments/{id}/students/{studentId}/self-access-invitations` | Secrétariat |
 | Voir ses établissements | `GET /me/affiliations` | Personnel |

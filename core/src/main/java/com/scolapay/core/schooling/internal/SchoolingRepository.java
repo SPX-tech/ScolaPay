@@ -26,6 +26,7 @@ public class SchoolingRepository {
             UUID studentId,
             UUID academicYearId,
             String academicYearLabel,
+            UUID academicUnitId,
             String level,
             String status,
             Instant enrolledAt,
@@ -163,15 +164,16 @@ public class SchoolingRepository {
     // Inscriptions
 
     public void insertEnrollment(
-            UUID id, UUID establishmentId, UUID studentId, UUID academicYearId, String level, Instant now) {
+            UUID id, UUID establishmentId, UUID studentId, UUID academicYearId, UUID academicUnitId, String level, Instant now) {
         jdbc.sql("""
-                INSERT INTO enrollments (id, establishment_id, student_record_id, academic_year_id, level, status, enrolled_at)
-                VALUES (:id, :establishmentId, :studentId, :academicYearId, :level, 'ACTIVE', :now)
+                INSERT INTO enrollments (id, establishment_id, student_record_id, academic_year_id, academic_unit_id, level, status, enrolled_at)
+                VALUES (:id, :establishmentId, :studentId, :academicYearId, :academicUnitId, :level, 'ACTIVE', :now)
                 """)
                 .param("id", id)
                 .param("establishmentId", establishmentId)
                 .param("studentId", studentId)
                 .param("academicYearId", academicYearId)
+                .param("academicUnitId", academicUnitId)
                 .param("level", level)
                 .param("now", Columns.timestamp(now))
                 .update();
@@ -193,7 +195,7 @@ public class SchoolingRepository {
 
     public List<Enrollment> listEnrollments(UUID establishmentId, UUID studentId) {
         return jdbc.sql("""
-                SELECT e.id, e.student_record_id, e.academic_year_id, y.label, e.level, e.status, e.enrolled_at, e.ended_at
+                SELECT e.id, e.student_record_id, e.academic_year_id, y.label, e.academic_unit_id, e.level, e.status, e.enrolled_at, e.ended_at
                 FROM enrollments e
                 JOIN academic_years y ON y.establishment_id = e.establishment_id AND y.id = e.academic_year_id
                 WHERE e.establishment_id = :establishmentId AND e.student_record_id = :studentId
@@ -206,6 +208,7 @@ public class SchoolingRepository {
                         Columns.uuid(rs, "student_record_id"),
                         Columns.uuid(rs, "academic_year_id"),
                         rs.getString("label"),
+                        Columns.uuid(rs, "academic_unit_id"),
                         rs.getString("level"),
                         rs.getString("status"),
                         Columns.instant(rs, "enrolled_at"),

@@ -24,7 +24,7 @@ Un module `billing`, au-dessus de `schooling`. Il ne lit ni n'écrit les tables 
 
 | Concept | Rôle | Écriture |
 | --- | --- | --- |
-| `fee_catalogs`, `fee_items` | Versions de frais d'une année, par unité académique ou pour tous, avec leur plan d'échéances. Chaque frais porte un `fee_code` stable d'une version à l'autre | Modifiables en brouillon, figés à la publication |
+| `fee_catalogs`, `fee_items` | Versions de frais d'une année, par [unité académique](0018-catalogue-academique.md) ou pour tous, avec leur plan d'échéances. Chaque frais porte un `fee_code` stable d'une version à l'autre | Modifiables en brouillon, figés à la publication |
 | `obligations` | Ce qu'un dossier doit pour une année | Immuable après émission, hors statut |
 | `obligation_lines` | Copie figée d'un frais facturé : `fee_code`, libellé, montant et version de catalogue d'origine | Ajout seul, jamais modifiée |
 | `installments` | Échéances datées d'une obligation. La somme égale le montant émis, l'arrondi va sur la dernière | Immuables, un rééchelonnement crée une nouvelle version |

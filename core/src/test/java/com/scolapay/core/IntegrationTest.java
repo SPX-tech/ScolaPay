@@ -224,6 +224,21 @@ abstract class IntegrationTest {
         return id;
     }
 
+    static String uniqueUnitCode() {
+        return "U-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    UUID newLevel(Tenant tenant) {
+        return newLevel(tenant, "Sixième");
+    }
+
+    UUID newLevel(Tenant tenant, String name) {
+        Response created = post(tenant.path("/academic-units"), tenant.adminToken(), Map.of(
+                "kind", "LEVEL", "code", uniqueUnitCode(), "name", name));
+        assertThat(created.status()).as(created.raw()).isEqualTo(201);
+        return created.id("id");
+    }
+
     UUID newStudent(Tenant tenant) {
         return newStudent(tenant, LocalDate.of(2012, 3, 14));
     }

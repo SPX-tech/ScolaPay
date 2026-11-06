@@ -11,6 +11,7 @@ import com.scolapay.core.identity.Invitations;
 import com.scolapay.core.schooling.EnrollmentEnded;
 import com.scolapay.core.schooling.StudentDirectory;
 import com.scolapay.core.schooling.StudentEnrolled;
+import com.scolapay.core.schooling.internal.AcademicUnitRepository.AcademicUnit;
 import com.scolapay.core.schooling.internal.SchoolingRepository.AcademicYear;
 import com.scolapay.core.schooling.internal.SchoolingRepository.Enrollment;
 import com.scolapay.core.schooling.internal.SchoolingRepository.Grant;
@@ -70,6 +71,7 @@ public class SchoolingService implements StudentDirectory {
     private static final Set<String> ENDED_STATUSES = Set.of("COMPLETED", "WITHDRAWN");
 
     private final SchoolingRepository repository;
+    private final AcademicUnitRepository units;
     private final EstablishmentAccess access;
     private final Establishments establishments;
     private final Invitations invitations;
@@ -82,6 +84,7 @@ public class SchoolingService implements StudentDirectory {
 
     public SchoolingService(
             SchoolingRepository repository,
+            AcademicUnitRepository units,
             EstablishmentAccess access,
             Establishments establishments,
             Invitations invitations,
@@ -92,6 +95,7 @@ public class SchoolingService implements StudentDirectory {
             PortalProperties portal,
             Clock clock) {
         this.repository = repository;
+        this.units = units;
         this.access = access;
         this.establishments = establishments;
         this.invitations = invitations;
@@ -170,7 +174,7 @@ public class SchoolingService implements StudentDirectory {
     // Inscriptions
 
     @Transactional
-    public Enrollment enroll(UUID establishmentId, UUID studentId, UUID academicYearId, String level) {
+    public Enrollment enroll(UUID establishmentId, UUID studentId, UUID academicYearId, UUID academicUnitId) {
         UUID actorId = access.require(establishmentId, Permission.ENROLLMENTS_MANAGE);
         Student student = requireStudent(establishmentId, studentId);
         if (!"ACTIVE".equals(student.status())) {
@@ -181,20 +185,32 @@ public class SchoolingService implements StudentDirectory {
         if (!"OPEN".equals(year.status())) {
             throw ApiException.conflict("ACADEMIC_YEAR_NOT_OPEN", "Cette année académique n'est pas ouverte aux inscriptions.");
         }
+        AcademicUnit unit = requireEnrollableUnit(establishmentId, academicUnitId);
         UUID enrollmentId = UUID.randomUUID();
         Instant now = clock.instant();
-        String trimmedLevel = level.trim();
         // L'index unique partiel tranche les doubles inscriptions concurrentes : le perdant reçoit un 409.
-        repository.insertEnrollment(enrollmentId, establishmentId, studentId, academicYearId, trimmedLevel, now);
+        repository.insertEnrollment(enrollmentId, establishmentId, studentId, academicYearId, unit.id(), unit.name(), now);
         repository.appendHistory(establishmentId, enrollmentId, null, "ACTIVE", null, actorId, now);
         audit.record(
                 establishmentId, actorId, "schooling.enrollment.created", "enrollment", enrollmentId,
                 Map.of("studentId", studentId, "academicYearId", academicYearId));
-        events.publishEvent(new StudentEnrolled(establishmentId, studentId, enrollmentId, academicYearId, trimmedLevel, now));
+        events.publishEvent(new StudentEnrolled(establishmentId, studentId, enrollmentId, academicYearId, unit.id(), unit.name(), now));
         return repository.listEnrollments(establishmentId, studentId).stream()
                 .filter(enrollment -> enrollment.id().equals(enrollmentId))
                 .findFirst()
                 .orElseThrow();
+    }
+
+    private AcademicUnit requireEnrollableUnit(UUID establishmentId, UUID academicUnitId) {
+        AcademicUnit unit = units.find(establishmentId, academicUnitId)
+                .orElseThrow(() -> ApiException.notFound("ACADEMIC_UNIT_NOT_FOUND", "Unité académique introuvable."));
+        if (!"LEVEL".equals(unit.kind())) {
+            throw ApiException.invalid("ACADEMIC_UNIT_NOT_ENROLLABLE", "On ne s'inscrit que sur un niveau.");
+        }
+        if (!"ACTIVE".equals(unit.status())) {
+            throw ApiException.conflict("ACADEMIC_UNIT_ARCHIVED", "Cette unité académique est archivée.");
+        }
+        return unit;
     }
 
     @Transactional

@@ -47,6 +47,7 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Majorité et consentement | Vérifié, modalités juridiques à confirmer | Âge légal par pays, non configurable. Un majeur contrôle l'accès académique des tiers | `AcademicAccess`, `FamilyAccessTest`, [0013](decisions/0013-majorite-et-autorisations-familiales.md) |
 | Audit | Vérifié | Immuable par trigger, écrit dans la transaction | `audit`, `DatabaseGuardsTest` |
 | Frontière vers la facturation | Vérifié, sans consommateur | `StudentDirectory`, événements `StudentEnrolled` et `EnrollmentEnded`, contributeurs financiers | `schooling` |
+| Catalogue académique | Vérifié | Programmes et niveaux par établissement, inscription sur un niveau. Sans semestres | `core/`, `AcademicCatalogTest`, [0018](decisions/0018-catalogue-academique.md) |
 | Facturation | Prévu, modèle accepté | Rien pour l'instant | [Cadrage](missions/mission-003-billing-engine.md), [0015](decisions/0015-modele-de-facturation.md) |
 | Outbox durable | Vérifié | Registre Spring Modulith, reprise après arrêt brutal et entre deux instances. **Aucun listener de production ne l'utilise encore** | `core/`, `OutboxReliabilityTest`, [0016](decisions/0016-outbox-durable.md) |
 | Contrôles de mise en service | Vérifié | Portail fermé par défaut, démarrage refusé si une condition manque. **Il ne peut pas être ouvert aujourd'hui** : règle du Tchad non confirmée, aucun canal d'invitation | `core/`, `GoLiveTest`, [0017](decisions/0017-controles-de-mise-en-service.md) |
@@ -143,6 +144,7 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 - **0009 à 0013**, acceptées : fondation technique, modèle d'identité et d'accès, transition depuis NestJS, convention monétaire, majorité légale et autorisations familiales. Les modalités juridiques de 0013 restent à confirmer.
 - **0014**, acceptée : Android hors de la feuille de route active.
 - **0015 à 0017**, acceptées : modèle de facturation, outbox durable sur le registre Spring Modulith, contrôles de mise en service.
+- **0018**, principe accepté, modèle proposé : catalogue académique.
 
 ## Priorités actuelles
 
@@ -190,7 +192,7 @@ Ce serait un nouveau déploiement, avec des secrets neufs :
 
 **Prochain chantier : Mission 003, ScolaPay Billing Engine**
 
-Périmètre, critères d'acceptation et état des lots dans le [cadrage](missions/mission-003-billing-engine.md). L'outbox durable et le contrôle de mise en service sont en place. Le prochain lot est le catalogue académique structuré.
+Périmètre, critères d'acceptation et état des lots dans le [cadrage](missions/mission-003-billing-engine.md). L'outbox durable et le contrôle de mise en service sont en place. Le catalogue académique est en place. Le prochain lot est le catalogue de frais et ses versions.
 
 **Ensuite, sans ordre arrêté**
 
