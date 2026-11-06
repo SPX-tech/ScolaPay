@@ -3,6 +3,7 @@ import { PaymentModule } from './payment.module';
 import { PAYMENT_PROVIDER } from './payment-provider.interface';
 import { MockPaymentProvider } from './mock-payment.provider';
 import { KadryzaPaymentProvider } from './kadryza-payment.provider';
+import { DisabledPaymentProvider } from './disabled-payment.provider';
 
 describe('PaymentModule (sélection du provider)', () => {
   const ORIGINAL_ENV = process.env;
@@ -15,17 +16,51 @@ describe('PaymentModule (sélection du provider)', () => {
     process.env = ORIGINAL_ENV;
   });
 
-  it('sélectionne MockPaymentProvider par défaut (PAYMENT_PROVIDER non défini)', async () => {
+  it('refuse les paiements simulés en production', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.PAYMENT_PROVIDER = 'mock';
+    await expect(
+      Test.createTestingModule({ imports: [PaymentModule] }).compile(),
+    ).rejects.toThrow();
+  });
+
+  it('refuse une configuration de fournisseur inconnue', async () => {
+    process.env.PAYMENT_PROVIDER = 'typo';
+    await expect(
+      Test.createTestingModule({ imports: [PaymentModule] }).compile(),
+    ).rejects.toThrow();
+  });
+
+  it('refuse les paiements simulés sans NODE_ENV explicite', async () => {
+    delete process.env.NODE_ENV;
+    process.env.PAYMENT_PROVIDER = 'mock';
+    await expect(
+      Test.createTestingModule({ imports: [PaymentModule] }).compile(),
+    ).rejects.toThrow();
+  });
+
+  it('refuse le connecteur Kadryza incomplet en production', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.PAYMENT_PROVIDER = 'kadryza';
+    await expect(
+      Test.createTestingModule({ imports: [PaymentModule] }).compile(),
+    ).rejects.toThrow();
+  });
+
+  it('démarre fermé par défaut, y compris en production', async () => {
+    process.env.NODE_ENV = 'production';
     delete process.env.PAYMENT_PROVIDER;
 
     const module: TestingModule = await Test.createTestingModule({
       imports: [PaymentModule],
     }).compile();
 
-    expect(module.get(PAYMENT_PROVIDER)).toBeInstanceOf(MockPaymentProvider);
+    expect(module.get(PAYMENT_PROVIDER)).toBeInstanceOf(
+      DisabledPaymentProvider,
+    );
   });
 
-  it("sélectionne MockPaymentProvider pour toute valeur autre que 'kadryza'", async () => {
+  it('sélectionne MockPaymentProvider seulement sur demande explicite hors production', async () => {
     process.env.PAYMENT_PROVIDER = 'mock';
 
     const module: TestingModule = await Test.createTestingModule({

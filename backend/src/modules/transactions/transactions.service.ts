@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -8,6 +9,11 @@ import { ListTransactionsQueryDto } from './dto/list-transactions-query.dto';
 import { VoidTransactionDto } from './dto/void-transaction.dto';
 import { Prisma } from '../../generated/prisma/client';
 import { AuditService } from '../audit/audit.service';
+import { parseDatePeriod } from '../../common/validation/date-period';
+import {
+  BALANCE_TRANSACTION_OPTIONS,
+  lockStudentBalance,
+} from '../students/student-balance-lock';
 
 @Injectable()
 export class TransactionsService {
@@ -37,9 +43,12 @@ export class TransactionsService {
     if (status) where.status = status;
     if (studentId) where.studentId = studentId;
     if (startDate || endDate) {
-      where.recordedAt = {};
-      if (startDate) where.recordedAt.gte = new Date(startDate);
-      if (endDate) where.recordedAt.lte = new Date(endDate);
+      const { timezone } = await this.prisma.tenant.findUniqueOrThrow({
+        where: { id: tenantId },
+        select: { timezone: true },
+      });
+      const { start, end } = parseDatePeriod({ startDate, endDate }, timezone);
+      where.recordedAt = { gte: start, lte: end };
     }
 
     const [transactions, total] = await Promise.all([
@@ -136,87 +145,106 @@ export class TransactionsService {
       );
     }
 
-    const transaction = await this.prisma.transaction.findFirst({
-      where: { id: transactionId, tenantId, status: 'POSTED' },
-    });
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // L'élève d'une transaction ne change jamais : cette lecture sert seulement
+      // à savoir quel verrou prendre, le statut est relu ensuite sous ce verrou.
+      const target = await tx.transaction.findFirst({
+        where: { id: transactionId, tenantId },
+        select: { studentId: true },
+      });
+      if (!target) {
+        throw new NotFoundException('Transaction not found or already voided.');
+      }
 
-    if (!transaction) {
-      throw new NotFoundException('Transaction not found or already voided.');
-    }
+      const student = await lockStudentBalance(tx, tenantId, target.studentId);
+      if (!student) {
+        throw new NotFoundException('Associated student not found.');
+      }
 
-    // Revert student debt/credit
-    const student = await this.prisma.student.findFirst({
-      where: { id: transaction.studentId, tenantId },
-    });
+      const transaction = await tx.transaction.findFirst({
+        where: { id: transactionId, tenantId, status: 'POSTED' },
+      });
+      if (!transaction) {
+        throw new NotFoundException('Transaction not found or already voided.');
+      }
 
-    if (!student) {
-      throw new NotFoundException('Associated student not found.');
-    }
+      // Annuler un paiement numérique sans contrepasser le compte virtuel
+      // laisserait de l'argent retirable : il faudra un vrai remboursement.
+      if (transaction.type !== 'CASH_PAYMENT') {
+        throw new ConflictException(
+          'Only cash payments can be voided. Digital payments require a refund workflow.',
+        );
+      }
 
-    const laterPostedTransaction = await this.prisma.transaction.findFirst({
-      where: {
-        tenantId,
-        studentId: transaction.studentId,
-        status: 'POSTED',
-        recordedAt: { gt: transaction.recordedAt },
-      },
-      orderBy: { recordedAt: 'asc' },
-    });
+      const laterPostedTransaction = await tx.transaction.findFirst({
+        where: {
+          tenantId,
+          studentId: transaction.studentId,
+          status: 'POSTED',
+          recordedAt: { gt: transaction.recordedAt },
+        },
+        orderBy: { recordedAt: 'asc' },
+      });
 
-    if (laterPostedTransaction) {
-      throw new ForbiddenException(
-        'Cannot void an older transaction while newer posted transactions exist.',
+      if (laterPostedTransaction) {
+        throw new ForbiddenException(
+          'Cannot void an older transaction while newer posted transactions exist.',
+        );
+      }
+
+      const { amountCents, previousDebtCents, newDebtCents } = transaction;
+      const overpaymentCents =
+        amountCents > previousDebtCents ? amountCents - previousDebtCents : 0n;
+
+      // La restauration repose sur un instantané : tout écart signifie que le
+      // solde a changé depuis ce paiement (ajustement manuel) et serait écrasé.
+      if (
+        student.debtCents !== newDebtCents ||
+        student.creditCents < overpaymentCents
+      ) {
+        throw new ConflictException(
+          'Student balance changed since this payment; it cannot be voided automatically.',
+        );
+      }
+
+      const restoredCreditCents = student.creditCents - overpaymentCents;
+
+      const voidedTransaction = await tx.transaction.update({
+        where: { id: transactionId },
+        data: {
+          status: 'VOIDED',
+          voidedAt: new Date(),
+          voidReason: dto.reason,
+        },
+      });
+
+      await tx.student.update({
+        where: { id: student.id },
+        data: {
+          debtCents: previousDebtCents,
+          creditCents: restoredCreditCents,
+        },
+      });
+
+      await this.auditService.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          action: 'transaction.void',
+          targetType: 'transaction',
+          targetId: transactionId,
+          before: transaction,
+          after: voidedTransaction,
+          metadata: {
+            reason: dto.reason,
+            studentId: student.id,
+            restoredDebtCents: previousDebtCents.toString(),
+            restoredCreditCents: restoredCreditCents.toString(),
+          },
+        },
+        tx,
       );
-    }
-
-    const amountCents = BigInt(transaction.amountCents);
-    const previousDebtCents = BigInt(transaction.previousDebtCents);
-    const currentCreditCents = BigInt(student.creditCents);
-    const overpaymentCents =
-      amountCents > previousDebtCents ? amountCents - previousDebtCents : 0n;
-    const newCreditCents = currentCreditCents - overpaymentCents;
-
-    const result = await this.prisma.$transaction(
-      async (tx: Prisma.TransactionClient) => {
-        // Void the transaction
-        const voidedTransaction = await tx.transaction.update({
-          where: { id: transactionId },
-          data: {
-            status: 'VOIDED',
-            voidedAt: new Date(),
-            voidReason: dto.reason,
-          },
-        });
-
-        // Restore student balance
-        await tx.student.update({
-          where: { id: student.id },
-          data: {
-            debtCents: previousDebtCents,
-            creditCents: newCreditCents < 0n ? 0n : newCreditCents,
-          },
-        });
-
-        return voidedTransaction;
-      },
-    );
-
-    await this.auditService.record({
-      tenantId,
-      actorUserId: userId,
-      action: 'transaction.void',
-      targetType: 'transaction',
-      targetId: transactionId,
-      before: transaction,
-      after: result,
-      metadata: {
-        reason: dto.reason,
-        studentId: student.id,
-        restoredDebtCents: previousDebtCents.toString(),
-        restoredCreditCents:
-          newCreditCents < 0n ? '0' : newCreditCents.toString(),
-      },
-    });
+    }, BALANCE_TRANSACTION_OPTIONS);
 
     return { message: 'Transaction voided successfully.', transactionId };
   }

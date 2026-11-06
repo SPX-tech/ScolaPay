@@ -96,12 +96,28 @@ jobs:
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
       - run: npm audit --omit=dev --audit-level=high
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
-      - name: Archiver le rendu pour vérification
+      - name: Assembler le rendu autonome
+        id: standalone
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         run: |
           cp -r .next/static .next/standalone/.next/static
           cp -r public .next/standalone/public
-          tar -czf web-preview.tar.gz -C .next/standalone .
+      - name: Installer Chromium pour les tests navigateur
+        if: ${{ !cancelled() && steps.standalone.outcome == 'success' }}
+        run: npx --no-install playwright install --with-deps chromium
+      - run: npm run test:e2e
+        if: ${{ !cancelled() && steps.standalone.outcome == 'success' }}
+      - uses: actions/upload-artifact@v7.0.2
+        if: ${{ !cancelled() && steps.standalone.outcome == 'success' }}
+        with:
+          name: web-e2e
+          path: |
+            web/test-results/
+            web/playwright-report/
+          if-no-files-found: ignore
+      - name: Archiver le rendu pour vérification
+        if: ${{ !cancelled() && steps.standalone.outcome == 'success' }}
+        run: tar -czf web-preview.tar.gz -C .next/standalone .
       - uses: actions/upload-artifact@v7.0.2
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         with:

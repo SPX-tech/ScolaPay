@@ -42,6 +42,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  useEffect(() => {
+    // Le jeton est lu à chaque requête : si une autre fenêtre change de compte,
+    // cette vue doit suivre au lieu d'afficher le nouvel établissement sous l'ancien.
+    // `user` est écrit en dernier à la connexion et retiré en dernier à la déconnexion.
+    const syncSession = (event: StorageEvent) => {
+      if (event.key !== null && event.key !== 'user') return;
+      const savedToken = localStorage.getItem('access_token');
+      const savedUser = localStorage.getItem('user');
+      setToken(savedToken);
+      setUser(savedToken && savedUser ? JSON.parse(savedUser) : null);
+    };
+    window.addEventListener('storage', syncSession);
+    return () => window.removeEventListener('storage', syncSession);
+  }, []);
+
   const login = useCallback(async (tenantCode: string, email: string, password: string) => {
     const response = await authApi.login(tenantCode, email, password);
     const { accessToken, user: userData } = response.data;

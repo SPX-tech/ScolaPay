@@ -1,3 +1,5 @@
+> **Document historique, arrêté au 2026-06-26.** Il ne décrit plus l'état du projet : plusieurs éléments marqués à faire ont été réalisés depuis (verrous du compte virtuel, grand livre immuable, cycle de retrait, abstraction des prestataires, CI). La référence est [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md).
+
 # 📋 ÉTAT DU PROJET — SCOLAPAY TCHAD (SaaS B2B2C)
 
 > **Mission :** Système SaaS de gestion financière 100 % cash pour écoles et universités au Tchad

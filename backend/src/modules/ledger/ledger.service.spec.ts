@@ -21,8 +21,10 @@ describe('LedgerService (paiements mobiles)', () => {
   const STUDENT_ID = 'student_1_00000000000000';
 
   let mockTx: {
-    student: { findUniqueOrThrow: jest.Mock; update: jest.Mock };
+    student: { update: jest.Mock };
     transaction: { updateMany: jest.Mock };
+    $executeRaw: jest.Mock;
+    $queryRaw: jest.Mock;
   };
   let mockPrisma: {
     tenant: { findUnique: jest.Mock; findUniqueOrThrow: jest.Mock };
@@ -83,8 +85,10 @@ describe('LedgerService (paiements mobiles)', () => {
 
   beforeEach(async () => {
     mockTx = {
-      student: { findUniqueOrThrow: jest.fn(), update: jest.fn() },
+      student: { update: jest.fn() },
       transaction: { updateMany: jest.fn() },
+      $executeRaw: jest.fn().mockResolvedValue(0),
+      $queryRaw: jest.fn(),
     };
     mockPrisma = {
       tenant: { findUnique: jest.fn(), findUniqueOrThrow: jest.fn() },
@@ -275,7 +279,7 @@ describe('LedgerService (paiements mobiles)', () => {
     it('confirme un paiement réussi : crédite le compte virtuel, écrit le Ledger, notifie et audite', async () => {
       mockPrisma.transaction.findUnique.mockResolvedValue(pendingTransaction());
       mockPrisma.tenant.findUniqueOrThrow.mockResolvedValue(tenant);
-      mockTx.student.findUniqueOrThrow.mockResolvedValue(student());
+      mockTx.$queryRaw.mockResolvedValue([student()]);
       mockTx.transaction.updateMany.mockResolvedValue({ count: 1 });
       mockTx.student.update.mockResolvedValue({});
       mockVirtualAccountService.creditFromPayment.mockResolvedValue({});
@@ -292,8 +296,13 @@ describe('LedgerService (paiements mobiles)', () => {
           previousDebtCents: 10_000n,
           newDebtCents: 5_000n,
           receiptNumber: 'RCP-ECOLE1-20260701-ABCD1234',
+          recordedAt: expect.any(Date),
         }),
       });
+      expect(mockTx.$queryRaw).toHaveBeenCalledTimes(1);
+      expect(
+        mockTx.transaction.updateMany.mock.calls[0][0].data.recordedAt,
+      ).not.toEqual(pendingTransaction().recordedAt);
       expect(mockTx.student.update).toHaveBeenCalledWith({
         where: { id: STUDENT_ID },
         data: expect.objectContaining({ debtCents: 5_000n, creditCents: 0n }),
@@ -333,9 +342,9 @@ describe('LedgerService (paiements mobiles)', () => {
         }),
       );
       mockPrisma.tenant.findUniqueOrThrow.mockResolvedValue(tenant);
-      mockTx.student.findUniqueOrThrow.mockResolvedValue(
+      mockTx.$queryRaw.mockResolvedValue([
         student({ debtCents: 10_000n, creditCents: 0n }),
-      );
+      ]);
       mockTx.transaction.updateMany.mockResolvedValue({ count: 1 });
       mockTx.student.update.mockResolvedValue({});
       mockVirtualAccountService.creditFromPayment.mockResolvedValue({});
@@ -355,7 +364,7 @@ describe('LedgerService (paiements mobiles)', () => {
     it('ne crédite jamais deux fois lors d’un rejeu concurrent (idempotence dans la transaction)', async () => {
       mockPrisma.transaction.findUnique.mockResolvedValue(pendingTransaction());
       mockPrisma.tenant.findUniqueOrThrow.mockResolvedValue(tenant);
-      mockTx.student.findUniqueOrThrow.mockResolvedValue(student());
+      mockTx.$queryRaw.mockResolvedValue([student()]);
       // Un autre appel a déjà gagné la course : le updateMany gardé par statut ne matche plus rien.
       mockTx.transaction.updateMany.mockResolvedValue({ count: 0 });
 

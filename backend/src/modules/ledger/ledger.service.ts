@@ -14,6 +14,10 @@ import { ReceiptService } from './receipt.service';
 import { RecordCashPaymentDto } from './dto/record-cash-payment.dto';
 import { InitializeMobilePaymentDto } from './dto/initialize-mobile-payment.dto';
 import { AuditService } from '../audit/audit.service';
+import {
+  BALANCE_TRANSACTION_OPTIONS,
+  lockStudentBalance,
+} from '../students/student-balance-lock';
 import { VirtualAccountService } from '../finance/virtual-account.service';
 import { PAYMENT_PROVIDER } from '../payment/payment-provider.interface';
 import type { PaymentProvider } from '../payment/payment-provider.interface';
@@ -41,6 +45,17 @@ type InitializeMobilePaymentResult = {
   amountCents: bigint;
   currency: string;
 };
+
+/** Un trop-perçu ne rend pas la dette négative : il alimente le crédit de l'élève. */
+function applyPayment(
+  student: { debtCents: bigint; creditCents: bigint },
+  amountCents: bigint,
+): { newDebtCents: bigint; newCreditCents: bigint } {
+  const remaining = student.debtCents - amountCents;
+  return remaining < 0n
+    ? { newDebtCents: 0n, newCreditCents: student.creditCents - remaining }
+    : { newDebtCents: remaining, newCreditCents: student.creditCents };
+}
 
 /** Résultat d'une confirmation webhook, distingué pour un logging/monitoring clair. */
 type ConfirmMobilePaymentOutcome =
@@ -97,63 +112,55 @@ export class LedgerService {
       throw new NotFoundException('Tenant not found.');
     }
 
-    // Get student + validate
-    const student = await this.prisma.student.findFirst({
-      where: { id: dto.studentId, tenantId, status: 'ACTIVE' },
-    });
-
-    if (!student) {
-      throw new NotFoundException('Active student not found.');
-    }
-
     const amountCents = BigInt(dto.amountCents);
-    const previousDebtCents = student.debtCents;
-    const zero = 0n;
-    let newDebtCents = previousDebtCents - amountCents;
-    let newCreditCents: bigint = student.creditCents;
 
-    // If overpayment, apply excess to credit
-    if (newDebtCents < zero) {
-      newCreditCents = newCreditCents + newDebtCents * -1n;
-      newDebtCents = zero;
-    }
-
-    const receiptNumber = this.receiptService.generateReceiptNumber(
-      tenant.code,
-    );
-    const receiptHash = this.receiptService.generateReceiptHash({
-      tenantId,
-      studentId: student.id,
-      recordedByUserId: userId,
-      amountCents,
-      previousDebtCents,
-      newDebtCents,
-      currency: tenant.currency,
-      receiptNumber,
-      recordedAt: new Date(),
-    });
-
-    // Generate QR code data (stored as JSON string)
-    const qrCodeData = this.receiptService.generateReceiptData({
-      id: 'pending',
-      receiptNumber,
-      receiptHash,
-      amountCents,
-      previousDebtCents,
-      newDebtCents,
-      currency: tenant.currency,
-      recordedAt: new Date(),
-      student: {
-        fullName: student.fullName,
-        studentNumber: student.studentNumber,
-      },
-      recordedBy: { fullName: 'pending' },
-    });
-
-    // Execute ACID transaction
     try {
-      const result = await this.prisma.$transaction(
+      return await this.prisma.$transaction(
         async (tx: Prisma.TransactionClient) => {
+          const student = await lockStudentBalance(tx, tenantId, dto.studentId);
+          if (!student || student.status !== 'ACTIVE') {
+            throw new NotFoundException('Active student not found.');
+          }
+
+          const recordedAt = new Date();
+          const previousDebtCents = student.debtCents;
+          const { newDebtCents, newCreditCents } = applyPayment(
+            student,
+            amountCents,
+          );
+
+          const receiptNumber = this.receiptService.generateReceiptNumber(
+            tenant.code,
+          );
+          const receiptHash = this.receiptService.generateReceiptHash({
+            tenantId,
+            studentId: student.id,
+            recordedByUserId: userId,
+            amountCents,
+            previousDebtCents,
+            newDebtCents,
+            currency: tenant.currency,
+            receiptNumber,
+            recordedAt,
+          });
+
+          // Generate QR code data (stored as JSON string)
+          const qrCodeData = this.receiptService.generateReceiptData({
+            id: 'pending',
+            receiptNumber,
+            receiptHash,
+            amountCents,
+            previousDebtCents,
+            newDebtCents,
+            currency: tenant.currency,
+            recordedAt,
+            student: {
+              fullName: student.fullName,
+              studentNumber: student.studentNumber,
+            },
+            recordedBy: { fullName: 'pending' },
+          });
+
           const transaction = await tx.transaction.create({
             data: {
               tenantId,
@@ -171,7 +178,7 @@ export class LedgerService {
               idempotencyKey: dto.idempotencyKey,
               note: dto.note,
               metadata: dto.metadata as Prisma.InputJsonObject | undefined,
-              recordedAt: new Date(),
+              recordedAt,
             },
           });
 
@@ -180,7 +187,7 @@ export class LedgerService {
             data: {
               debtCents: newDebtCents,
               creditCents: newCreditCents,
-              lastPaymentAt: new Date(),
+              lastPaymentAt: recordedAt,
             },
           });
 
@@ -204,41 +211,41 @@ export class LedgerService {
             },
           });
 
-          return transaction;
+          await this.auditService.record(
+            {
+              tenantId,
+              actorUserId: userId,
+              action: 'transaction.cash_payment.record',
+              targetType: 'transaction',
+              targetId: transaction.id,
+              metadata: {
+                studentId: student.id,
+                amountCents: amountCents.toString(),
+                previousDebtCents: previousDebtCents.toString(),
+                newDebtCents: newDebtCents.toString(),
+                creditCents: newCreditCents.toString(),
+                receiptNumber,
+              },
+            },
+            tx,
+          );
+
+          return {
+            transactionId: transaction.id,
+            studentId: student.id,
+            amountCents: transaction.amountCents,
+            previousDebtCents: transaction.previousDebtCents,
+            newDebtCents: transaction.newDebtCents,
+            creditCents: newCreditCents,
+            currency: transaction.currency,
+            receiptNumber,
+            receiptHash,
+            qrCodeData,
+            recordedAt: transaction.recordedAt,
+          };
         },
+        BALANCE_TRANSACTION_OPTIONS,
       );
-
-      const response = {
-        transactionId: result.id,
-        studentId: student.id,
-        amountCents: result.amountCents,
-        previousDebtCents: result.previousDebtCents,
-        newDebtCents: result.newDebtCents,
-        creditCents: newCreditCents,
-        currency: result.currency,
-        receiptNumber: result.receiptNumber!,
-        receiptHash: result.receiptHash!,
-        qrCodeData: result.qrCodeData!,
-        recordedAt: result.recordedAt,
-      };
-
-      await this.auditService.record({
-        tenantId,
-        actorUserId: userId,
-        action: 'transaction.cash_payment.record',
-        targetType: 'transaction',
-        targetId: result.id,
-        metadata: {
-          studentId: student.id,
-          amountCents: amountCents.toString(),
-          previousDebtCents: previousDebtCents.toString(),
-          newDebtCents: result.newDebtCents.toString(),
-          creditCents: newCreditCents.toString(),
-          receiptNumber,
-        },
-      });
-
-      return response;
     } catch (error: unknown) {
       if (
         error &&
@@ -454,21 +461,25 @@ export class LedgerService {
     let creditedThisCall = false;
 
     await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // Solde relu au moment de la confirmation : d'autres mouvements ont
-      // pu se produire depuis l'initiation, on ne réutilise pas la valeur
-      // figée à ce moment-là.
-      const student = await tx.student.findUniqueOrThrow({
-        where: { id: transaction.studentId },
-      });
-
-      const previousDebtCents = student.debtCents;
-      const zero = 0n;
-      let newDebtCents = previousDebtCents - amountCents;
-      let newCreditCents = student.creditCents;
-      if (newDebtCents < zero) {
-        newCreditCents = newCreditCents + newDebtCents * -1n;
-        newDebtCents = zero;
+      // Solde relu sous verrou : un encaissement concurrent ne peut pas être
+      // écrasé, et la valeur figée à l'initiation n'est jamais réutilisée.
+      const student = await lockStudentBalance(
+        tx,
+        tenantId,
+        transaction.studentId,
+      );
+      if (!student) {
+        throw new NotFoundException('Student not found for this transaction.');
       }
+
+      // La date d'application, pas celle de l'initiation : l'annulation s'appuie
+      // sur cet ordre pour détecter les mouvements postérieurs.
+      const postedAt = new Date();
+      const previousDebtCents = student.debtCents;
+      const { newDebtCents, newCreditCents } = applyPayment(
+        student,
+        amountCents,
+      );
 
       const receiptNumber = this.receiptService.generateReceiptNumber(
         tenant.code,
@@ -482,7 +493,7 @@ export class LedgerService {
         newDebtCents,
         currency: tenant.currency,
         receiptNumber,
-        recordedAt: new Date(),
+        recordedAt: postedAt,
       });
       const qrCodeData = this.receiptService.generateReceiptData({
         id: transaction.id,
@@ -492,7 +503,7 @@ export class LedgerService {
         previousDebtCents,
         newDebtCents,
         currency: tenant.currency,
-        recordedAt: transaction.recordedAt,
+        recordedAt: postedAt,
         student: {
           fullName: student.fullName,
           studentNumber: student.studentNumber,
@@ -509,6 +520,7 @@ export class LedgerService {
           receiptNumber,
           receiptHash,
           qrCodeData,
+          recordedAt: postedAt,
         },
       });
 
@@ -524,7 +536,7 @@ export class LedgerService {
         data: {
           debtCents: newDebtCents,
           creditCents: newCreditCents,
-          lastPaymentAt: new Date(),
+          lastPaymentAt: postedAt,
         },
       });
 
@@ -552,7 +564,7 @@ export class LedgerService {
           payerPhone: transaction.payerPhone,
           amountCents: amountCents.toString(),
           receiptNumber,
-          recordedAt: transaction.recordedAt.toISOString(),
+          recordedAt: postedAt.toISOString(),
         },
       });
 
@@ -574,7 +586,7 @@ export class LedgerService {
         },
         tx,
       );
-    });
+    }, BALANCE_TRANSACTION_OPTIONS);
 
     return { outcome: creditedThisCall ? 'credited' : 'already_processed' };
   }

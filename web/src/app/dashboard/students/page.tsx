@@ -165,7 +165,8 @@ export default function StudentsPage() {
         studentNumber: form.studentNumber || undefined,
         guardianPhone: form.guardianPhone || undefined,
         guardianName: form.guardianName || undefined,
-        classId: form.classId || undefined,
+        // Les sentinelles de statut partagent ce sélecteur mais ne sont pas des classes.
+        classId: form.classId && !form.classId.startsWith('__') ? form.classId : undefined,
         status: form.classId === '__GRADUATED__' ? 'GRADUATED' : form.classId === '__SUSPENDED__' ? 'SUSPENDED' : undefined,
       });
       setShowEditModal(false);
@@ -240,10 +241,10 @@ export default function StudentsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Étudiants</h1>
-          <p className="text-muted-foreground mt-1">{total} élèves inscrits</p>
+          <p className="text-muted-foreground mt-1">{total} {total > 1 ? 'élèves inscrits' : 'élève inscrit'}</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -264,8 +265,8 @@ export default function StudentsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="relative flex-1 min-w-[12rem] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"

@@ -78,7 +78,6 @@ describe('Cycle de vie du paiement mobile (intégration inter-services)', () => 
         }),
       },
       student: {
-        findUniqueOrThrow: jest.fn(() => Promise.resolve({ ...studentRow })),
         update: jest.fn((args: any) => {
           Object.assign(studentRow, args.data);
           return Promise.resolve({ ...studentRow });
@@ -99,15 +98,20 @@ describe('Cycle de vie du paiement mobile (intégration inter-services)', () => 
           return Promise.resolve(entry);
         }),
       },
-      $queryRaw: jest.fn(() =>
-        Promise.resolve([
-          {
-            id: virtualAccountRow.id,
-            balanceCents: virtualAccountRow.balanceCents,
-            pendingWithdrawalCents: virtualAccountRow.pendingWithdrawalCents,
-            currency: virtualAccountRow.currency,
-          },
-        ]),
+      $queryRaw: jest.fn((sql: TemplateStringsArray) =>
+        Promise.resolve(
+          sql.join('').includes('"students"')
+            ? [{ ...studentRow }]
+            : [
+                {
+                  id: virtualAccountRow.id,
+                  balanceCents: virtualAccountRow.balanceCents,
+                  pendingWithdrawalCents:
+                    virtualAccountRow.pendingWithdrawalCents,
+                  currency: virtualAccountRow.currency,
+                },
+              ],
+        ),
       ),
       $executeRaw: jest.fn(() => Promise.resolve(0)),
     };

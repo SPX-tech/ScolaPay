@@ -2,6 +2,8 @@
 
 ScolaPay est une application de gestion des paiements scolaires cash.
 
+**Commencer par [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md)** : vision, état réel du projet, priorités, risques et prochaines étapes. Les décisions majeures sont dans [`docs/decisions/`](docs/decisions/README.md).
+
 Le projet est organise autour de trois parties:
 
 - `backend/`: API REST NestJS, Prisma et PostgreSQL.
@@ -109,6 +111,15 @@ npm run typecheck
 npm test
 ```
 
+Tests navigateur Playwright, sur le rendu autonome et une API simulée, comme en CI :
+
+```bash
+cp -r .next/static .next/standalone/.next/static
+cp -r public .next/standalone/public
+npx playwright install chromium
+npm run test:e2e
+```
+
 ## Android
 
 Ouvrir le dossier `android/` dans Android Studio.
@@ -156,6 +167,8 @@ répétition de la restauration ou de `pg_upgrade`.
 
 ## Guide de Déploiement (MVP Cash)
 
+> Aucune instance n'est en service depuis le 2026-11-06. Ce guide décrit le déploiement du code NestJS actuel. Toute remise en service est un nouveau déploiement.
+
 Déploiement de la stack web/API en production via `docker compose`, piloté par le
 script `deploy.sh` à la racine.
 
@@ -190,6 +203,10 @@ NEXT_PUBLIC_API_URL=http://<domaine-ou-ip>:8080/api/v1
 
 # --- Reverse proxy ---
 NGINX_PORT=8080
+
+# --- Paiements numériques ---
+# Seule valeur admise en production. mock et kadryza y empêchent le démarrage.
+PAYMENT_PROVIDER=disabled
 ```
 
 > **Sécurité** : générer `ACCESS_TOKEN_SECRET` aléatoirement (ex. `openssl rand -hex 32`)
@@ -205,8 +222,8 @@ le désactiver avec `OUTBOX_POLLING_ENABLED=false`.
 
 ```bash
 # Cloner le dépôt sur le serveur
-git clone https://github.com/willyldx/scolapay.git
-cd scolapay
+git clone https://github.com/SPX-tech/ScolaPay.git
+cd ScolaPay
 
 # Créer et renseigner le fichier .env (voir section 2)
 cp .env.example .env

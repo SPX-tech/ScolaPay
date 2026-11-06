@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -17,6 +21,9 @@ describe('TransactionsService', () => {
     student: {
       findFirst: jest.fn(),
       update: jest.fn(),
+    },
+    tenant: {
+      findUniqueOrThrow: jest.fn(),
     },
     $transaction: jest.fn(),
   };
@@ -120,17 +127,22 @@ describe('TransactionsService', () => {
       mockPrisma.transaction.findMany.mockResolvedValue([]);
       mockPrisma.transaction.count.mockResolvedValue(0);
 
-      const startDate = '2024-01-01';
-      const endDate = '2024-12-31';
+      mockPrisma.tenant.findUniqueOrThrow.mockResolvedValue({
+        timezone: 'Africa/Ndjamena',
+      });
 
-      await service.listTenantTransactions(tenantId, { startDate, endDate });
+      await service.listTenantTransactions(tenantId, {
+        startDate: '2024-01-01',
+        endDate: '2024-12-31',
+      });
 
+      // Journées entières dans le fuseau de l'établissement (UTC+1).
       expect(mockPrisma.transaction.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             recordedAt: {
-              gte: new Date(startDate),
-              lte: new Date(endDate),
+              gte: new Date('2023-12-31T23:00:00.000Z'),
+              lte: new Date('2024-12-31T22:59:59.999Z'),
             },
           }),
         }),
@@ -239,40 +251,52 @@ describe('TransactionsService', () => {
 
   describe('voidTransaction', () => {
     const voidDto = { reason: 'Paiement en double' };
+    let mockTx: {
+      transaction: { findFirst: jest.Mock; update: jest.Mock };
+      student: { update: jest.Mock };
+      $executeRaw: jest.Mock;
+      $queryRaw: jest.Mock;
+    };
+
+    /** Enchaîne les lectures : cible, relecture sous verrou, mouvement postérieur. */
+    const arrange = (
+      transaction: Record<string, unknown> | null,
+      student: Record<string, unknown> | null = baseStudent,
+      later: Record<string, unknown> | null = null,
+    ) => {
+      mockTx.transaction.findFirst
+        .mockResolvedValueOnce(transaction && { studentId })
+        .mockResolvedValueOnce(transaction)
+        .mockResolvedValueOnce(later);
+      mockTx.$queryRaw.mockResolvedValue(student ? [student] : []);
+    };
+
+    const runVoid = (role = adminRole) =>
+      service.voidTransaction(tenantId, transactionId, userId, role, voidDto);
 
     beforeEach(() => {
-      mockPrisma.$transaction.mockImplementation(
-        (callback: (tx: any) => Promise<any>) =>
-          callback({
-            transaction: {
-              update: jest.fn().mockResolvedValue({
-                ...baseTransaction,
-                status: 'VOIDED',
-                voidReason: voidDto.reason,
-              }),
-            },
-            student: {
-              update: jest.fn().mockResolvedValue({}),
-            },
+      mockTx = {
+        transaction: {
+          findFirst: jest.fn(),
+          update: jest.fn().mockResolvedValue({
+            ...baseTransaction,
+            status: 'VOIDED',
+            voidReason: voidDto.reason,
           }),
+        },
+        student: { update: jest.fn().mockResolvedValue({}) },
+        $executeRaw: jest.fn().mockResolvedValue(0),
+        $queryRaw: jest.fn(),
+      };
+      mockPrisma.$transaction.mockImplementation(
+        (callback: (tx: unknown) => Promise<unknown>) => callback(mockTx),
       );
     });
 
-    it('should successfully void a posted transaction', async () => {
-      mockPrisma.transaction.findFirst.mockResolvedValue(baseTransaction);
-      mockPrisma.student.findFirst.mockResolvedValue(baseStudent);
+    it('should successfully void a posted cash transaction', async () => {
+      arrange(baseTransaction);
 
-      mockPrisma.transaction.findFirst
-        .mockResolvedValueOnce(baseTransaction)
-        .mockResolvedValueOnce(null);
-
-      const result = await service.voidTransaction(
-        tenantId,
-        transactionId,
-        userId,
-        adminRole,
-        voidDto,
-      );
+      const result = await runVoid();
 
       expect(result.message).toBe('Transaction voided successfully.');
       expect(result.transactionId).toBe(transactionId);
@@ -282,144 +306,120 @@ describe('TransactionsService', () => {
           targetId: transactionId,
           actorUserId: userId,
         }),
+        mockTx,
       );
     });
 
-    it('should throw NotFoundException if transaction not found or already voided', async () => {
-      mockPrisma.transaction.findFirst.mockResolvedValue(null);
+    it('should lock the student before re-reading the transaction status', async () => {
+      arrange(baseTransaction);
 
-      await expect(
-        service.voidTransaction(
-          tenantId,
-          transactionId,
-          userId,
-          adminRole,
-          voidDto,
-        ),
-      ).rejects.toThrow(NotFoundException);
+      await runVoid();
+
+      expect(mockTx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+        mockTx.transaction.findFirst.mock.invocationCallOrder[1],
+      );
+      expect(mockTx.transaction.findFirst.mock.calls[1][0].where.status).toBe(
+        'POSTED',
+      );
     });
 
-    it('should throw NotFoundException if transaction has VOIDED status (query returns null)', async () => {
-      // The service queries with status: 'POSTED', so a VOIDED transaction is not found
-      mockPrisma.transaction.findFirst.mockResolvedValue(null);
+    it('should throw NotFoundException if the transaction does not exist', async () => {
+      arrange(null);
 
-      await expect(
-        service.voidTransaction(
-          tenantId,
-          transactionId,
-          userId,
-          adminRole,
-          voidDto,
-        ),
-      ).rejects.toThrow(NotFoundException);
+      await expect(runVoid()).rejects.toThrow(NotFoundException);
+      expect(mockTx.$queryRaw).not.toHaveBeenCalled();
     });
 
-    it('should reject voiding a non-POSTED transaction', async () => {
-      mockPrisma.transaction.findFirst.mockResolvedValue(null);
+    it('should throw NotFoundException if it was voided before the lock was acquired', async () => {
+      mockTx.transaction.findFirst
+        .mockResolvedValueOnce({ studentId })
+        .mockResolvedValueOnce(null);
+      mockTx.$queryRaw.mockResolvedValue([baseStudent]);
 
-      await expect(
-        service.voidTransaction(
-          tenantId,
-          transactionId,
-          userId,
-          adminRole,
-          voidDto,
-        ),
-      ).rejects.toThrow(NotFoundException);
+      await expect(runVoid()).rejects.toThrow(NotFoundException);
+      expect(mockTx.transaction.update).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if student not found', async () => {
-      mockPrisma.transaction.findFirst.mockResolvedValue(baseTransaction);
-      mockPrisma.student.findFirst.mockResolvedValue(null);
+      arrange(baseTransaction, null);
 
-      await expect(
-        service.voidTransaction(
-          tenantId,
-          transactionId,
-          userId,
-          adminRole,
-          voidDto,
-        ),
-      ).rejects.toThrow(NotFoundException);
+      await expect(runVoid()).rejects.toThrow(NotFoundException);
     });
 
-    it('should calculate correct reversal amounts', async () => {
-      mockPrisma.transaction.findFirst.mockResolvedValue(baseTransaction);
-      mockPrisma.student.findFirst.mockResolvedValue(baseStudent);
+    it('should restore the debt recorded before the payment', async () => {
+      arrange(baseTransaction);
 
-      mockPrisma.transaction.findFirst
-        .mockResolvedValueOnce(baseTransaction)
-        .mockResolvedValueOnce(null);
+      await runVoid();
 
-      await service.voidTransaction(
-        tenantId,
-        transactionId,
-        userId,
-        adminRole,
-        voidDto,
-      );
-
-      // Transaction amount is 25000, student debt is 25000
-      // After reversal: newDebt = 25000 + 25000 = 50000
-      // Credit is 0, so no credit adjustment
-
-      expect(mockPrisma.$transaction).toHaveBeenCalled();
+      expect(mockTx.student.update).toHaveBeenCalledWith({
+        where: { id: studentId },
+        data: { debtCents: BigInt(50000), creditCents: BigInt(0) },
+      });
     });
 
-    it('should handle credit balance during reversal', async () => {
-      const txWithCredit = {
-        ...baseTransaction,
-        amountCents: BigInt(10000),
-      };
-      const studentWithCredit = {
-        ...baseStudent,
-        debtCents: BigInt(0),
-        creditCents: BigInt(5000),
-      };
-
-      mockPrisma.transaction.findFirst
-        .mockResolvedValueOnce(txWithCredit)
-        .mockResolvedValueOnce(null);
-      mockPrisma.student.findFirst.mockResolvedValue(studentWithCredit);
-
-      await service.voidTransaction(
-        tenantId,
-        transactionId,
-        userId,
-        adminRole,
-        voidDto,
+    it('should remove only the overpayment from the credit', async () => {
+      arrange(
+        {
+          ...baseTransaction,
+          amountCents: BigInt(30000),
+          previousDebtCents: BigInt(25000),
+          newDebtCents: BigInt(0),
+        },
+        {
+          ...baseStudent,
+          debtCents: BigInt(0),
+          creditCents: BigInt(7000),
+        },
       );
 
-      expect(mockPrisma.$transaction).toHaveBeenCalled();
+      await runVoid();
+
+      expect(mockTx.student.update).toHaveBeenCalledWith({
+        where: { id: studentId },
+        data: { debtCents: BigInt(25000), creditCents: BigInt(2000) },
+      });
+    });
+
+    it('should refuse digital payments, which require a refund workflow', async () => {
+      arrange({ ...baseTransaction, type: 'MOBILE_PAYMENT' });
+
+      await expect(runVoid()).rejects.toThrow(ConflictException);
+      expect(mockTx.transaction.update).not.toHaveBeenCalled();
+      expect(mockTx.student.update).not.toHaveBeenCalled();
+    });
+
+    it('should refuse when the balance changed since the payment', async () => {
+      arrange(baseTransaction, { ...baseStudent, debtCents: BigInt(99000) });
+
+      await expect(runVoid()).rejects.toThrow(ConflictException);
+      expect(mockTx.student.update).not.toHaveBeenCalled();
+    });
+
+    it('should refuse when the overpayment credit is no longer available', async () => {
+      arrange(
+        {
+          ...baseTransaction,
+          amountCents: BigInt(30000),
+          previousDebtCents: BigInt(25000),
+          newDebtCents: BigInt(0),
+        },
+        { ...baseStudent, debtCents: BigInt(0), creditCents: BigInt(1000) },
+      );
+
+      await expect(runVoid()).rejects.toThrow(ConflictException);
     });
 
     it('should reject users without void permissions', async () => {
-      await expect(
-        service.voidTransaction(
-          tenantId,
-          transactionId,
-          userId,
-          'CASHIER',
-          voidDto,
-        ),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(runVoid('CASHIER')).rejects.toThrow(ForbiddenException);
     });
 
     it('should reject voiding older transactions when newer posted transactions exist', async () => {
-      mockPrisma.transaction.findFirst
-        .mockResolvedValueOnce(baseTransaction)
-        .mockResolvedValueOnce({ ...baseTransaction, id: 'txn-2' });
-      mockPrisma.student.findFirst.mockResolvedValue(baseStudent);
+      arrange(baseTransaction, baseStudent, {
+        ...baseTransaction,
+        id: 'txn-2',
+      });
 
-      await expect(
-        service.voidTransaction(
-          tenantId,
-          transactionId,
-          userId,
-          adminRole,
-          voidDto,
-        ),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(runVoid()).rejects.toThrow(ForbiddenException);
     });
   });
 });

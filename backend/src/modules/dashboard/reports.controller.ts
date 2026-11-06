@@ -2,6 +2,8 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ReqContext } from '../../common/decorators/request-context.decorator';
 import type { RequestContext } from '../../common/types/request-context.type';
 import { PrismaService } from '../../prisma/prisma.service';
+import { resolveReportPeriod } from '../../common/validation/date-period';
+import { ReportPeriodQueryDto } from './dto/report-period-query.dto';
 
 type DailyCollectionRow = { date: string; total: bigint; count: bigint };
 
@@ -14,29 +16,32 @@ export class ReportsController {
   @Get('reports/collections')
   async getCollectionsReport(
     @ReqContext() context: RequestContext,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
+    @Query() query: ReportPeriodQueryDto,
   ) {
     const tenantId = context.tenantId;
-    const start = startDate
-      ? new Date(startDate)
-      : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    const end = endDate ? new Date(endDate) : new Date();
+    const { timezone } = await this.prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      select: { timezone: true },
+    });
+    const { start, end } = resolveReportPeriod(query, timezone);
 
-    // Daily collections
+    // "recordedAt" est un TIMESTAMP sans fuseau contenant de l'UTC : les bornes
+    // sont converties explicitement pour ne pas dépendre du fuseau de la session.
+    // Le groupement positionnel évite de répéter le paramètre du fuseau, que
+    // PostgreSQL verrait comme une expression différente du SELECT.
     const dailyAgg = await this.prisma.$queryRaw<DailyCollectionRow[]>`
       SELECT
-        DATE(recorded_at) as date,
-        COALESCE(SUM(amount_cents), 0) as total,
-        COUNT(*) as count
-      FROM transactions
-      WHERE tenant_id = ${tenantId}
-        AND status = 'POSTED'
-        AND type = 'CASH_PAYMENT'
-        AND recorded_at >= ${start}
-        AND recorded_at <= ${end}
-      GROUP BY DATE(recorded_at)
-      ORDER BY date ASC
+        to_char(("recordedAt" AT TIME ZONE 'UTC') AT TIME ZONE ${timezone}, 'YYYY-MM-DD') AS "date",
+        SUM("amountCents")::bigint AS "total",
+        COUNT(*)::bigint AS "count"
+      FROM "transactions"
+      WHERE "tenantId" = ${tenantId}
+        AND "status" = 'POSTED'
+        AND "type" = 'CASH_PAYMENT'
+        AND "recordedAt" >= ${start.toISOString()}::timestamptz AT TIME ZONE 'UTC'
+        AND "recordedAt" <= ${end.toISOString()}::timestamptz AT TIME ZONE 'UTC'
+      GROUP BY 1
+      ORDER BY 1 ASC
     `;
 
     // Totals
@@ -71,7 +76,7 @@ export class ReportsController {
       (s: { studentId: string }) => s.studentId,
     );
     const students = await this.prisma.student.findMany({
-      where: { id: { in: studentIds } },
+      where: { id: { in: studentIds }, tenantId },
       select: { id: true, fullName: true, studentNumber: true },
     });
     const studentMap = new Map<string, StudentInfo>(

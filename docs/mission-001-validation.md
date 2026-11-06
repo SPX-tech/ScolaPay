@@ -33,9 +33,56 @@ ESLint 10 utilise les plugins officiels Next.js et React Hooks directement. Le p
 
 ## Résultats finaux
 
-Mission interrompue à la demande du propriétaire avant les corrections financières. La [CI complète du socle](https://github.com/SPX-tech/ScolaPay/actions/runs/42115202377) est verte : backend, web, Android et lancement sur émulateur. Le backend a passé 155 tests unitaires et 16 E2E ; l'audit de production ne relève aucune vulnérabilité. Les [conteneurs](https://github.com/SPX-tech/ScolaPay/actions/runs/42115202324) sont également validés. Les dernières petites modifications et le test de connexion supplémentaire doivent encore être revérifiés sur leur commit.
+Commit `f50feec` de `mission001/financial-hardening`, qui intègre `mission001/ci-baseline`. [CI complète](https://github.com/SPX-tech/ScolaPay/actions/runs/42134244570) et [conteneurs](https://github.com/SPX-tech/ScolaPay/actions/runs/42134244633) verts.
 
-Les tests financiers ajoutés sur une autre branche reproduisent des défauts non corrigés. Voir [l'état de reprise](../HANDOFF_MISSION_001.md) pour les résultats négatifs, les branches et les tâches restantes. Le dépôt ne doit pas être considéré prêt pour une mise en production.
+| Application | Résultat observé |
+| --- | --- |
+| Backend | 190 tests unitaires (17 suites), 35 E2E sur PostgreSQL 16.15 jetable, migrations rejouées sans dérive, seed, lint sans erreur (44 avertissements), audit de production : 0 vulnérabilité |
+| Web | Lint, build, types, 2 tests monétaires, 47 tests Playwright sur le rendu autonome, audit de production : 0 vulnérabilité |
+| Android | Compilation, tests JVM, lint, puis sur émulateur API 35 : écran de connexion affiché, journal de crash vide |
+| Conteneurs | Images API, migration et web, démarrage derrière Nginx avec `PAYMENT_PROVIDER=disabled` |
+
+### Défauts financiers corrigés
+
+Résultats avant correction : 2 tests unitaires et 6 E2E en échec. Après dix encaissements concurrents de 1000 sur une dette de 10000, il restait `8000` au lieu de `0`. Le cash concurrent avec un paiement mobile laissait `3000` au lieu de `0`. Le reporting échouait sur la colonne absente `recorded_at`. Ces scénarios passent désormais sans avoir été retirés.
+
+- **Simulation en production** : fournisseur `disabled` par défaut ; `mock`, `kadryza` et les valeurs inconnues empêchent le démarrage selon l'environnement.
+- **Concurrence** : verrou de ligne par élève partagé par l'encaissement, la confirmation mobile, l'annulation et la modification d'un élève, avec outbox et audit dans la transaction.
+- **Annulations** : transitions relues sous verrou, cash uniquement.
+- **Isolation** : classe vérifiée contre l'établissement à la création et à la modification d'un élève.
+- **Reporting** : colonnes réelles, sommes et dates typées, période validée, journées calculées dans le fuseau de l'établissement, journée finale incluse. Les filtres de dates des transactions suivent les mêmes règles.
+- **Webhook** : contenu validé strictement après la signature et avant toute mutation.
+- **Cache web** : cache lié à la session et clés portant l'établissement.
+
+La revue et les tests ont aussi révélé des défauts absents de la liste initiale, corrigés :
+
+- Un paiement mobile gardait sa date d'initiation : annuler un cash enregistré entre l'initiation et la confirmation aurait effacé l'effet du paiement mobile. La date devient celle de l'application, et l'annulation refuse tout solde modifié depuis.
+- L'empreinte du reçu était calculée sur une date différente de celle stockée, donc non recalculable.
+- Le nettoyage des fixtures E2E se heurtait au trigger d'immuabilité du grand livre, ce qui bloquait le processus de test. L'application se ferme maintenant dans un `finally`.
+- Le formulaire élève envoyait les valeurs `__GRADUATED__` et `__SUSPENDED__` comme identifiant de classe.
+- Le tableau des transactions affichait un paiement mobile comme remboursement et un échec comme annulation.
+- La page Étudiants débordait de 19 px à 360 px, et le rapport affichait une heure parasite sur les journées, avec un risque de décalage d'un jour selon le fuseau du navigateur.
+
+### Limites de cette validation
+
+Non vérifié :
+
+- Aucun déploiement, et aucune donnée réelle n'a été utilisée.
+- Aucun SMS réel ni appel à un prestataire de paiement.
+- Les tests Playwright utilisent une API simulée : l'intégration web et API réelle n'est pas couverte de bout en bout. L'API est couverte séparément par les E2E backend.
+- Sur Android, seuls le lancement et l'écran de connexion sont contrôlés, pas les parcours métier.
+- La restauration d'une sauvegarde n'a pas été répétée.
+- `npm ci` signale 30 vulnérabilités basses ou modérées dans les dépendances de développement du backend, hors du périmètre de l'audit de production.
+
+Les runners PC-02 n'apparaissant toujours pas sur le dépôt, toute la validation a utilisé les runners hébergés de GitHub, comme confirmé par le propriétaire. Le lockfile web a été résolu avec `--package-lock-only`, puis contrôlé par `npm ci --strict-peer-deps` en CI.
+
+### Clôture
+
+Mission finalisée le 2026-11-06 : PR #1 et #2 fusionnées dans `main`, sans déploiement. L'ancienne instance a été retirée et ses données de démonstration archivées avec chiffrement, hors du serveur et hors du dépôt.
+
+Incident à retenir : le volume PostgreSQL de cette instance a été supprimé avant qu'une sauvegarde dédiée ne soit créée et sans validation préalable du propriétaire. Une sauvegarde automatique antérieure a été restaurée dans un environnement jetable, et ses données correspondaient aux relevés faits avant suppression. Le fichier d'environnement et les journaux de l'instance sont perdus. La règle sur les suppressions irréversibles d'[`AGENTS.md`](../AGENTS.md) en découle.
+
+Les priorités et les risques restants sont dans [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md).
 
 ## Sources des décisions de version
 

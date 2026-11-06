@@ -10,6 +10,10 @@ import { ListStudentsQueryDto } from './dto/list-students-query.dto';
 import { ImportStudentsDto } from './dto/import-students.dto';
 import { AuditService } from '../audit/audit.service';
 import { Prisma } from '../../generated/prisma/client';
+import {
+  BALANCE_TRANSACTION_OPTIONS,
+  lockStudentBalance,
+} from './student-balance-lock';
 
 @Injectable()
 export class StudentsService {
@@ -18,11 +22,30 @@ export class StudentsService {
     private readonly auditService: AuditService,
   ) {}
 
+  /** La clé étrangère ne vérifie pas l'établissement : ce contrôle est le garde-fou. */
+  private async assertClassInTenant(
+    db: Prisma.TransactionClient | PrismaService,
+    tenantId: string,
+    classId: string,
+  ): Promise<void> {
+    const schoolClass = await db.schoolClass.findFirst({
+      where: { id: classId, tenantId },
+      select: { id: true },
+    });
+    if (!schoolClass) {
+      throw new NotFoundException('Classe non trouvée.');
+    }
+  }
+
   async createStudent(
     tenantId: string,
     actorUserId: string,
     dto: CreateStudentDto,
   ) {
+    if (dto.classId !== undefined && dto.classId !== null) {
+      await this.assertClassInTenant(this.prisma, tenantId, dto.classId);
+    }
+
     try {
       const student = await this.prisma.student.create({
         data: {
@@ -125,43 +148,68 @@ export class StudentsService {
     studentId: string,
     dto: UpdateStudentDto,
   ) {
-    const existingStudent = await this.getStudentById(tenantId, studentId);
-
     try {
-      const data: Prisma.StudentUncheckedUpdateInput = {};
-      if (dto.fullName) data.fullName = dto.fullName.trim();
-      if (dto.studentNumber) data.studentNumber = dto.studentNumber.trim();
-      if (dto.guardianPhone !== undefined)
-        data.guardianPhone = dto.guardianPhone?.trim();
-      if (dto.guardianName !== undefined)
-        data.guardianName = dto.guardianName?.trim();
-      if (dto.classId !== undefined) data.classId = dto.classId;
-      if (dto.status) data.status = dto.status;
-      if (dto.debtCents !== undefined) data.debtCents = BigInt(dto.debtCents);
-      if (dto.creditCents !== undefined)
-        data.creditCents = BigInt(dto.creditCents);
-      if (dto.metadata !== undefined)
-        data.metadata = dto.metadata as Prisma.InputJsonObject;
+      // debtCents et creditCents sont modifiables ici : le verrou empêche un
+      // paiement concurrent de calculer sur un solde sur le point de changer.
+      return await this.prisma.$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          const locked = await lockStudentBalance(tx, tenantId, studentId);
+          if (!locked) {
+            throw new NotFoundException('Étudiant non trouvé.');
+          }
 
-      const student = await this.prisma.student.update({
-        where: { id: studentId },
-        data,
-        include: {
-          class: { select: { id: true, name: true, academicYear: true } },
+          const existingStudent = await tx.student.findFirst({
+            where: { id: studentId, tenantId },
+            include: {
+              class: { select: { id: true, name: true, academicYear: true } },
+            },
+          });
+
+          if (dto.classId !== undefined && dto.classId !== null) {
+            await this.assertClassInTenant(tx, tenantId, dto.classId);
+          }
+
+          const data: Prisma.StudentUncheckedUpdateInput = {};
+          if (dto.fullName) data.fullName = dto.fullName.trim();
+          if (dto.studentNumber) data.studentNumber = dto.studentNumber.trim();
+          if (dto.guardianPhone !== undefined)
+            data.guardianPhone = dto.guardianPhone?.trim();
+          if (dto.guardianName !== undefined)
+            data.guardianName = dto.guardianName?.trim();
+          if (dto.classId !== undefined) data.classId = dto.classId;
+          if (dto.status) data.status = dto.status;
+          if (dto.debtCents !== undefined)
+            data.debtCents = BigInt(dto.debtCents);
+          if (dto.creditCents !== undefined)
+            data.creditCents = BigInt(dto.creditCents);
+          if (dto.metadata !== undefined)
+            data.metadata = dto.metadata as Prisma.InputJsonObject;
+
+          const student = await tx.student.update({
+            where: { id: studentId },
+            data,
+            include: {
+              class: { select: { id: true, name: true, academicYear: true } },
+            },
+          });
+
+          await this.auditService.record(
+            {
+              tenantId,
+              actorUserId,
+              action: 'student.update',
+              targetType: 'student',
+              targetId: student.id,
+              before: existingStudent,
+              after: student,
+            },
+            tx,
+          );
+
+          return student;
         },
-      });
-
-      await this.auditService.record({
-        tenantId,
-        actorUserId,
-        action: 'student.update',
-        targetType: 'student',
-        targetId: student.id,
-        before: existingStudent,
-        after: student,
-      });
-
-      return student;
+        BALANCE_TRANSACTION_OPTIONS,
+      );
     } catch (error: unknown) {
       if (
         error &&

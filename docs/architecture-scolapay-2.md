@@ -1,6 +1,10 @@
 # Préparation de ScolaPay 2.0
 
+> Index des décisions : [`docs/decisions/`](decisions/README.md). Les nouvelles décisions y sont ajoutées, ce fichier conserve D-001 à D-005.
+
 ## Décision 001 : conserver le monolithe modulaire
+
+> **Amendée le 2026-11-06.** La [décision 0006](decisions/0006-backend-java-spring-boot.md) conserve le monolithe modulaire mais remplace le choix de NestJS pour les futurs domaines, qui seront développés en Java/Spring Boot. Le code NestJS reste dans le dépôt comme référence. Le tableau ci-dessous conserve la répartition des domaines, pas leur technologie.
 
 NestJS et PostgreSQL couvrent les besoins actuels. Les modules existants fournissent déjà l'authentification, les établissements, les élèves, les encaissements, la trésorerie, l'audit et l'outbox. Les clients web et Android consomment la même API `/api/v1`. Aucun bénéfice mesuré ne justifie des microservices, un courtier de messages ou une seconde base.
 
