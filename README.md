@@ -167,6 +167,8 @@ répétition de la restauration ou de `pg_upgrade`.
 
 ## Guide de Déploiement (MVP Cash)
 
+> Aucune instance n'est en service depuis le 2026-11-06. Ce guide décrit le déploiement du code NestJS actuel. Toute remise en service est un nouveau déploiement.
+
 Déploiement de la stack web/API en production via `docker compose`, piloté par le
 script `deploy.sh` à la racine.
 

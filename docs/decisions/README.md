@@ -11,7 +11,7 @@ Une décision mérite une entrée ici lorsqu'elle est coûteuse à inverser ou q
 | [D-003](../architecture-scolapay-2.md#décision-003--conserver-les-unités-financières-historiques) | Unités financières historiques | Acceptée | En place |
 | [D-004](../architecture-scolapay-2.md#décision-004--prestataires-financiers-fermés-par-défaut) | Prestataires fermés par défaut | Acceptée | En place |
 | [D-005](../architecture-scolapay-2.md#décision-005--migrations-séparées-du-démarrage) | Migrations séparées du démarrage | Acceptée | En place |
-| [0006](0006-backend-java-spring-boot.md) | Cœur métier ScolaPay 2.0 en Java/Spring Boot, NestJS conservé pendant la transition | Acceptée | Non démarrée |
+| [0006](0006-backend-java-spring-boot.md) | Nouveau backend ScolaPay 2.0 en Java/Spring Boot, code NestJS conservé comme référence | Acceptée | Non démarrée |
 | [0007](0007-portail-familles-avant-apk.md) | Portail web des familles avant une application Android | Acceptée | Non démarrée |
 | [0008](0008-go-services-paiement.md) | Go pour de futurs services financiers spécialisés | Orientation validée, introduction non prévue immédiatement | Non démarrée |
 

@@ -2,7 +2,7 @@
 
 Référence stratégique et technique du projet, lisible sans l'historique des conversations. En cas de désaccord entre ce document et le code, **le code prime** : corriger le document.
 
-**Dernière mise à jour : 2026-11-06.** Le statut des fonctionnalités décrit les branches `mission001/ci-baseline` et `mission001/financial-hardening`, **pas encore fusionnées dans `main`**.
+**Dernière mise à jour : 2026-11-06.** Le statut des fonctionnalités décrit le code des branches `mission001/ci-baseline` et `mission001/financial-hardening`, **pas encore fusionnées dans `main`**. **Aucune instance de ScolaPay n'est en service** : « implémenté » ne signifie pas « déployé ».
 
 ## Vision
 
@@ -39,7 +39,7 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Application Android des familles | Prévu, après le portail | Rien. L'application `android/` sert le personnel | [0007](decisions/0007-portail-familles-avant-apk.md) |
 | Facturation, échéanciers, réconciliation, administration SaaS | Prévu | Rien. Le grand livre n'est pas une comptabilité en partie double | [D-001](architecture-scolapay-2.md#décision-001--conserver-le-monolithe-modulaire) |
 | Remboursement d'un paiement numérique | Prévu | Rien. L'annulation générique le refuse volontairement | [D-004](architecture-scolapay-2.md#décision-004--prestataires-financiers-fermés-par-défaut) |
-| Cœur métier Java/Spring Boot : identités, établissements, inscriptions, facturation | Prévu | Aucun code, migration non commencée | [0006](decisions/0006-backend-java-spring-boot.md) |
+| Nouveau backend Java/Spring Boot : identités, établissements, inscriptions, facturation | Prévu | Aucun code, migration non commencée | [0006](decisions/0006-backend-java-spring-boot.md) |
 | Services Go de paiement | Envisagé, sans échéance | Aucun code | [0008](decisions/0008-go-services-paiement.md) |
 
 Les chemins `modules/` et `common/` sont relatifs à `backend/src/`.
@@ -55,7 +55,7 @@ Android Compose ┘            monolithe modulaire, Prisma 7
 ```
 
 - **Node 24**, TypeScript 6 côté backend et 5.9 côté web, React 19, Kotlin 2.4, AGP 9.3. Détail et motifs dans le [journal de validation](mission-001-validation.md).
-- **Déploiement par `docker compose`** : une image `migrate` applique les migrations avant l'API. Une seule instance d'API est supposée (voir les risques).
+- **Déploiement par `docker compose`** : une image `migrate` applique les migrations avant l'API. Une seule instance d'API est supposée (voir les risques). L'ancienne instance a été retirée le 2026-11-06 : elle ne contenait qu'un établissement de démonstration, et ses données sont archivées hors du dépôt.
 - **Modèle de données** : [`backend/prisma/schema.prisma`](../backend/prisma/schema.prisma). Montants en `BIGINT`, exposés en chaînes dans le JSON.
 
 ### Cible validée pour ScolaPay 2.0
@@ -64,16 +64,16 @@ Android Compose ┘            monolithe modulaire, Prisma 7
 
 | Élément | Décision | Référence |
 | --- | --- | --- |
-| Cœur métier | Java et Spring Boot, en monolithe modulaire. Spring Modulith est une option à évaluer | [0006](decisions/0006-backend-java-spring-boot.md) |
+| Nouveau backend | Java et Spring Boot, en monolithe modulaire. Spring Modulith est une option à évaluer | [0006](decisions/0006-backend-java-spring-boot.md) |
 | Nouveaux domaines | Identités, établissements, inscriptions et facturation scolaire directement en Java | [0006](decisions/0006-backend-java-spring-boot.md) |
-| Backend NestJS | Conservé pendant la transition, migration progressive, sans dupliquer les sources de vérité financières | [0006](decisions/0006-backend-java-spring-boot.md) |
+| Code NestJS | Conservé dans le dépôt comme référence. Le nouveau backend est construit directement, sans maintenir durablement deux backends, à condition de ne perdre ni dépendance de production ni donnée nécessaire | [0006](decisions/0006-backend-java-spring-boot.md) |
 | Web et données | Next.js/TypeScript et PostgreSQL conservés | [0006](decisions/0006-backend-java-spring-boot.md) |
 | Familles | Véritable site web d'abord, application Android ensuite | [0007](decisions/0007-portail-familles-avant-apk.md) |
 | Services financiers | Go envisagé, notamment pour les intégrations de prestataires, sans introduction immédiate | [0008](decisions/0008-go-services-paiement.md) |
 
-**Règle de transition :** chaque donnée financière garde un seul propriétaire applicatif. Tant qu'un domaine n'a pas migré, NestJS reste sa référence, et aucun nouveau domaine métier ne lui est ajouté.
+**Règle :** aucun nouveau domaine métier n'est ajouté à NestJS, et les sources de vérité financières ne sont jamais dupliquées.
 
-Les questions ouvertes de chaque décision ne doivent pas être tranchées par supposition. La plus structurante est dans [0006](decisions/0006-backend-java-spring-boot.md#questions-ouvertes) : qui possède les établissements et les comptes du personnel, qui existent déjà dans NestJS, pendant la transition.
+Les questions ouvertes de chaque décision ne doivent pas être tranchées par supposition. Celles du nouveau backend sont dans [0006](decisions/0006-backend-java-spring-boot.md#questions-ouvertes).
 
 ## Invariants financiers
 
@@ -95,14 +95,13 @@ Les questions ouvertes de chaque décision ne doivent pas être tranchées par s
 L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 
 - **D-001 à D-005** ([détail](architecture-scolapay-2.md)) : monolithe modulaire, isolation par établissement, unités historiques, prestataires fermés par défaut, migrations séparées du démarrage.
-- **0006 et 0007**, acceptées le 2026-11-06 : cœur métier en Java/Spring Boot avec NestJS conservé pendant la transition, portail web des familles avant l'application Android.
+- **0006 et 0007**, acceptées le 2026-11-06 : nouveau backend en Java/Spring Boot, construit directement, avec le code NestJS conservé comme référence, puis portail web des familles avant l'application Android.
 - **0008**, orientation validée : Go envisagé pour de futurs services financiers, sans introduction immédiate.
 
 ## Priorités actuelles
 
 1. **Clore la Mission 001** : faire examiner et fusionner les PR [#1](https://github.com/SPX-tech/ScolaPay/pull/1) puis [#2](https://github.com/SPX-tech/ScolaPay/pull/2), selon la [procédure ci-dessous](#intégrer-les-pr-de-la-mission-001). La fusion et le déploiement attendent l'autorisation explicite du propriétaire.
-2. **Préparer la production** : aucun correctif de ces branches n'est actif en production tant qu'il n'est ni fusionné ni déployé.
-3. **Préparer la fondation Java/Spring Boot** : chantier distinct, à cadrer avec ses objectifs métier et architecturaux. **Il n'est pas commencé.**
+2. **Préparer la fondation Java/Spring Boot** : chantier distinct, à cadrer avec ses objectifs métier et architecturaux. **Il n'est pas commencé.**
 
 ### Intégrer les PR de la Mission 001
 
@@ -110,9 +109,9 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 
 1. **Fusionner #1 dans `main`** avec un commit de fusion, sans squash : #2 repose sur ses commits.
 2. **Recibler #2 sur `main`** : elle vise le socle, et le dépôt ne le fait pas automatiquement.
-3. **Fusionner #2** aussitôt, puis vérifier la CI du commit de `main`. Le socle seul ne contient pas les correctifs financiers : ne pas déployer entre ces deux fusions, `deploy.sh` déploie `main`.
+3. **Fusionner #2** aussitôt, puis vérifier la CI du commit de `main`. Le socle seul ne contient pas les correctifs financiers : ne rien déployer entre ces deux fusions.
 
-L'arbre obtenu est identique à la tête de `mission001/financial-hardening`, déjà validée en CI. Aucune nouvelle migration n'est introduite par rapport à celles du dépôt à ce jour.
+L'arbre obtenu est identique à la tête de `mission001/financial-hardening`, déjà validée en CI.
 
 ## Risques connus
 
@@ -133,11 +132,13 @@ L'arbre obtenu est identique à la tête de `mission001/financial-hardening`, d�
 
 ## Prochaines étapes
 
-**Avant tout déploiement de ces branches**
+**Si le code NestJS devait être remis en service**
 
-- Vérifier que `PAYMENT_PROVIDER` vaut `disabled` ou est absent, et `NODE_ENV` vaut `production` : `mock` et `kadryza` empêchent désormais le démarrage.
-- Rejouer les conditions de production : restauration d'une sauvegarde, HTTPS, origines et limites du proxy.
-- `deploy.sh` déploie `main` : vérifier la branche réellement en service sur le serveur avant de le lancer.
+Ce serait un nouveau déploiement, avec des secrets neufs :
+
+- Laisser `PAYMENT_PROVIDER` à `disabled` : `mock` et `kadryza` empêchent le démarrage en production.
+- Ne pas exécuter le seed : ses comptes de démonstration ont des mots de passe publics.
+- Définir HTTPS, les origines, les limites du proxy et une sauvegarde restaurée : voir les [conditions de production](architecture-scolapay-2.md#conditions-avant-une-future-ouverture-en-production).
 
 **Prochaine grande mission : fondation Java/Spring Boot de ScolaPay 2.0**
 

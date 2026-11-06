@@ -8,6 +8,6 @@ Règles propres à ce dépôt :
 - **Mémoire du projet.** Une PR qui change une fonctionnalité, une priorité, un risque ou une décision met à jour `PROJECT_CONTEXT.md` dans cette même PR. Les décisions majeures vont dans [`docs/decisions/`](docs/decisions/README.md).
 - **Dépôt public.** Pas de secret, d'adresse de serveur ni de détail d'exposition de la production dans le dépôt, les issues ou les PR.
 - **Argent.** Respecter les [invariants financiers](docs/PROJECT_CONTEXT.md#invariants-financiers). Ne pas supprimer un scénario de `backend/test/financial-integrity.e2e-spec.ts` pour obtenir une CI verte.
-- **Transition.** Pas de nouveau domaine métier dans NestJS, et pas de code Java hors de la mission de fondation dédiée. Voir la [décision 0006](docs/decisions/0006-backend-java-spring-boot.md).
+- **Nouveau backend.** Pas de nouveau domaine métier dans NestJS, et pas de code Java hors de la mission de fondation dédiée. Voir la [décision 0006](docs/decisions/0006-backend-java-spring-boot.md).
 - **Migrations.** Les migrations existantes sont immuables. Jamais de `prisma migrate dev`, `db push` ou reset sur une base persistante.
 - **Vérification.** Les compilations et suites de tests lourdes passent par la CI, pas par le poste de développement de 8 Go.
