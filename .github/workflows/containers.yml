@@ -26,7 +26,7 @@ jobs:
       OUTBOX_POLLING_ENABLED: 'false'
       COMPOSE_PROJECT_NAME: scolapay-ci-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@v7
       - run: docker compose config --quiet
       - name: Construire l'image du nouveau backend
         run: docker build --tag scolapay-core-ci core
