@@ -36,4 +36,4 @@ Règles pour tout futur modèle financier :
 ## Questions ouvertes
 
 - Forme exacte du type `Money` en Java, à définir par la Mission 003.
-- Politique d'arrondi des frais, remises et échéanciers fractionnés, à définir par la Mission 003.
+- Politique d'arrondi des remises, à définir par la Mission 003. Les échéances du catalogue de frais n'en ont pas besoin : elles sont saisies en montants exacts, voir [0020](0020-catalogue-de-frais-et-periodes.md#montants).

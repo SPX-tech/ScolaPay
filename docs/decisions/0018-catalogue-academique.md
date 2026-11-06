@@ -1,8 +1,8 @@
 # 0018 : catalogue académique
 
-- **Statut** : Principe accepté par le propriétaire, modèle proposé dans la PR du lot 2 de la Mission 003
+- **Statut** : Acceptée
 - **Date** : 2026-11-06
-- **Implémentation** : en place dans `core/`. La tarification, qui s'appuiera dessus, n'existe pas encore.
+- **Implémentation** : en place dans `core/`, le [catalogue de frais](0020-catalogue-de-frais-et-periodes.md) s'appuie dessus.
 
 ## Contexte
 
@@ -32,7 +32,7 @@ Règles :
 
 ## Ce qui n'est volontairement pas construit
 
-- **Semestres.** Ils s'ajouteront comme une nouvelle nature, en élargissant le `CHECK`, quand un besoin de facturation réel les exigera. Une inscription reste annuelle aujourd'hui : un semestre changerait ce que signifie s'inscrire, ce qui mérite sa propre décision.
+- **Semestres dans le catalogue.** Le propriétaire conserve l'inscription annuelle. La facturation par semestre ou par session passe par des [périodes de facturation](0020-catalogue-de-frais-et-periodes.md) indépendantes, et ne change rien à ce modèle.
 - **Reprise des inscriptions existantes.** Rien n'est déployé. Une inscription existante ferait échouer la migration, ce qui vaut mieux que d'inventer son rattachement.
 - **Classes et groupes**, qui ne servent pas à tarifer.
 

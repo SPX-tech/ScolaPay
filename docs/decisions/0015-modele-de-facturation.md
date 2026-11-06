@@ -24,8 +24,8 @@ Un module `billing`, au-dessus de `schooling`. Il ne lit ni n'écrit les tables 
 
 | Concept | Rôle | Écriture |
 | --- | --- | --- |
-| `fee_catalogs`, `fee_items` | Versions de frais d'une année, par [unité académique](0018-catalogue-academique.md) ou pour tous, avec leur plan d'échéances. Chaque frais porte un `fee_code` stable d'une version à l'autre | Modifiables en brouillon, figés à la publication |
-| `obligations` | Ce qu'un dossier doit pour une année | Immuable après émission, hors statut |
+| `fee_catalogs`, `fee_items` | Versions de frais d'une année, par [unité académique](0018-catalogue-academique.md) ou pour tous, avec leur plan d'échéances et leur [période de facturation](0020-catalogue-de-frais-et-periodes.md). Chaque frais porte un `fee_code` stable d'une version à l'autre | Modifiables en brouillon, figés à la publication |
+| `obligations` | Ce qu'un dossier doit pour une année. **Ce n'est pas une facture**, voir [0019](0019-nature-des-documents-et-numerotation.md). Porte une référence interne unique, stable et non réutilisable | Immuable après émission, hors statut |
 | `obligation_lines` | Copie figée d'un frais facturé : `fee_code`, libellé, montant et version de catalogue d'origine | Ajout seul, jamais modifiée |
 | `installments` | Échéances datées d'une obligation. La somme égale le montant émis, l'arrondi va sur la dernière | Immuables, un rééchelonnement crée une nouvelle version |
 | `obligation_entries` | Journal immuable : `ISSUED`, `DISCOUNT`, `ADJUSTMENT`, et `SETTLEMENT` réservé au futur module de paiement | Ajout seul, trigger d'immuabilité |
@@ -47,7 +47,7 @@ La garantie est une **contrainte PostgreSQL**, pas une vérification applicative
 | Nouvelle version du catalogue | Le `fee_code` déjà facturé n'est pas refacturé, un écart de tarif passe par un ajustement. Seul un nouveau `fee_code` crée une ligne |
 | Retrait puis réinscription la même année | Le frais déjà facturé ne l'est pas une seconde fois |
 
-La clé ne contient volontairement ni la version du catalogue ni l'inscription.
+La clé ne contient volontairement ni la version du catalogue ni l'inscription. La période de facturation n'y figure pas non plus, car un `fee_code` reste attaché à une seule période : voir [0020](0020-catalogue-de-frais-et-periodes.md#le-code-de-frais-et-sa-période).
 
 ### Remises et ajustements
 
@@ -114,5 +114,5 @@ Les pénalités de retard sont exclues de cette mission.
 
 Remontées au propriétaire, sans décision par supposition :
 
-- Numérotation légale des factures : une référence unique suffit-elle, ou faut-il une séquence continue par établissement ?
 - Ce qui constitue un engagement valable, selon les règles juridiques à valider.
+- Le traitement fiscal et la numérotation : voir [0019](0019-nature-des-documents-et-numerotation.md).

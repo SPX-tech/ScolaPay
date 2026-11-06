@@ -48,7 +48,8 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Audit | Vérifié | Immuable par trigger, écrit dans la transaction | `audit`, `DatabaseGuardsTest` |
 | Frontière vers la facturation | Vérifié, sans consommateur | `StudentDirectory`, événements `StudentEnrolled` et `EnrollmentEnded`, contributeurs financiers | `schooling` |
 | Catalogue académique | Vérifié | Programmes et niveaux par établissement, inscription sur un niveau. Sans semestres | `core/`, `AcademicCatalogTest`, [0018](decisions/0018-catalogue-academique.md) |
-| Facturation | Prévu, modèle accepté | Rien pour l'instant | [Cadrage](missions/mission-003-billing-engine.md), [0015](decisions/0015-modele-de-facturation.md) |
+| Catalogue de frais | Vérifié | Périodes de facturation, frais par unité académique, versions et publication immuables, aperçu d'impact. **Aucune dette n'existe encore** | `core/`, `FeeCatalogTest`, [0020](decisions/0020-catalogue-de-frais-et-periodes.md) |
+| Obligations et dû | Prévu, lot 4 | Rien pour l'instant | [Cadrage](missions/mission-003-billing-engine.md), [0015](decisions/0015-modele-de-facturation.md) |
 | Outbox durable | Vérifié | Registre Spring Modulith, reprise après arrêt brutal et entre deux instances. **Aucun listener de production ne l'utilise encore** | `core/`, `OutboxReliabilityTest`, [0016](decisions/0016-outbox-durable.md) |
 | Contrôles de mise en service | Vérifié | Portail fermé par défaut, démarrage refusé si une condition manque. **Il ne peut pas être ouvert aujourd'hui** : règle du Tchad non confirmée, aucun canal d'invitation | `core/`, `GoLiveTest`, [0017](decisions/0017-controles-de-mise-en-service.md) |
 | Encaissement réel, comptabilité | Prévu | Rien | [0006](decisions/0006-backend-java-spring-boot.md) |
@@ -144,7 +145,9 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 - **0009 à 0013**, acceptées : fondation technique, modèle d'identité et d'accès, transition depuis NestJS, convention monétaire, majorité légale et autorisations familiales. Les modalités juridiques de 0013 restent à confirmer.
 - **0014**, acceptée : Android hors de la feuille de route active.
 - **0015 à 0017**, acceptées : modèle de facturation, outbox durable sur le registre Spring Modulith, contrôles de mise en service.
-- **0018**, principe accepté, modèle proposé : catalogue académique.
+- **0018**, acceptée : catalogue académique.
+- **0019**, principes acceptés, traitement fiscal à valider : obligations, appels de frais, factures fiscales et reçus sont distincts. Aucun document n'est présenté comme fiscalement conforme.
+- **0020**, modèle proposé : catalogue de frais et périodes de facturation, indépendantes de l'inscription annuelle.
 
 ## Priorités actuelles
 
@@ -161,6 +164,8 @@ Dans `core/`, les limites connues sont listées dans [0010](decisions/0010-ident
 | Règles juridiques non confirmées | L'âge légal enregistré pour le Tchad est provisoire. L'application refuse d'ouvrir le portail tant qu'il n'est pas confirmé | [0013](decisions/0013-majorite-et-autorisations-familiales.md#limites-et-conditions), [0017](decisions/0017-controles-de-mise-en-service.md) |
 | Dégradation silencieuse d'Android | Plus vérifié à chaque PR : accepté tant qu'il est hors feuille de route | [0014](decisions/0014-android-hors-feuille-de-route.md) |
 | Pas de limitation de débit par adresse | Le verrouillage par compte permet de gêner un compte connu | `core`, `identity` |
+| Traitement fiscal non validé | La FEN du Tchad vise au-delà de la seule TVA et exige un système agréé. Aucune source ne traite de l'enseignement. **Aucun document ScolaPay n'est fiscalement conforme** | [0019](decisions/0019-nature-des-documents-et-numerotation.md) |
+| Archive des événements sans purge | 180 jours à titre provisoire, mais rien ne l'applique encore | [0016](decisions/0016-outbox-durable.md#conservation) |
 | Limites de l'outbox | Un listener peut s'exécuter deux fois et sans ordre garanti : l'émission des obligations devra être idempotente par contrainte PostgreSQL. L'alerte n'est qu'une ligne de journal | [0016](decisions/0016-outbox-durable.md#limites-à-respecter) |
 
 Dans le code historique :
@@ -192,7 +197,7 @@ Ce serait un nouveau déploiement, avec des secrets neufs :
 
 **Prochain chantier : Mission 003, ScolaPay Billing Engine**
 
-Périmètre, critères d'acceptation et état des lots dans le [cadrage](missions/mission-003-billing-engine.md). L'outbox durable et le contrôle de mise en service sont en place. Le catalogue académique est en place. Le prochain lot est le catalogue de frais et ses versions.
+Périmètre, critères d'acceptation et état des lots dans le [cadrage](missions/mission-003-billing-engine.md). L'outbox durable et le contrôle de mise en service sont en place. Le catalogue académique et le catalogue de frais sont en place. Le prochain lot est l'émission des obligations, avec ses décisions à présenter au propriétaire avant de commencer.
 
 **Ensuite, sans ordre arrêté**
 
