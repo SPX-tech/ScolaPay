@@ -103,6 +103,10 @@ abstract class IntegrationTest {
         return send("PATCH", path, token, JSON.writeValueAsString(body));
     }
 
+    Response put(String path, String token, Object body) {
+        return send("PUT", path, token, JSON.writeValueAsString(body));
+    }
+
     Response get(String path, String token) {
         return send("GET", path, token, null);
     }

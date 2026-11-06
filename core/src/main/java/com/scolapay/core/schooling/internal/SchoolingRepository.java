@@ -6,7 +6,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -214,6 +216,22 @@ public class SchoolingRepository {
                         Columns.instant(rs, "enrolled_at"),
                         Columns.instant(rs, "ended_at")))
                 .list();
+    }
+
+    public Map<UUID, Long> activeEnrollmentsByUnit(UUID establishmentId, UUID academicYearId) {
+        Map<UUID, Long> counts = new HashMap<>();
+        jdbc.sql("""
+                SELECT academic_unit_id, count(*) AS total
+                FROM enrollments
+                WHERE establishment_id = :establishmentId AND academic_year_id = :academicYearId AND status = 'ACTIVE'
+                GROUP BY academic_unit_id
+                """)
+                .param("establishmentId", establishmentId)
+                .param("academicYearId", academicYearId)
+                .query(rs -> {
+                    counts.put(Columns.uuid(rs, "academic_unit_id"), rs.getLong("total"));
+                });
+        return counts;
     }
 
     public void appendHistory(

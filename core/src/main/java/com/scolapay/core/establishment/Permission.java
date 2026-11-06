@@ -10,5 +10,7 @@ public enum Permission {
     STUDENTS_MANAGE,
     ENROLLMENTS_MANAGE,
     GUARDIANS_MANAGE,
-    AUDIT_READ
+    AUDIT_READ,
+    FEES_MANAGE,
+    FEES_PUBLISH
 }

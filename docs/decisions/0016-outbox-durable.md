@@ -56,6 +56,11 @@ Elles viennent de la lecture du code source 2.1.2 et sont confirmées par les te
 - L'alerte n'est qu'une ligne de journal : elle devra être reliée à une vraie supervision avant la mise en service.
 - La livraison vers un service externe (notifications, futur service Go) n'est pas évaluée ici. Le mode `outbox` d'externalisation du registre reste à examiner le moment venu.
 
-## Question ouverte
+## Conservation
 
-Durée de conservation de `event_publication_archive`, qui n'est pas purgée. Elle contient des identifiants et le niveau scolaire, sans montant ni nom. À trancher par le propriétaire, avec les règles de protection des données.
+Politique **provisoire**, à confirmer avec les obligations de conservation applicables :
+
+- **180 jours** pour les événements archivés, traités correctement.
+- Les événements en échec ou en attente sont conservés **jusqu'à leur résolution**, quelle que soit leur ancienneté.
+- **Aucune purge automatique n'est développée pour le moment.** `event_publication_archive` croît donc sans limite, et rien n'applique encore les 180 jours.
+- **Ces archives de transport ne remplacent ni le journal d'audit ni les documents financiers**, qui suivent leurs propres règles : voir [0019](0019-nature-des-documents-et-numerotation.md). Rien ne doit dépendre d'elles pour reconstituer un montant ou une décision.

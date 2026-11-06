@@ -25,6 +25,7 @@ Conditions initiales :
 | Toute règle juridique enregistrée est confirmée | `legally_confirmed`, sur toutes les règles et pas seulement les pays des établissements actuels : sinon, un établissement créé après le démarrage échapperait au contrôle |
 | Les invitations ont un canal de remise réel | Présence d'une implémentation de `InvitationDelivery`. **Il n'en existe aucune** : le jeton est rendu au personnel qui l'a émis |
 | Secrets et base de production, HTTPS | **Pas encore de condition**, à préciser à l'approche de la mise en service |
+| Traitement fiscal validé, voir [0019](0019-nature-des-documents-et-numerotation.md) | **Pas encore de condition**, à ajouter avant toute exploitation réelle |
 
 Confirmer une règle juridique reste un acte relu : `legally_confirmed` ne passe à `true` que par une migration citant sa source, jamais par une API. Seules les bases jetables de test posent leur propre état de confirmation, par une migration présente uniquement dans les ressources de test.
 

@@ -12,8 +12,8 @@ Modèle détaillé : [0015](../decisions/0015-modele-de-facturation.md). Événe
 
 | Inclus | Exclu |
 | --- | --- |
-| Catalogue de frais par année et niveau | Encaissement réel, prestataires, webhooks |
-| Émission d'obligations à l'inscription et en lot | Reçus, remboursements, rapprochement |
+| Catalogue de frais par année et unité académique, périodes de facturation | Encaissement réel, prestataires, webhooks |
+| Émission d'obligations à l'inscription et en lot | Reçus, factures fiscales, remboursements, rapprochement |
 | Échéanciers | Comptabilité en partie double, exports |
 | Remises et ajustements motivés, tracés | Interfaces web et portail |
 | Rôles redevable, responsable, contributeur | Notifications réelles |
@@ -58,7 +58,8 @@ Prouvés par des tests sur PostgreSQL réel, sans doubles, et par des mutations 
 
 **Fiabilité**
 - Les quatre tests de sortie de [0016](../decisions/0016-outbox-durable.md) sont verts.
-- Rejouer une inscription, relancer un lot, ou publier une nouvelle version du catalogue ne facture jamais deux fois le même frais.
+- Rejouer une inscription, relancer un lot, publier une nouvelle version du catalogue ou corriger un code de frais ne facture jamais deux fois la même charge.
+- Publier un tarif ne crée aucune dette. Un élève déjà inscrit n'est facturé que par une émission explicite.
 
 **Mise en service**
 - Le portail est fermé par défaut pour les familles : surface `/me` familiale en 404 et invitations familiales refusées.
@@ -72,8 +73,8 @@ Chaque lot est une PR verte, indépendante, et met à jour `PROJECT_CONTEXT.md`.
 | --- | --- | --- | --- |
 | 1 | Outbox durable et ses tests de sortie, contrôle de mise en service | | **Terminé** |
 | 2 | Catalogue académique structuré dans `schooling`, voir [0018](../decisions/0018-catalogue-academique.md) | | **Terminé** |
-| 3 | Module `billing` : catalogue de frais et ses versions, publication | Lot 2 | À faire |
-| 4 | Obligations, échéances et journal, émission sans double facturation | Lots 1 et 3 | À faire |
+| 3 | Module `billing` : catalogue de frais, identité stable des charges, applicabilité, périodes de facturation, publication et versions, voir [0020](../decisions/0020-catalogue-de-frais-et-periodes.md) | Lot 2 | **Terminé** |
+| 4 | Obligations, échéances et journal, émission sans double facturation, élèves déjà inscrits, distinction des [documents](../decisions/0019-nature-des-documents-et-numerotation.md) | Lots 1 et 3 | **En cours** |
 | 5 | Remises et ajustements, permissions, confirmation par une seconde personne, réexamen après retrait | Lot 4 | À faire |
 | 6 | Personnes physiques et morales, rôles, vues par rôle, retrait de `financial_contributor` | Lot 4 | À faire |
 | 7 | Campagne de mutations et clôture | Tous | À faire |
@@ -96,5 +97,5 @@ Tout changement structurant ou question juridique non tranchée est remonté au 
 - **Règles juridiques non confirmées** : qualité de redevable, confidentialité, consentement. Elles bloquent l'ouverture du portail, pas la construction.
 - **Montants absents du catalogue actuel** : rien n'est à reprendre de NestJS, dont la convention est différente. Voir [0012](../decisions/0012-convention-monetaire.md).
 - **Outbox** : un listener peut s'exécuter deux fois et sans ordre garanti. Le lot 4 doit respecter les [limites établies](../decisions/0016-outbox-durable.md#limites-à-respecter).
-- **Conservation de l'archive des événements** : non tranchée, voir [0016](../decisions/0016-outbox-durable.md#question-ouverte).
-- **Numérotation légale des factures** : non tranchée, voir [0015](../decisions/0015-modele-de-facturation.md#questions-ouvertes).
+- **Conservation de l'archive des événements** : 180 jours à titre provisoire, sans purge automatique, voir [0016](../decisions/0016-outbox-durable.md#conservation).
+- **Traitement fiscal et FEN au Tchad** : à valider avec un conseil fiscal et la DGI. Aucun document n'est présenté comme conforme d'ici là, voir [0019](../decisions/0019-nature-des-documents-et-numerotation.md#questions-à-poser-à-un-conseil-fiscal-et-à-la-dgi).
