@@ -123,6 +123,8 @@ npm run test:e2e
 
 ## Android
 
+> Hors de la feuille de route active : ce code est conservé comme référence, sans développement prévu. Voir [la décision 0014](docs/decisions/0014-android-hors-feuille-de-route.md).
+
 Ouvrir le dossier `android/` dans Android Studio.
 
 Avant de lancer l'app sur emulateur, verifier l'URL API dans:
