@@ -136,7 +136,7 @@ La CI GitHub (`.github/workflows/ci.yml`) est la source de preuve : backend avec
 
 Le poste de développement (8 Go) est réservé aux éditions légères. Les commandes locales figurent dans le [README](../README.md).
 
-Dernière exécution complète : voir le [journal de validation](mission-001-validation.md#résultats-finaux).
+Dernier résultat complet (2026-11-06) : 190 tests unitaires et 35 E2E backend, 47 tests Playwright, compilation et lancement Android. Détail et limites dans le [journal de validation](mission-001-validation.md#résultats-finaux).
 
 ## Carte de la documentation
 
