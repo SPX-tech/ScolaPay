@@ -14,6 +14,71 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  core:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18.6-alpine
+        env:
+          POSTGRES_USER: scolapay_smoke
+          POSTGRES_PASSWORD: isolated_ci_only
+          POSTGRES_DB: scolapay_smoke
+        ports: ['5432/tcp']
+        options: >-
+          --health-cmd "pg_isready -U scolapay_smoke -d scolapay_smoke"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      SCOLAPAY_DB_USERNAME: scolapay_smoke
+      SCOLAPAY_DB_PASSWORD: isolated_ci_only
+    defaults:
+      run:
+        working-directory: core
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Configurer la base jetable
+        run: echo 'SCOLAPAY_DB_URL=jdbc:postgresql://localhost:${{ job.services.postgres.ports[5432] }}/scolapay_smoke' >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v6.2.0
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: core/pom.xml
+      - name: Compiler et tester sur PostgreSQL réel
+        run: ./mvnw --batch-mode --no-transfer-progress verify
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: core-test-reports
+          path: core/target/surefire-reports/
+          if-no-files-found: ignore
+      - name: Refuser de démarrer sans secret suffisant
+        run: |
+          if timeout 90 java -jar target/scolapay-core.jar; then
+            echo "L'application a démarré sans secret." && exit 1
+          fi
+          if SCOLAPAY_JWT_SECRET=trop-court timeout 90 java -jar target/scolapay-core.jar; then
+            echo "L'application a démarré avec un secret trop court." && exit 1
+          fi
+      - name: Démarrer le JAR et vérifier sa surface publique
+        env:
+          SCOLAPAY_JWT_SECRET: secret-de-verification-ci-sans-aucun-acces-reel
+          SERVER_PORT: '18081'
+        run: |
+          java -jar target/scolapay-core.jar > core-smoke.log 2>&1 &
+          APP_PID=$!
+          curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors http://127.0.0.1:18081/actuator/health
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:18081/api/v2/me)" = 401
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:18081/actuator/env)" = 401
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"identifier":"inconnu@scolapay.test","password":"mot-de-passe-faux"}' http://127.0.0.1:18081/api/v2/auth/login)" = 401
+          kill "$APP_PID"
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: core-smoke-log
+          path: core/core-smoke.log
+          if-no-files-found: ignore
+
   backend:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: scolapay-core
+  datasource:
+    # Sans valeur par défaut : une configuration manquante doit empêcher le démarrage.
+    url: ${SCOLAPAY_DB_URL}
+    username: ${SCOLAPAY_DB_USERNAME}
+    password: ${SCOLAPAY_DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 5000
+      connection-init-sql: "SET statement_timeout = '15s'; SET lock_timeout = '5s'"
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+  flyway:
+    locations: classpath:db/migration
+
+server:
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+    include-exception: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+scolapay:
+  security:
+    jwt-secret: ${SCOLAPAY_JWT_SECRET}
+    issuer: scolapay-core
+    access-token-ttl: PT30M
+  http:
+    max-request-body-bytes: 262144
+  bootstrap:
+    # Ne crée le premier opérateur que si ces deux valeurs sont fournies.
+    operator-contact: ${SCOLAPAY_BOOTSTRAP_OPERATOR_CONTACT:}
+    operator-password: ${SCOLAPAY_BOOTSTRAP_OPERATOR_PASSWORD:}

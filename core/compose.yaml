@@ -1,0 +1,22 @@
+# Environnement de développement local du nouveau backend, indépendant de NestJS.
+# La base écoute uniquement sur la boucle locale.
+services:
+  postgres:
+    image: postgres:18.6-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-scolapay}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Definir POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-scolapay}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      # PostgreSQL 18 range ses données sous un sous-dossier versionné de ce chemin.
+      - core_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  core_postgres_data:

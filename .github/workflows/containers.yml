@@ -28,6 +28,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - run: docker compose config --quiet
+      - name: Construire l'image du nouveau backend
+        run: docker build --tag scolapay-core-ci core
       - run: docker compose build backend
       - run: docker compose build migrate
       - run: docker compose build web

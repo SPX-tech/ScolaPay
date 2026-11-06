@@ -15,12 +15,21 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
+  - package-ecosystem: maven
+    directory: /core
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
   - package-ecosystem: docker
     directory: /backend
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /core
     schedule:
       interval: weekly
   - package-ecosystem: docker

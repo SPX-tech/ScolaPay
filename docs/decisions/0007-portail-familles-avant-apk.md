@@ -7,7 +7,7 @@
 
 ## Contexte
 
-Le produit actuel sert uniquement le personnel des établissements. Le dashboard web et l'application Android (`android/`) demandent un code établissement et un compte de personnel. **Il n'existe ni compte parent ou étudiant, ni lien famille-élève, ni portail familles.** Le modèle `User` appartient à un seul établissement et ses rôles sont `TENANT_ADMIN`, `CASHIER`, `ACCOUNTANT` et `AUDITOR`.
+Le dashboard web et l'application Android (`android/`) servent uniquement le personnel, sur `/api/v1`. Depuis la Mission 002, `core/` modélise les comptes des familles et leurs liens aux dossiers ([0010](0010-identite-et-acces.md)) et expose `/api/v2/me`. **Le portail lui-même n'existe pas : aucune interface n'est destinée aux familles.**
 
 ## Décision
 
@@ -16,12 +16,13 @@ Le portail destiné aux parents et aux étudiants sera d'abord un véritable sit
 ## Conséquences
 
 - L'application Android existante reste un outil du personnel. Ne pas la présenter comme l'application des familles.
-- Les identités des familles relèvent du cœur Java ([0006](0006-backend-java-spring-boot.md)). Le portail dépend donc de la fondation Java.
+- Le portail consomme `/api/v2/me` et s'appuie sur la fondation Java, livrée.
+- **Condition d'ouverture réelle :** les modalités juridiques de [0013](0013-majorite-et-autorisations-familiales.md) doivent être confirmées.
 - [D-002](../architecture-scolapay-2.md#décision-002--isolation-explicite-par-établissement) reste applicable : pas de transformation directe de `User` en compte parent global, et une relation famille-élève n'accorde jamais d'accès à tout l'établissement.
 
 ## Questions ouvertes
 
 - Application Next.js séparée ou espace du dashboard actuel.
-- Mode d'authentification des familles et preuve du lien avec l'élève.
+- Mode de session du portail, et remise réelle des invitations, sans laquelle une famille ne peut pas ouvrir de compte.
 - Périmètre de la première version : consultation des soldes et reçus, ou paiement en ligne. Le paiement dépend d'un prestataire réel, voir [D-004](../architecture-scolapay-2.md#décision-004--prestataires-financiers-fermés-par-défaut).
 - Critères de lancement de l'application Android des familles.
