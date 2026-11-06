@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - name: Configurer la base jetable
         run: echo 'DATABASE_URL=postgresql://scolapay_test:isolated_ci_only@localhost:${{ job.services.postgres.ports[5432] }}/scolapay_test?schema=public' >> "$GITHUB_ENV"
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           cache: npm
@@ -79,7 +79,7 @@ jobs:
       NEXT_PUBLIC_API_URL: /api/v1
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           cache: npm
