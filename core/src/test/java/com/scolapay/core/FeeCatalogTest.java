@@ -8,12 +8,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import tools.jackson.databind.JsonNode;
 
 class FeeCatalogTest extends IntegrationTest {
+
+    @Autowired
+    DataSource dataSource;
 
     private UUID period(Tenant tenant, UUID year, String code) {
         Response created = post(tenant.path("/billing/periods"), tenant.adminToken(), Map.of(
@@ -692,6 +697,45 @@ class FeeCatalogTest extends IntegrationTest {
                 """).param("id", item).update())
                 .isInstanceOf(DataAccessException.class)
                 .hasMessageContaining("immuable");
+    }
+
+    /**
+     * Le service verrouille déjà la version : ce test passe directement par PostgreSQL pour prouver
+     * que la base attend seule la fin d'une publication, puis refuse l'écriture. Sans ce verrou, la
+     * ligne entrerait dans un tarif en train de se figer.
+     */
+    @Test
+    void laBaseFaitAttendreUneEcriturePendantUnePublicationPuisLaRefuse() throws Exception {
+        Tenant tenant = newTenant();
+        UUID year = openYear(tenant);
+        UUID version = draft(tenant, year);
+        UUID item = addOk(tenant, version, fee("A", period(tenant, year, "ANNEE"), null, 100));
+        UUID actor = accountOf(tenant);
+
+        try (java.sql.Connection publisher = dataSource.getConnection();
+                java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            publisher.setAutoCommit(false);
+            try (java.sql.PreparedStatement publish = publisher.prepareStatement(
+                    "UPDATE fee_catalog_versions SET status = 'PUBLISHED', published_at = now(), published_by = ? WHERE id = ?")) {
+                publish.setObject(1, actor);
+                publish.setObject(2, version);
+                assertThat(publish.executeUpdate()).isEqualTo(1);
+            }
+
+            java.util.concurrent.Future<Integer> intruder = executor.submit(() -> jdbc.sql("""
+                    INSERT INTO fee_items (id, establishment_id, academic_year_id, catalog_version_id, fee_code, label, category, application, amount_minor, billing_period_id)
+                    SELECT gen_random_uuid(), establishment_id, academic_year_id, catalog_version_id, 'INTRUS', label, category, application, 1, billing_period_id
+                    FROM fee_items WHERE id = :id
+                    """).param("id", item).update());
+
+            Thread.sleep(500);
+            assertThat(intruder.isDone()).as("L'écriture attend la fin de la publication").isFalse();
+            publisher.commit();
+
+            assertThatThrownBy(intruder::get).hasMessageContaining("immuable");
+        }
+        assertThat(jdbc.sql("SELECT count(*) FROM fee_items WHERE catalog_version_id = :id").param("id", version).query(Long.class).single())
+                .isEqualTo(1);
     }
 
     @Test

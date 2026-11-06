@@ -77,6 +77,10 @@ Convention de [0012](0012-convention-monetaire.md) : `BIGINT` nommé `*_minor`, 
 - **Traitement fiscal** : voir [0019](0019-nature-des-documents-et-numerotation.md). Une catégorie n'a aucune portée fiscale.
 - **Contenance d'une période dans l'année** : non imposée, car une session de rattrapage peut déborder de l'année académique.
 
+## Preuves
+
+`FeeCatalogTest` passe par la vraie API, et écrit directement en base pour les garanties de PostgreSQL. Sur 41 défauts injectés un à un, 40 ont été détectés d'emblée. Le dernier, la suppression du verrou de la base pendant une publication, survivait parce que le service verrouille aussi : un test sur deux connexions directes le couvre désormais.
+
 ## Risques
 
 - Si un établissement renomme un code au lieu de le conserver (`SCOL` devient `SCOLARITE`), le système y voit une nouvelle charge. L'aperçu d'impact la signale `NEW` avec le nombre d'inscrits concernés, et l'émission en lot l'affichera avant confirmation : **la protection est humaine sur ce point**.
