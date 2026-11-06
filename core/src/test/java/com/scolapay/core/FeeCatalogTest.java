@@ -62,6 +62,13 @@ class FeeCatalogTest extends IntegrationTest {
         return feeOf(charge(code, period), code, unit, amount);
     }
 
+    /** Le même frais sous un autre code : seul le code change, pas le libellé. */
+    private static Map<String, Object> renamed(UUID charge, String oldCode, String newCode, UUID unit, long amount) {
+        Map<String, Object> body = feeOf(charge, newCode, unit, amount);
+        body.put("label", "Frais " + oldCode);
+        return body;
+    }
+
     private static Map<String, Object> feeOf(UUID charge, String code, UUID unit, long amount) {
         Map<String, Object> body = new HashMap<>();
         body.put("feeDefinitionId", charge.toString());
@@ -399,9 +406,9 @@ class FeeCatalogTest extends IntegrationTest {
         enrollOk(tenant, year, level);
 
         UUID second = draft(tenant, year);
-        Response renamed = put(tenant.path("/billing/fee-catalogs/" + second + "/items/" + itemIdOf(tenant, second, "SCOL")), tenant.adminToken(),
-                feeOf(charge, "SCOLARITE", null, 25_000));
-        assertThat(renamed.status()).as(renamed.raw()).isEqualTo(200);
+        Response corrected = put(tenant.path("/billing/fee-catalogs/" + second + "/items/" + itemIdOf(tenant, second, "SCOL")), tenant.adminToken(),
+                renamed(charge, "SCOL", "SCOLARITE", null, 25_000));
+        assertThat(corrected.status()).as(corrected.raw()).isEqualTo(200);
 
         Response impact = get(tenant.path("/billing/fee-catalogs/" + second + "/impact"), tenant.adminToken());
         assertThat(impact.body().path("fees").size()).as("Une seule charge, pas deux").isEqualTo(1);
@@ -551,14 +558,14 @@ class FeeCatalogTest extends IntegrationTest {
         UUID secondUnit = UUID.fromString(secondLine.path("academicUnitId").asString());
 
         assertThat(put(path + firstLine.path("id").asString(), tenant.adminToken(),
-                feeOf(charge, "SCOLARITE", firstUnit, firstLine.path("amountMinor").asLong())).status()).isEqualTo(200);
+                renamed(charge, "SCOL", "SCOLARITE", firstUnit, firstLine.path("amountMinor").asLong())).status()).isEqualTo(200);
 
         Response half = publish(tenant, second);
         assertThat(half.status()).as(half.raw()).isEqualTo(409);
         assertThat(half.code()).isEqualTo("FEE_DEFINITION_CODE_CONFLICT");
 
         assertThat(put(path + secondLine.path("id").asString(), tenant.adminToken(),
-                feeOf(charge, "SCOLARITE", secondUnit, secondLine.path("amountMinor").asLong())).status()).isEqualTo(200);
+                renamed(charge, "SCOL", "SCOLARITE", secondUnit, secondLine.path("amountMinor").asLong())).status()).isEqualTo(200);
         publishOk(tenant, second);
 
         Response impact = get(tenant.path("/billing/fee-catalogs/" + second + "/impact"), tenant.adminToken());
