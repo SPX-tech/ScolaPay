@@ -1059,7 +1059,7 @@ class ObligationTest extends IntegrationTest {
         School school = school();
         UUID obligation = issuedObligation(school);
         UUID actor = accountOf(school.tenant());
-        UUID second = secondPerson(school);
+        UUID approver = secondPerson(school);
 
         try (java.sql.Connection first = dataSource.getConnection();
                 java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newSingleThreadExecutor()) {
@@ -1072,7 +1072,7 @@ class ObligationTest extends IntegrationTest {
                 discount.setObject(2, obligation);
                 discount.setString(3, UUID.randomUUID().toString());
                 discount.setObject(4, actor);
-                discount.setObject(5, second);
+                discount.setObject(5, approver);
                 assertThat(discount.executeUpdate()).isEqualTo(1);
             }
 
