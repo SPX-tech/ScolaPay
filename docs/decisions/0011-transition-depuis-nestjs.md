@@ -18,8 +18,8 @@ Aucune instance n'est en service depuis le 2026-11-06. L'ancienne instance ne co
 | Sources de vérité | Jamais deux écrivains sur une même donnée. Les deux backends ne partagent aucune table |
 | Données historiques | Aucune reprise automatique : il n'existe que des données de démonstration. L'archive est conservée. Un outil d'import ne se justifierait que si des données réelles apparaissaient |
 | Contrat HTTP | `/api/v2`, nouveau et sans compatibilité. `/api/v1` reste la référence documentaire du comportement NestJS |
-| Clients | Le dashboard web et l'application Android restent sur `/api/v1` dans le dépôt. Le portail familles naîtra sur `/api/v2`, les écrans existants seront portés au fil des domaines |
-| Code NestJS | Conservé dans le dépôt comme référence fonctionnelle et technique, avec ses tests. Plus aucun nouveau domaine n'y entre |
+| Clients | Le dashboard web reste sur `/api/v1` dans le dépôt, et ses écrans seront portés sur `/api/v2` au fil des domaines. Le portail familles naîtra sur `/api/v2`. L'application Android n'est pas portée : voir [0014](0014-android-hors-feuille-de-route.md) |
+| Code NestJS | Conservé dans le dépôt comme référence fonctionnelle et technique, avec ses tests. Il n'est plus modifié, et aucun nouveau domaine n'y entre |
 
 ### Correspondance du modèle
 

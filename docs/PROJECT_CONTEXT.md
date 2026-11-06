@@ -13,13 +13,15 @@ Référence stratégique et technique du projet, lisible sans l'historique des c
 | Données de l'ancienne instance | **Archivées**, chiffrées, hors du serveur et hors du dépôt, avec restauration et relecture vérifiées. La clé est conservée séparément |
 | Mission 002 (fondation Java) | **Finalisée** : identités, établissements, inscriptions et liens familiaux dans `core/`. Testée en CI, jamais déployée |
 | Facturation, paiements, portail familles | **Pas commencés** |
-| Prochain chantier | **Mission 003, ScolaPay Billing Engine**, exigences métier à définir avant son démarrage |
+| Mission 003 (moteur de facturation) | **En cadrage**, aucun code. Voir le [cadrage](missions/mission-003-billing-engine.md) et ses décisions attendues |
+| Android | **Hors de la feuille de route active**, code conservé comme référence ([0014](decisions/0014-android-hors-feuille-de-route.md)) |
+| Ordre de construction | Backend Java, puis interfaces web. L'APK viendra une fois les parcours métier et financiers stabilisés |
 
 ## Vision
 
 ScolaPay veut devenir une plateforme financière scolaire qui connecte les établissements, les parents et les étudiants, d'abord au Tchad (XAF, fuseau `Africa/Ndjamena`).
 
-**Deux backends coexistent dans le dépôt.** `backend/` (NestJS) porte l'outil historique du personnel, centré sur l'encaissement cash, et sert désormais de référence. `core/` (Java) est le nouveau backend : il modélise déjà les familles, mais aucune interface ne l'utilise encore. Aucun des deux n'est déployé.
+**Deux backends coexistent dans le dépôt.** `backend/` (NestJS) porte l'outil historique du personnel, centré sur l'encaissement cash, et sert désormais de référence. `core/` (Java) est le nouveau backend et concentre désormais tout l'effort : il modélise déjà les familles, mais aucune interface ne l'utilise encore. Aucun des deux n'est déployé.
 
 ## Lire les statuts
 
@@ -45,14 +47,17 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Majorité et consentement | Vérifié, modalités juridiques à confirmer | Âge légal par pays, non configurable. Un majeur contrôle l'accès académique des tiers | `AcademicAccess`, `FamilyAccessTest`, [0013](decisions/0013-majorite-et-autorisations-familiales.md) |
 | Audit | Vérifié | Immuable par trigger, écrit dans la transaction | `audit`, `DatabaseGuardsTest` |
 | Frontière vers la facturation | Vérifié, sans consommateur | `StudentDirectory`, événements `StudentEnrolled` et `EnrollmentEnded`, contributeurs financiers | `schooling` |
-| Facturation, paiements, comptabilité | Prévu | Rien | [0006](decisions/0006-backend-java-spring-boot.md) |
+| Facturation | En cadrage | Rien : modèle proposé, décisions attendues | [Cadrage](missions/mission-003-billing-engine.md), [0015](decisions/0015-modele-de-facturation.md) |
+| Outbox durable | Proposée | Rien : événements synchrones uniquement | [0016](decisions/0016-outbox-durable.md) |
+| Contrôles de mise en service | Principe accepté | **Rien : aucun code n'empêche encore d'ouvrir le portail** | [0017](decisions/0017-controles-de-mise-en-service.md) |
+| Encaissement réel, comptabilité | Prévu | Rien | [0006](decisions/0006-backend-java-spring-boot.md) |
 | Portail web des familles | Prévu | L'API `/api/v2/me` existe, aucune interface | [0007](decisions/0007-portail-familles-avant-apk.md) |
-| Application Android des familles | Prévu, après le portail | Rien. L'application `android/` sert le personnel | [0007](decisions/0007-portail-familles-avant-apk.md) |
+| Application Android des familles | Hors feuille de route active | Rien. L'application `android/` sert le personnel | [0014](decisions/0014-android-hors-feuille-de-route.md) |
 | Services Go de paiement | Envisagé, sans échéance | Aucun code | [0008](decisions/0008-go-services-paiement.md) |
 
 ### Code historique : `backend/`, `web/`, `android/`
 
-Conservé comme référence : voir la [transition](decisions/0011-transition-depuis-nestjs.md). Aucun nouveau domaine n'y entre. Le web et Android utilisent `/api/v1`.
+Conservé comme référence : voir la [transition](decisions/0011-transition-depuis-nestjs.md). NestJS n'est plus modifié et Android est hors de la feuille de route active. Le web et Android utilisent `/api/v1`.
 
 | Domaine | Statut | Ce qui existe | Preuve |
 | --- | --- | --- | --- |
@@ -64,7 +69,7 @@ Conservé comme référence : voir la [transition](decisions/0011-transition-dep
 | Rapports | Vérifié | Tableau de bord, encaissements par jour et créances, dans le fuseau de l'établissement | `modules/dashboard`, `modules/ledger/dashboard.service.ts` |
 | Notifications SMS | Vérifié, envoi réel non testé | Outbox avec relance, transport Africa's Talking, simulé sans clé. La CI n'envoie aucun SMS | `modules/outbox`, `modules/notifications` |
 | Dashboard web | Vérifié | Next.js 16, toutes les pages ci-dessus, trésorerie, tests navigateur à 360, 768 et 1440 px | `web/`, `web/e2e/` |
-| Application Android du personnel | Vérifié | Kotlin/Compose : connexion, élèves, encaissement, transactions, rapports, utilisateurs. La CI ne contrôle que le lancement et l'écran de connexion sur émulateur, sans parcours métier | `android/`, job `android-runtime` |
+| Application Android du personnel | Vérifiée au 2026-11-06, plus à chaque PR | Kotlin/Compose : connexion, élèves, encaissement, transactions, rapports, utilisateurs. Contrôlée seulement si `android/` change | `android/`, workflow `android-legacy.yml` |
 | Paiements mobiles | Non activé | Initiation, webhook, crédit du compte virtuel, mais `PaymentProvider` désactivé par défaut | `modules/payment`, `modules/ledger` |
 | Compte virtuel et retraits | Non activé | Grand livre immuable, verrou, cycle `PENDING` vers `COMPLETED` ou `FAILED`. Sans prestataire, tout virement échoue et libère les fonds | `modules/finance` |
 | Connecteur Kadryza | Non activé | Squelette sans contrat d'API, refusé en production | `kadryza-payment.provider.ts` |
@@ -76,9 +81,9 @@ Les chemins `modules/` et `common/` sont relatifs à `backend/src/`. Les modules
 ### Nouveau backend : `core/`
 
 ```text
-Portail familles (prévu)  ─┐
-Dashboard Next.js (à porter) ─┼─ API Spring Boot /api/v2 ─ PostgreSQL 18
-Android (à porter)        ─┘    monolithe modulaire
+Portail familles (prévu)     ─┐
+                              ├─ API Spring Boot /api/v2 ─ PostgreSQL 18
+Dashboard Next.js (à porter) ─┘    monolithe modulaire
 
 shared ← audit ← identity ← establishment ← schooling ← billing (prévu)
 ```
@@ -103,13 +108,15 @@ Android Compose ┘            monolithe modulaire, Prisma 7
 
 | Élément | Décision | Référence |
 | --- | --- | --- |
-| Facturation (Mission 003) | Frais, factures, échéanciers et obligations financières, en module Java au-dessus de `schooling`, avec une outbox durable avant les premiers événements asynchrones critiques | [0006](decisions/0006-backend-java-spring-boot.md) |
+| Facturation (Mission 003) | Frais, obligations, échéances, remises et ajustements, en module Java au-dessus de `schooling`, indépendant de l'encaissement réel. Redevable, responsable et contributeur sont distincts | [0015](decisions/0015-modele-de-facturation.md), proposée |
+| Outbox | Durable, avant les premiers événements asynchrones critiques | [0016](decisions/0016-outbox-durable.md), proposée |
+| Ouverture du portail | L'application refuse de démarrer tant que les règles juridiques ne sont pas confirmées | [0017](decisions/0017-controles-de-mise-en-service.md), non implémentée |
 | Montants | Entiers dans l'unité minimale ISO : francs entiers pour le XAF. Conversions de prestataire dans leurs connecteurs | [0012](decisions/0012-convention-monetaire.md) |
 | Web | Next.js/TypeScript conservé, écrans portés vers `/api/v2` au fil des domaines | [0011](decisions/0011-transition-depuis-nestjs.md) |
-| Familles | Véritable site web d'abord, application Android ensuite | [0007](decisions/0007-portail-familles-avant-apk.md) |
+| Familles | Véritable site web d'abord. L'APK vient dans une phase ultérieure | [0007](decisions/0007-portail-familles-avant-apk.md), [0014](decisions/0014-android-hors-feuille-de-route.md) |
 | Services financiers | Go envisagé, notamment pour les intégrations de prestataires, sans introduction immédiate | [0008](decisions/0008-go-services-paiement.md) |
 
-**Règle :** aucun nouveau domaine métier n'est ajouté à NestJS, et les sources de vérité financières ne sont jamais dupliquées.
+**Règles :** NestJS n'est plus modifié, les sources de vérité financières ne sont jamais dupliquées, et facturer n'est pas encaisser : aucun paiement fictif ne rend une obligation réglée.
 
 ## Invariants financiers
 
@@ -134,10 +141,13 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 - **0006 et 0007**, acceptées : nouveau backend en Java/Spring Boot, construit directement, avec le code NestJS conservé comme référence, puis portail web des familles avant l'application Android.
 - **0008**, orientation validée : Go envisagé pour de futurs services financiers, sans introduction immédiate.
 - **0009 à 0013**, acceptées : fondation technique, modèle d'identité et d'accès, transition depuis NestJS, convention monétaire, majorité légale et autorisations familiales. Les modalités juridiques de 0013 restent à confirmer.
+- **0014**, acceptée : Android hors de la feuille de route active.
+- **0015 à 0017**, proposées pour la Mission 003 : modèle de facturation, outbox durable, contrôles de mise en service.
 
 ## Priorités actuelles
 
-1. **Mission 003, ScolaPay Billing Engine** : prochain chantier, distinct. **Il n'est pas commencé**, et ses exigences métier seront définies avant son démarrage. Il s'appuie sur `schooling` sans refaire les utilisateurs ni les établissements. Voir ses [prérequis](#prochaines-étapes).
+1. **Mission 003, ScolaPay Billing Engine** : priorité absolue, **en cadrage et sans code**. Elle s'appuie sur `schooling` sans refaire les utilisateurs ni les établissements. La construction attend les [décisions du propriétaire](missions/mission-003-billing-engine.md#décisions-attendues-du-propriétaire).
+2. **Interfaces web des établissements, des parents et des étudiants**, sur `/api/v2`, une fois le cœur financier en place.
 
 ## Risques connus
 
@@ -146,9 +156,10 @@ Dans `core/`, les limites connues sont listées dans [0010](decisions/0010-ident
 | Risque | Conséquence | Où |
 | --- | --- | --- |
 | Invitations non remises | Le jeton transite par la personne qui invite. Un service de notification est nécessaire avant tout usage réel | `core`, `identity` |
-| Règles juridiques non confirmées | L'âge légal enregistré pour le Tchad est provisoire. Les modalités doivent être confirmées avant toute ouverture réelle du portail | [0013](decisions/0013-majorite-et-autorisations-familiales.md#limites-et-conditions) |
+| Règles juridiques non confirmées | L'âge légal enregistré pour le Tchad est provisoire, et **aucun code n'empêche encore l'ouverture du portail** | [0013](decisions/0013-majorite-et-autorisations-familiales.md#limites-et-conditions), [0017](decisions/0017-controles-de-mise-en-service.md) |
+| Dégradation silencieuse d'Android | Plus vérifié à chaque PR : accepté tant qu'il est hors feuille de route | [0014](decisions/0014-android-hors-feuille-de-route.md) |
 | Pas de limitation de débit par adresse | Le verrouillage par compte permet de gêner un compte connu | `core`, `identity` |
-| Événements non durables | Publiés de façon synchrone, sans outbox : à résoudre avant la facturation | [0009](decisions/0009-fondation-technique-core.md#conséquences) |
+| Événements non durables | Publiés de façon synchrone, sans outbox : à résoudre avant la facturation | [0016](decisions/0016-outbox-durable.md) |
 
 Dans le code historique :
 
@@ -179,16 +190,7 @@ Ce serait un nouveau déploiement, avec des secrets neufs :
 
 **Prochain chantier : Mission 003, ScolaPay Billing Engine**
 
-Frais scolaires, factures, échéanciers et obligations financières, sur les modules Java existants. Les exigences métier précises seront définies avant son démarrage. Déjà acquis :
-
-- **Montants** : la [convention monétaire](decisions/0012-convention-monetaire.md) s'applique dès sa première migration.
-- **Outbox durable** : exigée avant les premiers événements asynchrones critiques. Le registre de publication de Spring Modulith est le candidat à évaluer.
-
-À traiter au cadrage :
-
-- **Catalogue de frais** : `enrollments.level` est un texte libre. La tarification par niveau demandera sans doute un catalogue de niveaux ou de classes.
-- **Soldes** : à dériver de factures et de paiements, sans modification directe comme dans NestJS.
-- **Contributeurs** : ce qu'un contributeur financier voit d'une facture, et sa distinction éventuelle avec un débiteur légal.
+Périmètre, critères d'acceptation et lots dans le [cadrage](missions/mission-003-billing-engine.md). Le premier lot construit l'outbox durable et le contrôle de mise en service. La construction attend six décisions du propriétaire, chacune avec une recommandation.
 
 **Ensuite, sans ordre arrêté**
 
@@ -199,7 +201,7 @@ Frais scolaires, factures, échéanciers et obligations financières, sur les mo
 
 ## Vérifier le projet
 
-La CI GitHub (`.github/workflows/ci.yml`) est la source de preuve : `core` avec Testcontainers et démarrage du JAR, backend NestJS avec PostgreSQL jetable, web avec Playwright, Android avec émulateur. `containers.yml` valide les images et le proxy. Aucun workflow ne déploie, ne lit de secret de production ni n'appelle de prestataire réel.
+La CI GitHub (`.github/workflows/ci.yml`) est la source de preuve : `core` avec Testcontainers et démarrage du JAR, backend NestJS avec PostgreSQL jetable, web avec Playwright. Android a son propre workflow, `android-legacy.yml`, qui ne tourne que si son code change. `containers.yml` valide les images et le proxy. Aucun workflow ne déploie, ne lit de secret de production ni n'appelle de prestataire réel.
 
 Le poste de développement (8 Go) est réservé aux éditions légères. Les commandes locales figurent dans le [README](../README.md).
 
@@ -215,6 +217,7 @@ Derniers résultats : 86 tests pour `core/`, et 23 mutations toutes détectées 
 | [`docs/mission-001-validation.md`](mission-001-validation.md) | Socle historique : versions et résultats |
 | [`docs/mission-002-validation.md`](mission-002-validation.md) | Fondation Java : versions, résultats et limites |
 | [`core/README.md`](../core/README.md) | Démarrer le backend Java, ajouter un module |
+| [`docs/missions/mission-003-billing-engine.md`](missions/mission-003-billing-engine.md) | Cadrage du moteur de facturation |
 | [`README.md`](../README.md) | Démarrage et déploiement |
 | [`AGENTS.md`](../AGENTS.md) | Règles pour les agents de développement |
 | [`implementation_plan.md`](../implementation_plan.md) | Historique arrêté au 2026-06-26, à ne pas prendre pour l'état actuel |

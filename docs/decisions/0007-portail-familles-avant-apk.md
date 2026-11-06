@@ -11,13 +11,13 @@ Le dashboard web et l'application Android (`android/`) servent uniquement le per
 
 ## Décision
 
-Le portail destiné aux parents et aux étudiants sera d'abord un véritable site web, en Next.js/TypeScript. L'application Android destinée aux familles viendra dans une phase ultérieure.
+Le portail destiné aux parents et aux étudiants sera d'abord un véritable site web, en Next.js/TypeScript. L'application Android destinée aux familles viendra dans une phase ultérieure, hors de la feuille de route active : voir [0014](0014-android-hors-feuille-de-route.md).
 
 ## Conséquences
 
 - L'application Android existante reste un outil du personnel. Ne pas la présenter comme l'application des familles.
 - Le portail consomme `/api/v2/me` et s'appuie sur la fondation Java, livrée.
-- **Condition d'ouverture réelle :** les modalités juridiques de [0013](0013-majorite-et-autorisations-familiales.md) doivent être confirmées.
+- **Condition d'ouverture réelle :** les modalités juridiques de [0013](0013-majorite-et-autorisations-familiales.md) doivent être confirmées, et les [contrôles de mise en service](0017-controles-de-mise-en-service.md) doivent l'imposer.
 - [D-002](../architecture-scolapay-2.md#décision-002--isolation-explicite-par-établissement) reste applicable : pas de transformation directe de `User` en compte parent global, et une relation famille-élève n'accorde jamais d'accès à tout l'établissement.
 
 ## Questions ouvertes
@@ -25,4 +25,3 @@ Le portail destiné aux parents et aux étudiants sera d'abord un véritable sit
 - Application Next.js séparée ou espace du dashboard actuel.
 - Mode de session du portail, et remise réelle des invitations, sans laquelle une famille ne peut pas ouvrir de compte.
 - Périmètre de la première version : consultation des soldes et reçus, ou paiement en ligne. Le paiement dépend d'un prestataire réel, voir [D-004](../architecture-scolapay-2.md#décision-004--prestataires-financiers-fermés-par-défaut).
-- Critères de lancement de l'application Android des familles.

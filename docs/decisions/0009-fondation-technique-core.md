@@ -41,14 +41,14 @@ Dépendances autorisées, déclarées dans chaque `package-info.java` et vérifi
 | `identity` | Comptes, connexion, jetons, invitations | `shared`, `audit` |
 | `establishment` | Établissements, personnel, rôles, permissions | `shared`, `audit`, `identity` |
 | `schooling` | Années, dossiers, inscriptions, liens familiaux | `shared`, `audit`, `identity`, `establishment` |
-| `billing` | **Prévu, n'existe pas** | `schooling` et les précédents |
+| `billing` | **Prévu, n'existe pas**, voir [0015](0015-modele-de-facturation.md) | `schooling` et les précédents |
 
 Le paquet racine d'un module est son API publique, `internal` lui est réservé. Une clé étrangère peut viser `accounts` ou `establishments` depuis un autre module : l'intégrité passe avant la pureté, tant que tout vit dans une même base. Un module ne lit ni n'écrit les tables d'un autre.
 
 ## Conséquences
 
 - Le backend se construit, se teste et s'exécute sans NestJS (`core/`).
-- Les événements `StudentEnrolled` et `EnrollmentEnded` sont publiés de façon synchrone, dans la transaction. **Il n'y a pas encore d'outbox durable** : elle est exigée par la Mission 003 avant les premiers événements asynchrones critiques, et le registre de publication de Spring Modulith est le candidat à évaluer.
+- Les événements `StudentEnrolled` et `EnrollmentEnded` sont publiés de façon synchrone, dans la transaction. **Il n'y a pas encore d'outbox durable** : elle est exigée avant les premiers événements asynchrones critiques, voir [0016](0016-outbox-durable.md).
 - Les migrations partagent pour l'instant le pool de l'application et son `statement_timeout` de 15 secondes. Une migration longue exigera une configuration dédiée.
 
 ## Questions ouvertes
