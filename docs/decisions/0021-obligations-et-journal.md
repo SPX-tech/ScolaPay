@@ -1,6 +1,6 @@
 # 0021 : obligations, échéanciers et journal
 
-- **Statut** : Exigences du propriétaire, modèle proposé dans la PR du lot 4 de la Mission 003
+- **Statut** : Orientations validées par le propriétaire, résultats en revue dans la PR du lot 4 de la Mission 003
 - **Date** : 2026-11-06
 - **Implémentation** : en place dans `core/`. **Aucun encaissement n'existe, et aucune obligation ne peut être réglée.**
 - **Précise** : [0015](0015-modele-de-facturation.md)
@@ -8,7 +8,7 @@
 ## Exigences
 
 - Les élèves inscrits avant la publication d'un tarif sont facturés par une émission en lot, explicite et confirmée après un aperçu.
-- Une inscription ne crée pas de dette inattendue pour le personnel qui la confirme.
+- Une inscription ne crée pas de dette inattendue pour le personnel qui la confirme, et une inscription sans confirmation reste clairement identifiable pour une émission ultérieure.
 - L'émission est idempotente, y compris en concurrence, à la reprise d'un événement ou après une nouvelle publication.
 - Aucune remise ni action administrative ne simule un encaissement. Une obligation ne devient réglée qu'à travers le futur module de paiement, sur preuve d'un règlement confirmé.
 
@@ -18,7 +18,7 @@
 
 **Ceci simplifie [0015](0015-modele-de-facturation.md), qui prévoyait une obligation avec des lignes.** Une obligation est une charge pour un dossier, sans table de lignes :
 
-- la protection contre la double facturation est une contrainte directe : `UNIQUE (établissement, dossier, fee_definition_id)` ;
+- la protection contre la double facturation est une contrainte directe : `UNIQUE (établissement, dossier, fee_definition_id)`. **Ni la version du catalogue ni l'inscription n'en font partie** : une réinscription après un nouveau tarif ne peut donc pas refacturer une charge déjà émise ;
 - une remise, un ajustement ou un règlement vise une charge précise ;
 - un semestre donne naturellement sa propre obligation ;
 - un futur **appel de frais** pourra regrouper plusieurs obligations, sans changer ce modèle.
@@ -56,7 +56,7 @@ Toutes passent par le même code et la même contrainte.
 
 **Inscription.**
 
-- Sans confirmation : l'inscription reste valable, **aucune dette n'est créée**, et l'élève apparaît dans l'aperçu du lot.
+- Sans confirmation : l'inscription reste valable, **aucune dette n'est créée**, et l'élève apparaît nominativement dans `GET .../billing/pending-issuances` et dans l'aperçu du lot.
 - Avec confirmation : la version citée doit être celle en vigueur, sinon l'inscription est refusée (`FEES_PREVIEW_OUTDATED`) plutôt que d'émettre un autre tarif que celui vu.
 - L'émission passe par l'[outbox](0016-outbox-durable.md) et se fait d'après **la version confirmée**, même si une autre a été publiée entre-temps.
 - Un frais `ON_REQUEST` n'est jamais émis par cette voie.
@@ -66,6 +66,10 @@ Toutes passent par le même code et la même contrainte.
 - L'aperçu n'écrit rien. Il donne les inscrits concernés, les obligations à créer, ce qui est déjà émis, les totaux par charge et un jeton.
 - La confirmation recalcule le plan : si le tarif ou les inscrits ont changé, le jeton ne correspond plus et **rien n'est émis** (`ISSUANCE_PREVIEW_OUTDATED`).
 - Tout se fait dans une seule transaction, avec au plus 5 000 inscriptions par lot. Au-delà, on découpe par unité académique.
+
+### Ce qui reste à facturer
+
+`GET .../billing/pending-issuances` liste nominativement les inscriptions actives à qui il manque des frais automatiques du tarif en vigueur, avec les frais et le total. **Elle se déduit de ce qui manque réellement**, et non d'un indicateur posé à l'inscription. Y figurent donc aussi les élèves inscrits avant toute publication, ceux concernés par une nouvelle charge, et ceux dont l'émission aurait échoué. Un frais facultatif n'y figure pas, ni un élève retiré.
 
 ### Limites de l'outbox respectées
 
@@ -81,9 +85,13 @@ Toutes passent par le même code et la même contrainte.
 | Caissier, auditeur | Oui | Oui | Non |
 | Secrétariat | Oui | **Non** | Par la confirmation d'une inscription seulement |
 
+La liste de ce qui reste à facturer suit la permission de lecture des obligations.
+
 ## Preuves
 
 `ObligationTest` passe par la vraie API et écrit directement en base pour les garanties de PostgreSQL. `OutboxReliabilityTest` tue une vraie JVM avant l'émission : l'obligation confirmée est créée une seule fois à la reprise.
+
+Sur le commit `f2b89a3` : 236 tests, **46 défauts injectés sur 46 détectés**, 3 exécutions de contrôle vertes sur 3. Le scénario critique, une réinscription après un nouveau tarif, est prouvé par quatre tests, dont la lecture de la clé dans le catalogue de PostgreSQL. Détails dans le [journal de validation](../mission-003-validation.md#lot-4-en-détail).
 
 ## Conséquences
 
@@ -93,6 +101,7 @@ Toutes passent par le même code et la même contrainte.
 
 ## Limites
 
-- L'aperçu de lot donne des totaux, sans la liste nominative. La liste viendra avec le besoin des interfaces web.
 - Le retrait ne déclenche pas encore de réexamen : c'est le lot 5. Il ne supprime déjà rien.
-- Un élève inscrit sans confirmation n'est facturé que si quelqu'un lance un lot. **Aucune relance automatique ne le signale** : l'aperçu est le seul endroit où cela se voit.
+- Un élève inscrit sans confirmation n'est facturé que si quelqu'un lance un lot. Il est identifiable nominativement, mais **aucun signal actif ne le rappelle** : les interfaces web devront afficher cette liste.
+- **Un écart de tarif n'est pas repris automatiquement.** Un élève réinscrit sur un niveau plus cher garde le montant de son obligation. Corriger cet écart relève d'un ajustement autorisé, au lot 5.
+- Le volume n'a pas été mesuré : le plafond de 5 000 inscriptions est testé, pas la durée d'une telle transaction.

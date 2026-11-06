@@ -14,7 +14,7 @@ Java 25. Docker pour les tests, qui démarrent eux-mêmes un PostgreSQL 18 jetab
 ./mvnw verify
 ```
 
-Les suites sont lourdes pour le poste de développement de 8 Go : elles passent normalement par la CI (job `core`).
+Les suites sont lourdes pour le poste de développement de 8 Go : elles passent normalement par la CI (job `core`). Les campagnes de défauts injectés s'exécutent aussi à distance : voir [leur mode d'emploi](../.github/mutation/README.md).
 
 ## Exécuter en local
 
