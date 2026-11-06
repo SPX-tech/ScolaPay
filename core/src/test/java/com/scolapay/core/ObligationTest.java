@@ -568,6 +568,242 @@ class ObligationTest extends IntegrationTest {
         assertThat(obligationsOf(student)).isEqualTo(1);
     }
 
+    /**
+     * Le scénario critique : une obligation émise, un nouveau tarif publié avec un autre montant, un autre
+     * libellé et un autre code, puis un retrait et une réinscription confirmée sur ce nouveau tarif.
+     */
+    @Test
+    void uneReinscriptionApresUneNouvelleVersionNeRefacturePasLaCharge() throws Exception {
+        School school = school();
+        Tenant tenant = school.tenant();
+        UUID student = enrolled(school, school.catalog());
+        awaitObligations(student, 1);
+        JsonNode before = theOnlyObligation(tenant, school.year(), student);
+
+        UUID next = draft(tenant, school.year());
+        String item = get(tenant.path("/billing/fee-catalogs/" + next), tenant.adminToken()).body().path("items").get(0).path("id").asString();
+        Map<String, Object> revised = fee(school.charge(), "SCOL-REVISE", null, 40_000, "AUTOMATIC");
+        revised.put("label", "Scolarité révisée");
+        assertThat(put(tenant.path("/billing/fee-catalogs/" + next + "/items/" + item), tenant.adminToken(), revised).status()).isEqualTo(200);
+        publish(tenant, next);
+
+        assertThat(post(tenant.path("/students/" + student + "/enrollments/" + enrollmentOf(tenant, student) + "/end"), tenant.adminToken(),
+                Map.of("status", "WITHDRAWN")).status()).isEqualTo(204);
+        Response again = enroll(tenant, student, school.year(), newLevel(tenant), next);
+        assertThat(again.status()).as(again.raw()).isEqualTo(201);
+        awaitOutboxDrained();
+
+        assertThat(obligationsOf(student)).as("Jamais une deuxième obligation pour cette charge").isEqualTo(1);
+        JsonNode after = theOnlyObligation(tenant, school.year(), student);
+        assertThat(after.path("id").asString()).isEqualTo(before.path("id").asString());
+        assertThat(after.path("reference").asString()).as("La référence reste stable").isEqualTo(before.path("reference").asString());
+        assertThat(after.path("issuedAmountMinor").asString()).as("Le montant du moment").isEqualTo("25000");
+        assertThat(after.path("feeCode").asString()).isEqualTo("SCOLARITE");
+        assertThat(after.path("label").asString()).isEqualTo("Frais");
+        assertThat(after.path("catalogVersionId").asString()).isEqualTo(school.catalog().toString());
+
+        Response preview = issuancePreview(tenant, school.year());
+        assertThat(preview.body().path("obligationsToCreate").asLong()).as("Le lot ne la voit pas non plus comme manquante").isZero();
+        assertThat(preview.body().path("alreadyIssued").asLong()).isEqualTo(1);
+        assertThat(confirm(tenant, school.year(), preview).body().path("obligationsCreated").asInt()).isZero();
+
+        Response manual = post(tenant.path("/billing/obligations"), tenant.adminToken(), Map.of(
+                "enrollmentId", UUID.fromString(again.text("id")).toString(), "feeDefinitionId", school.charge().toString()));
+        assertThat(manual.status()).as("L'émission unitaire renvoie l'existante").isEqualTo(200);
+        assertThat(manual.text("id")).isEqualTo(before.path("id").asString());
+
+        assertThat(obligationsOf(student)).isEqualTo(1);
+        assertThat(get(tenant.path("/billing/students/" + student + "/balances"), tenant.adminToken()).body().get(0).path("dueMinor").asString())
+                .isEqualTo("25000");
+    }
+
+    /** Même charge, tarifée autrement pour le nouveau niveau : ce n'est toujours pas une nouvelle charge. */
+    @Test
+    void uneReinscriptionSurUnNiveauAuTarifSpecifiqueNeRefacturePasLaCharge() throws Exception {
+        School school = school();
+        Tenant tenant = school.tenant();
+        UUID student = enrolled(school, school.catalog());
+        awaitObligations(student, 1);
+
+        UUID terminale = newLevel(tenant);
+        UUID next = draft(tenant, school.year());
+        add(tenant, next, fee(school.charge(), "SCOLARITE", terminale, 60_000, "AUTOMATIC"));
+        publish(tenant, next);
+        assertThat(post(tenant.path("/students/" + student + "/enrollments/" + enrollmentOf(tenant, student) + "/end"), tenant.adminToken(),
+                Map.of("status", "WITHDRAWN")).status()).isEqualTo(204);
+
+        assertThat(enroll(tenant, student, school.year(), terminale, next).status()).isEqualTo(201);
+        awaitOutboxDrained();
+
+        assertThat(obligationsOf(student)).isEqualTo(1);
+        assertThat(theOnlyObligation(tenant, school.year(), student).path("issuedAmountMinor").asString()).isEqualTo("25000");
+    }
+
+    /** La clé elle-même, lue dans le catalogue de PostgreSQL : ni la version ni l'inscription n'y figurent. */
+    @Test
+    void laCleDUniciteNeContientNiLaVersionNiLInscription() {
+        List<String> columns = jdbc.sql("""
+                SELECT a.attname
+                FROM pg_constraint c
+                JOIN unnest(c.conkey) WITH ORDINALITY AS k(attnum, position) ON true
+                JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
+                WHERE c.conname = 'obligations_one_per_charge'
+                ORDER BY k.position
+                """)
+                .query(String.class)
+                .list();
+
+        assertThat(columns).containsExactly("establishment_id", "student_record_id", "fee_definition_id");
+    }
+
+    /** Écriture directe, sans passer par le code : une autre version et une autre inscription n'y changent rien. */
+    @Test
+    void laBaseRefuseUneDeuxiemeObligationSurUneAutreVersionEtUneAutreInscription() throws Exception {
+        School school = school();
+        Tenant tenant = school.tenant();
+        UUID student = enrolled(school, school.catalog());
+        awaitObligations(student, 1);
+        UUID next = draft(tenant, school.year());
+        UUID nextItem = UUID.fromString(get(tenant.path("/billing/fee-catalogs/" + next), tenant.adminToken()).body().path("items").get(0).path("id").asString());
+        publish(tenant, next);
+        assertThat(post(tenant.path("/students/" + student + "/enrollments/" + enrollmentOf(tenant, student) + "/end"), tenant.adminToken(),
+                Map.of("status", "WITHDRAWN")).status()).isEqualTo(204);
+        UUID secondEnrollment = enroll(tenant, student, school.year(), school.level(), null).id("id");
+
+        assertThatThrownBy(() -> insertBareObligation(school, next, student, secondEnrollment, nextItem, id -> {}))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("obligations_one_per_charge");
+    }
+
+    // Inscriptions restant à facturer : pas d'omission
+
+    private Response pending(Tenant tenant, UUID year) {
+        Response response = get(tenant.path("/billing/pending-issuances?academicYearId=" + year), tenant.adminToken());
+        assertThat(response.status()).as(response.raw()).isEqualTo(200);
+        return response;
+    }
+
+    @Test
+    void uneInscriptionSansConfirmationResteIdentifiableNominativementJusquALEmission() throws Exception {
+        School school = school();
+        Tenant tenant = school.tenant();
+        UUID unconfirmed = enrolled(school, null);
+        UUID confirmed = enrolled(school, school.catalog());
+        awaitObligations(confirmed, 1);
+
+        Response before = pending(tenant, school.year());
+        assertThat(before.body().path("pendingEnrollments").asLong()).as("Seule l'inscription sans confirmation").isEqualTo(1);
+        assertThat(before.text("totalMinor")).isEqualTo("25000");
+        JsonNode line = before.body().path("pending").get(0);
+        assertThat(line.path("studentId").asString()).isEqualTo(unconfirmed.toString());
+        assertThat(line.path("fullName").asString()).isEqualTo("Élève Test");
+        assertThat(line.path("studentNumber").asString()).startsWith("ETU-");
+        assertThat(line.path("totalMinor").asString()).isEqualTo("25000");
+        assertThat(line.path("fees").get(0).path("feeCode").asString()).isEqualTo("SCOLARITE");
+
+        assertThat(confirm(tenant, school.year(), issuancePreview(tenant, school.year())).status()).isEqualTo(201);
+
+        Response after = pending(tenant, school.year());
+        assertThat(after.body().path("pendingEnrollments").asLong()).as("Plus rien à facturer une fois émis").isZero();
+        assertThat(after.body().path("pending").size()).isZero();
+    }
+
+    /** Publier après coup rend visibles les élèves déjà inscrits, sans rien leur facturer. */
+    @Test
+    void lesElevesInscritsAvantLaPublicationApparaissentCommeAFacturer() {
+        Tenant tenant = newTenant();
+        UUID year = openYear(tenant);
+        UUID level = newLevel(tenant);
+        UUID student = newStudent(tenant);
+        assertThat(enroll(tenant, student, year, level, null).status()).isEqualTo(201);
+        assertThat(pending(tenant, year).body().path("catalogVersionId").isNull()).as("Sans tarif, rien à facturer").isTrue();
+
+        UUID catalog = draft(tenant, year);
+        add(tenant, catalog, fee(charge(tenant, year, period(tenant, year, "ANNEE"), "Scolarité"), "SCOLARITE", null, 1_000, "AUTOMATIC"));
+        publish(tenant, catalog);
+
+        assertThat(pending(tenant, year).body().path("pending").get(0).path("studentId").asString()).isEqualTo(student.toString());
+        assertThat(obligationsOf(student)).isZero();
+    }
+
+    @Test
+    void uneNouvelleChargeRendANouveauIdentifiableUnEleveDejaFacture() throws Exception {
+        School school = school();
+        Tenant tenant = school.tenant();
+        UUID student = enrolled(school, school.catalog());
+        awaitObligations(student, 1);
+        assertThat(pending(tenant, school.year()).body().path("pendingEnrollments").asLong()).isZero();
+
+        UUID added = charge(tenant, school.year(), school.annual(), "Assurance");
+        UUID next = draft(tenant, school.year());
+        add(tenant, next, fee(added, "ASSURANCE", null, 5_000, "AUTOMATIC"));
+        publish(tenant, next);
+
+        JsonNode line = pending(tenant, school.year()).body().path("pending").get(0);
+        assertThat(line.path("fees").size()).as("Seule la charge manquante").isEqualTo(1);
+        assertThat(line.path("fees").get(0).path("feeCode").asString()).isEqualTo("ASSURANCE");
+        assertThat(line.path("totalMinor").asString()).isEqualTo("5000");
+    }
+
+    @Test
+    void unEleveRetireNEstPasAFacturer() {
+        School school = school();
+        Tenant tenant = school.tenant();
+        UUID student = enrolled(school, null);
+        assertThat(pending(tenant, school.year()).body().path("pendingEnrollments").asLong()).isEqualTo(1);
+
+        assertThat(post(tenant.path("/students/" + student + "/enrollments/" + enrollmentOf(tenant, student) + "/end"), tenant.adminToken(),
+                Map.of("status", "WITHDRAWN")).status()).isEqualTo(204);
+
+        assertThat(pending(tenant, school.year()).body().path("pendingEnrollments").asLong()).isZero();
+    }
+
+    @Test
+    void unFraisFacultatifNEstPasUneOmission() {
+        Tenant tenant = newTenant();
+        UUID year = openYear(tenant);
+        UUID level = newLevel(tenant);
+        UUID catalog = draft(tenant, year);
+        add(tenant, catalog, fee(charge(tenant, year, period(tenant, year, "ANNEE"), "Cantine"), "CANTINE", null, 40_000, "ON_REQUEST"));
+        publish(tenant, catalog);
+        UUID student = newStudent(tenant);
+        assertThat(enroll(tenant, student, year, level, null).status()).isEqualTo(201);
+        assertThat(pending(tenant, year).body().path("pendingEnrollments").asLong()).as("Un frais facultatif n'est pas une omission").isZero();
+    }
+
+    @Test
+    void laListeAFacturerSePagineSansFausserLeTotal() {
+        School school = school();
+        Tenant tenant = school.tenant();
+        for (int i = 0; i < 3; i++) {
+            enrolled(school, null);
+        }
+
+        Response page = get(tenant.path("/billing/pending-issuances?academicYearId=" + school.year() + "&limit=2&offset=0"), tenant.adminToken());
+        assertThat(page.body().path("pendingEnrollments").asLong()).as("Le total ne dépend pas de la page").isEqualTo(3);
+        assertThat(page.text("totalMinor")).isEqualTo("75000");
+        assertThat(page.body().path("pending").size()).isEqualTo(2);
+
+        Response rest = get(tenant.path("/billing/pending-issuances?academicYearId=" + school.year() + "&limit=2&offset=2"), tenant.adminToken());
+        assertThat(rest.body().path("pending").size()).isEqualTo(1);
+    }
+
+    @Test
+    void laListeAFacturerSuitLesPermissionsEtLIsolation() {
+        School school = school();
+        Tenant tenant = school.tenant();
+        enrolled(school, null);
+        String path = tenant.path("/billing/pending-issuances?academicYearId=" + school.year());
+
+        assertThat(get(path, newStaff(tenant, "REGISTRAR")).status()).isEqualTo(403);
+        assertThat(get(path, newStaff(tenant, "CASHIER")).status()).isEqualTo(200);
+        assertThat(get(path, newStaff(tenant, "ACCOUNTANT")).status()).isEqualTo(200);
+
+        School other = school();
+        assertThat(get(path, other.tenant().adminToken()).status()).isEqualTo(404);
+        assertThat(get(other.tenant().path("/billing/pending-issuances?academicYearId=" + school.year()), other.tenant().adminToken()).status()).isEqualTo(404);
+    }
+
     @Test
     void uneUniversiteEmetUneObligationParSemestrePourUneInscriptionAnnuelle() throws Exception {
         Tenant tenant = newTenant();
@@ -823,6 +1059,10 @@ class ObligationTest extends IntegrationTest {
 
     /** Insère directement une obligation incomplète : la validation doit échouer. */
     private void insertBareObligation(School school, UUID student, UUID enrollment, UUID item, java.util.function.Consumer<UUID> completion) {
+        insertBareObligation(school, school.catalog(), student, enrollment, item, completion);
+    }
+
+    private void insertBareObligation(School school, UUID catalog, UUID student, UUID enrollment, UUID item, java.util.function.Consumer<UUID> completion) {
         transactions.executeWithoutResult(status -> {
             UUID id = UUID.randomUUID();
             jdbc.sql("""
@@ -837,7 +1077,7 @@ class ObligationTest extends IntegrationTest {
                     .param("student", student)
                     .param("enrollment", enrollment)
                     .param("charge", school.charge())
-                    .param("catalog", school.catalog())
+                    .param("catalog", catalog)
                     .param("item", item)
                     .param("reference", "OBL-" + "0123456789")
                     .param("actor", accountOf(school.tenant()))

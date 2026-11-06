@@ -56,6 +56,7 @@ Toutes les routes sont sous `/api/v2`. Les erreurs suivent la RFC 9457, avec un 
 | Créer un dossier | `POST /establishments/{id}/students` | Secrétariat |
 | Voir ce qu'une inscription générerait | `GET /establishments/{id}/billing/enrollment-preview` | Personnel |
 | Inscrire sur un niveau, en citant le tarif confirmé pour émettre les frais | `POST /establishments/{id}/students/{studentId}/enrollments` | Secrétariat |
+| Voir qui reste à facturer, nominativement | `GET .../billing/pending-issuances` | Comptable, caissier, auditeur |
 | Émettre en lot, après aperçu | `GET .../billing/issuance-preview`, puis `POST .../billing/issuance-runs` | Comptable |
 | Émettre à l'unité, notamment un frais facultatif | `POST .../billing/obligations` | Comptable |
 | Consulter les obligations et le solde | `GET .../billing/obligations`, `GET .../billing/students/{studentId}/balances` | Comptable, caissier, auditeur |

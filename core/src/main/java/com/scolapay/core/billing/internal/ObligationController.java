@@ -61,6 +61,11 @@ class ObligationController {
             List<FeeTotalView> fees,
             String previewToken) {}
 
+    record PendingView(
+            UUID enrollmentId, UUID studentId, String studentNumber, String fullName, UUID academicUnitId, String totalMinor, List<ItemView> fees) {}
+
+    record PendingIssuancesView(UUID catalogVersionId, Integer version, String currency, long pendingEnrollments, String totalMinor, List<PendingView> pending) {}
+
     record RunView(
             UUID id, UUID academicYearId, UUID academicUnitId, UUID catalogVersionId, int obligationsCreated, String totalMinor, Instant confirmedAt) {
 
@@ -166,6 +171,34 @@ class ObligationController {
                         .map(fee -> new FeeTotalView(fee.feeDefinitionId(), fee.feeCode(), fee.label(), fee.obligations(), String.valueOf(fee.totalMinor())))
                         .toList(),
                 preview.previewToken());
+    }
+
+    /** Qui reste à facturer, nominativement, pour éviter les omissions. */
+    @GetMapping("/pending-issuances")
+    PendingIssuancesView pendingIssuances(
+            @PathVariable UUID establishmentId,
+            @RequestParam UUID academicYearId,
+            @RequestParam(required = false) UUID academicUnitId,
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) Integer offset) {
+        ObligationService.PendingIssuances pending =
+                obligations.pendingIssuances(establishmentId, academicYearId, academicUnitId, PageQuery.of(limit, offset));
+        return new PendingIssuancesView(
+                pending.version() == null ? null : pending.version().id(),
+                pending.version() == null ? null : pending.version().version(),
+                pending.version() == null ? null : pending.version().currency(),
+                pending.pendingEnrollments(),
+                String.valueOf(pending.totalMinor()),
+                pending.page().stream()
+                        .map(item -> new PendingView(
+                                item.enrollment().id(),
+                                item.enrollment().studentId(),
+                                item.studentNumber(),
+                                item.fullName(),
+                                item.enrollment().academicUnitId(),
+                                String.valueOf(item.totalMinor()),
+                                item.fees().stream().map(ItemView::of).toList()))
+                        .toList());
     }
 
     @PostMapping("/issuance-runs")

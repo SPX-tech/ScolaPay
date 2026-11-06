@@ -81,6 +81,11 @@ public class ObligationService {
             List<FeeTotal> fees,
             String previewToken) {}
 
+    /** Une inscription active à qui il manque des frais automatiques du tarif en vigueur. */
+    public record PendingIssuance(EnrollmentSummary enrollment, String studentNumber, String fullName, List<Item> fees, long totalMinor) {}
+
+    public record PendingIssuances(Version version, long pendingEnrollments, long totalMinor, List<PendingIssuance> page) {}
+
     public record Detail(Obligation obligation, ObligationStatus status, List<InstallmentRow> installments, List<Entry> entries) {}
 
     public record ManualIssue(boolean created, Obligation obligation) {}
@@ -242,6 +247,35 @@ public class ObligationService {
                 establishmentId, actorId, "billing.issuance.confirmed", "issuance_run", runId,
                 Map.of("catalogVersionId", version.id(), "obligationsCreated", created, "totalMinor", String.valueOf(totalCreated)));
         return run;
+    }
+
+    /**
+     * Les inscriptions restant à facturer, nominativement : c'est ce qui évite une omission. On les
+     * déduit de ce qui manque réellement, et non d'un indicateur posé à l'inscription, si bien qu'y
+     * figurent aussi les élèves inscrits avant toute publication, et ceux dont l'émission aurait échoué.
+     */
+    @Transactional(readOnly = true)
+    public PendingIssuances pendingIssuances(UUID establishmentId, UUID academicYearId, UUID academicUnitId, PageQuery page) {
+        access.require(establishmentId, Permission.BILLING_READ);
+        requireYear(establishmentId, academicYearId);
+        Optional<Version> published = catalogs.publishedVersion(establishmentId, academicYearId);
+        if (published.isEmpty()) {
+            return new PendingIssuances(null, 0, 0, List.of());
+        }
+        Plan plan = plan(establishmentId, academicYearId, academicUnitId, published.get());
+        Map<EnrollmentSummary, List<Item>> byEnrollment = plan.obligations().stream().collect(Collectors.groupingBy(
+                Planned::enrollment, LinkedHashMap::new, Collectors.mapping(Planned::item, Collectors.toList())));
+        List<PendingIssuance> pending = byEnrollment.entrySet().stream()
+                .skip(page.offset())
+                .limit(page.limit())
+                .map(entry -> {
+                    EnrollmentSummary enrollment = entry.getKey();
+                    StudentDirectory.StudentSummary student = students.find(establishmentId, enrollment.studentId()).orElseThrow();
+                    long due = entry.getValue().stream().mapToLong(Item::amountMinor).reduce(0, Math::addExact);
+                    return new PendingIssuance(enrollment, student.studentNumber(), student.fullName(), entry.getValue(), due);
+                })
+                .toList();
+        return new PendingIssuances(published.get(), byEnrollment.size(), total(plan), pending);
     }
 
     @Transactional(readOnly = true)

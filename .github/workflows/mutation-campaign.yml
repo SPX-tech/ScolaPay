@@ -1,0 +1,106 @@
+# Campagne de défauts injectés, exécutée entièrement sur GitHub : un simple push de référence la lance,
+# sans rien faire tourner sur le poste de développement. Par petits groupes, sur le commit exact poussé :
+#   git push origin HEAD:refs/heads/campaign/<nom>/<suffixe>
+# <nom> désigne .github/mutation/<nom>.mjs. Voir .github/mutation/README.md.
+name: Campagne de mutations
+
+on:
+  push:
+    branches: ['campaign/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-campaign-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      ids: ${{ steps.plan.outputs.ids }}
+      campaign: ${{ steps.plan.outputs.campaign }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - id: plan
+        name: Vérifier que chaque défaut s'applique, sans rien lancer d'autre
+        run: |
+          campaign="$(echo "$GITHUB_REF_NAME" | cut -d/ -f2)"
+          echo "campaign=$campaign" >> "$GITHUB_OUTPUT"
+          node .github/mutation/apply.mjs "$campaign" --check-all
+          echo "ids=$(node .github/mutation/apply.mjs "$campaign" --list)" >> "$GITHUB_OUTPUT"
+
+  run:
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      # Par petits groupes : assez pour finir en un temps raisonnable, sans saturer les runners.
+      max-parallel: 6
+      matrix:
+        id: ${{ fromJson(needs.plan.outputs.ids) }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-java@v6.2.0
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: core/pom.xml
+      - name: Injecter le défaut
+        id: apply
+        continue-on-error: true
+        run: node .github/mutation/apply.mjs "${{ needs.plan.outputs.campaign }}" "${{ matrix.id }}"
+      - name: Compiler
+        id: compile
+        if: steps.apply.outcome == 'success'
+        continue-on-error: true
+        working-directory: core
+        run: ./mvnw --batch-mode --no-transfer-progress --quiet -DskipTests test-compile
+      - name: Tester sur PostgreSQL réel
+        id: test
+        if: steps.compile.outcome == 'success'
+        continue-on-error: true
+        working-directory: core
+        run: ./mvnw --batch-mode --no-transfer-progress verify
+      - name: Qualifier le résultat
+        if: always()
+        env:
+          APPLIED: ${{ steps.apply.outcome }}
+          COMPILED: ${{ steps.compile.outcome }}
+          TESTED: ${{ steps.test.outcome }}
+        run: node .github/mutation/result.mjs "${{ needs.plan.outputs.campaign }}" "${{ matrix.id }}" > "result-${{ matrix.id }}.json"
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: result-${{ matrix.id }}
+          path: result-${{ matrix.id }}.json
+
+  report:
+    needs: [plan, run]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Récupérer les résultats
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'result-*' --dir results
+      - name: Établir le rapport
+        env:
+          COMMIT: ${{ github.sha }}
+        run: node .github/mutation/report.mjs results | tee report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: campaign-report
+          path: report.md
+      - name: Échouer si la campagne n'est pas concluante
+        run: '! grep -q "^Conclusion : NON CONCLUANTE" report.md'
