@@ -1,0 +1,61 @@
+# ScolaPay Core
+
+Nouveau backend de ScolaPay 2.0, en Java et Spring Boot. Il se construit, se teste et s'exécute sans le backend NestJS.
+
+Décisions : [fondation technique](../docs/decisions/0009-fondation-technique-core.md), [identité et accès](../docs/decisions/0010-identite-et-acces.md), [transition](../docs/decisions/0011-transition-depuis-nestjs.md).
+
+## Prérequis
+
+Java 25. Docker pour les tests, qui démarrent eux-mêmes un PostgreSQL 18 jetable.
+
+## Tester
+
+```bash
+./mvnw verify
+```
+
+Les suites sont lourdes pour le poste de développement de 8 Go : elles passent normalement par la CI (job `core`).
+
+## Exécuter en local
+
+```bash
+POSTGRES_PASSWORD=<mot-de-passe-local> docker compose up -d
+
+export SCOLAPAY_DB_URL=jdbc:postgresql://127.0.0.1:5433/scolapay
+export SCOLAPAY_DB_USERNAME=scolapay
+export SCOLAPAY_DB_PASSWORD=<mot-de-passe-local>
+export SCOLAPAY_JWT_SECRET=<au-moins-32-octets-aleatoires>
+export SCOLAPAY_BOOTSTRAP_OPERATOR_CONTACT=<e-mail-ou-telephone>
+export SCOLAPAY_BOOTSTRAP_OPERATOR_PASSWORD=<12-caracteres-minimum>
+
+./mvnw spring-boot:run
+```
+
+Sans ces variables, l'application refuse de démarrer. Il n'existe aucun identifiant par défaut. Les variables d'amorçage ne créent le premier opérateur que si aucun n'existe.
+
+## Parcours de base
+
+Toutes les routes sont sous `/api/v2`. Les erreurs suivent la RFC 9457, avec un champ `code` stable.
+
+| Étape | Requête | Qui |
+| --- | --- | --- |
+| Se connecter | `POST /auth/login` | Tous |
+| Créer un établissement et inviter son administrateur | `POST /platform/establishments` | Opérateur |
+| Accepter une invitation | `POST /invitations/accept` | Destinataire |
+| Inviter du personnel | `POST /establishments/{id}/invitations` | Administrateur |
+| Créer puis ouvrir une année | `POST /establishments/{id}/academic-years`, `PATCH .../{yearId}` | Secrétariat |
+| Créer un dossier | `POST /establishments/{id}/students` | Secrétariat |
+| Inscrire | `POST /establishments/{id}/students/{studentId}/enrollments` | Secrétariat |
+| Inviter un tuteur | `POST /establishments/{id}/students/{studentId}/guardian-invitations` | Secrétariat |
+| Inviter un étudiant majeur | `POST /establishments/{id}/students/{studentId}/self-access-invitations` | Secrétariat |
+| Voir ses établissements | `GET /me/affiliations` | Personnel |
+| Voir ses enfants ou son dossier | `GET /me/students`, `GET /me/students/{studentId}` | Famille |
+
+## Ajouter un module
+
+1. Créer `com.scolapay.core.<module>` avec un `package-info.java` déclarant `allowedDependencies`.
+2. Le paquet racine est l'API publique, le reste va dans `internal`.
+3. Toute méthode de dépôt sur une donnée d'établissement exige `establishmentId`, et toute table reçoit `UNIQUE (establishment_id, id)` et des clés composites.
+4. Toute route d'établissement vit sous `/api/v2/establishments/{establishmentId}`. Le service appelle `EstablishmentAccess.require` avec la permission voulue.
+5. Une mutation sensible écrit dans `AuditTrail`, dans la même transaction.
+6. Une migration existante n'est jamais modifiée : en ajouter une nouvelle.

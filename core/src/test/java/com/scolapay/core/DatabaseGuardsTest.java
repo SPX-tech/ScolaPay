@@ -105,6 +105,12 @@ class DatabaseGuardsTest extends IntegrationTest {
     }
 
     @Test
+    void lesTestsTournentSurLaVersionDePostgreSQLRetenue() {
+        String version = jdbc.sql("SHOW server_version").query(String.class).single();
+        assertThat(version).startsWith("18.6");
+    }
+
+    @Test
     void lesMigrationsSontValidesEtRejouables() {
         flyway.validate();
         assertThat(flyway.info().applied()).isNotEmpty();

@@ -2,7 +2,7 @@
 
 Référence stratégique et technique du projet, lisible sans l'historique des conversations. En cas de désaccord entre ce document et le code, **le code prime** : corriger le document.
 
-**Dernière mise à jour : 2026-11-06.** Le statut des fonctionnalités décrit le code de `main`. **Aucune instance de ScolaPay n'est en service** : « implémenté » ne signifie pas « déployé ».
+**Dernière mise à jour : 2026-11-06.** Le statut des fonctionnalités décrit le code du dépôt. **Aucune instance de ScolaPay n'est en service** : « implémenté » ne signifie pas « déployé ».
 
 ## État du projet en bref
 
@@ -11,14 +11,15 @@ Référence stratégique et technique du projet, lisible sans l'historique des c
 | Mission 001 (socle et durcissement financier) | **Finalisée**, PR #1 et #2 fusionnées dans `main` le 2026-11-06 |
 | Ancien déploiement | **Retiré** le 2026-11-06. Il ne contenait qu'un établissement de démonstration |
 | Données de l'ancienne instance | **Archivées**, chiffrées, hors du serveur et hors du dépôt, avec restauration et relecture vérifiées. La clé est conservée séparément |
-| Nouveau backend Java/Spring Boot | **Approuvé, pas implémenté.** Aucun code Java dans le dépôt |
-| Prochain chantier | Construction du nouveau backend ScolaPay 2.0 |
+| Mission 002 (fondation Java) | **Livrée** : identités, établissements, inscriptions et liens familiaux dans `core/`. Testée en CI, jamais déployée |
+| Facturation, paiements, portail familles | **Pas commencés** |
+| Prochain chantier | Moteur de facturation scolaire |
 
 ## Vision
 
 ScolaPay veut devenir une plateforme financière scolaire qui connecte les établissements, les parents et les étudiants, d'abord au Tchad (XAF, fuseau `Africa/Ndjamena`).
 
-**Aujourd'hui, le produit est un outil de gestion pour le personnel des établissements**, centré sur l'encaissement cash. Les parents et les étudiants n'y ont aucun accès : ils sont seulement concernés par les fiches élèves, les reçus et les SMS.
+**Deux backends coexistent dans le dépôt.** `backend/` (NestJS) porte l'outil historique du personnel, centré sur l'encaissement cash, et sert désormais de référence. `core/` (Java) est le nouveau backend : il modélise déjà les familles, mais aucune interface ne l'utilise encore. Aucun des deux n'est déployé.
 
 ## Lire les statuts
 
@@ -29,6 +30,28 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | **Prévu** | Décision prise, rien n'est implémenté |
 
 ## État réel
+
+### Nouveau backend : `core/`
+
+| Domaine | Statut | Ce qui existe | Preuve |
+| --- | --- | --- | --- |
+| Identité globale | Vérifié | Compte unique, e-mail ou téléphone, connexion, verrouillage après 5 échecs, jetons révocables | `identity`, `SecurityHardeningTest` |
+| Invitations | Vérifié, remise non construite | Usage unique, empreinte seule stockée, liées au contact. Le jeton est renvoyé à la personne qui invite | `identity`, `SecurityHardeningTest` |
+| Établissements | Vérifié | Création par un opérateur, type, fuseau, devise, âge de la majorité, suspension | `establishment` |
+| Personnel et permissions | Vérifié | Adhésion par établissement, rôles multiples, dernier administrateur protégé | `establishment`, `TenantIsolationTest` |
+| Isolation entre établissements | Vérifié | Barrière d'adhésion, 404 aux non-membres, clés composites en base | `TenantIsolationTest`, `DatabaseGuardsTest` |
+| Années, dossiers, inscriptions | Vérifié | Inscription active unique par année, historique immuable | `schooling`, `ConcurrencyTest` |
+| Tuteurs et étudiants majeurs | Vérifié | Liens révocables entre compte et dossier, plusieurs enfants et établissements | `schooling`, `FoundationJourneyTest` |
+| Audit | Vérifié | Immuable par trigger, écrit dans la transaction | `audit`, `DatabaseGuardsTest` |
+| Frontière vers la facturation | Vérifié, sans consommateur | `StudentDirectory`, événements `StudentEnrolled` et `EnrollmentEnded`, responsable financier | `schooling` |
+| Facturation, paiements, comptabilité | Prévu | Rien | [0006](decisions/0006-backend-java-spring-boot.md) |
+| Portail web des familles | Prévu | L'API `/api/v2/me` existe, aucune interface | [0007](decisions/0007-portail-familles-avant-apk.md) |
+| Application Android des familles | Prévu, après le portail | Rien. L'application `android/` sert le personnel | [0007](decisions/0007-portail-familles-avant-apk.md) |
+| Services Go de paiement | Envisagé, sans échéance | Aucun code | [0008](decisions/0008-go-services-paiement.md) |
+
+### Code historique : `backend/`, `web/`, `android/`
+
+Conservé comme référence : voir la [transition](decisions/0011-transition-depuis-nestjs.md). Aucun nouveau domaine n'y entre. Le web et Android utilisent `/api/v1`.
 
 | Domaine | Statut | Ce qui existe | Preuve |
 | --- | --- | --- | --- |
@@ -44,19 +67,26 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Paiements mobiles | Non activé | Initiation, webhook, crédit du compte virtuel, mais `PaymentProvider` désactivé par défaut | `modules/payment`, `modules/ledger` |
 | Compte virtuel et retraits | Non activé | Grand livre immuable, verrou, cycle `PENDING` vers `COMPLETED` ou `FAILED`. Sans prestataire, tout virement échoue et libère les fonds | `modules/finance` |
 | Connecteur Kadryza | Non activé | Squelette sans contrat d'API, refusé en production | `kadryza-payment.provider.ts` |
-| Comptes parents et étudiants | Prévu | Rien | [0007](decisions/0007-portail-familles-avant-apk.md) |
-| Portail web des familles | Prévu | Rien | [0007](decisions/0007-portail-familles-avant-apk.md) |
-| Application Android des familles | Prévu, après le portail | Rien. L'application `android/` sert le personnel | [0007](decisions/0007-portail-familles-avant-apk.md) |
-| Facturation, échéanciers, réconciliation, administration SaaS | Prévu | Rien. Le grand livre n'est pas une comptabilité en partie double | [D-001](architecture-scolapay-2.md#décision-001--conserver-le-monolithe-modulaire) |
-| Remboursement d'un paiement numérique | Prévu | Rien. L'annulation générique le refuse volontairement | [D-004](architecture-scolapay-2.md#décision-004--prestataires-financiers-fermés-par-défaut) |
-| Nouveau backend Java/Spring Boot : identités, établissements, inscriptions, facturation | Prévu | Aucun code, migration non commencée | [0006](decisions/0006-backend-java-spring-boot.md) |
-| Services Go de paiement | Envisagé, sans échéance | Aucun code | [0008](decisions/0008-go-services-paiement.md) |
 
-Les chemins `modules/` et `common/` sont relatifs à `backend/src/`.
+Les chemins `modules/` et `common/` sont relatifs à `backend/src/`. Les modules Java sont sous `core/src/main/java/com/scolapay/core/`, leurs tests sous `core/src/test/`.
 
 ## Architecture
 
-### En place
+### Nouveau backend : `core/`
+
+```text
+Portail familles (prévu)  ─┐
+Dashboard Next.js (à porter) ─┼─ API Spring Boot /api/v2 ─ PostgreSQL 18
+Android (à porter)        ─┘    monolithe modulaire
+
+shared ← audit ← identity ← establishment ← schooling ← billing (prévu)
+```
+
+- **Java 25, Spring Boot 4.1, Spring Modulith 2.1, SQL explicite avec `JdbcClient`, Flyway.** Choix et motifs dans [0009](decisions/0009-fondation-technique-core.md).
+- **Modèle d'identité** : identité, affiliation, rôle et accès à un dossier sont quatre notions séparées, et trois surfaces HTTP étanches. Voir [0010](decisions/0010-identite-et-acces.md).
+- **Modèle de données** : [`V1__foundation.sql`](../core/src/main/resources/db/migration/V1__foundation.sql). Démarrage et conventions dans [`core/README.md`](../core/README.md).
+
+### Code historique
 
 ```text
 Web Next.js 16 ─┐
@@ -64,36 +94,30 @@ Web Next.js 16 ─┐
 Android Compose ┘            monolithe modulaire, Prisma 7
 ```
 
-- **Node 24**, TypeScript 6 côté backend et 5.9 côté web, React 19, Kotlin 2.4, AGP 9.3. Détail et motifs dans le [journal de validation](mission-001-validation.md).
-- **Déploiement par `docker compose`** : une image `migrate` applique les migrations avant l'API. Une seule instance d'API est supposée (voir les risques). Ce mode de déploiement n'est plus utilisé depuis le retrait de l'ancienne instance.
-- **Modèle de données** : [`backend/prisma/schema.prisma`](../backend/prisma/schema.prisma). Montants en `BIGINT`, exposés en chaînes dans le JSON.
+- **Node 24**, TypeScript 6 côté backend et 5.9 côté web, React 19, Kotlin 2.4, AGP 9.3. Détail dans le [journal de la Mission 001](mission-001-validation.md).
+- **Déploiement par `docker compose`**, plus utilisé depuis le retrait de l'ancienne instance. Une seule instance d'API est supposée (voir les risques).
+- **Modèle de données** : [`backend/prisma/schema.prisma`](../backend/prisma/schema.prisma). Les deux backends ne partagent aucune table.
 
-### Cible validée pour ScolaPay 2.0
-
-**Ces décisions sont prises, mais rien n'est construit.** Tout ce qui suit est prévu, pas livré.
+### Décisions validées, non encore construites
 
 | Élément | Décision | Référence |
 | --- | --- | --- |
-| Nouveau backend | Java et Spring Boot, en monolithe modulaire. Spring Modulith est une option à évaluer | [0006](decisions/0006-backend-java-spring-boot.md) |
-| Nouveaux domaines | Identités, établissements, inscriptions et facturation scolaire directement en Java | [0006](decisions/0006-backend-java-spring-boot.md) |
-| Code NestJS | Conservé dans le dépôt comme référence. Le nouveau backend est construit directement, sans maintenir durablement deux backends, à condition de ne perdre ni dépendance de production ni donnée nécessaire | [0006](decisions/0006-backend-java-spring-boot.md) |
-| Web et données | Next.js/TypeScript et PostgreSQL conservés | [0006](decisions/0006-backend-java-spring-boot.md) |
+| Facturation | Module Java au-dessus de `schooling` | [0006](decisions/0006-backend-java-spring-boot.md) |
+| Web | Next.js/TypeScript conservé, écrans portés vers `/api/v2` au fil des domaines | [0011](decisions/0011-transition-depuis-nestjs.md) |
 | Familles | Véritable site web d'abord, application Android ensuite | [0007](decisions/0007-portail-familles-avant-apk.md) |
 | Services financiers | Go envisagé, notamment pour les intégrations de prestataires, sans introduction immédiate | [0008](decisions/0008-go-services-paiement.md) |
 
 **Règle :** aucun nouveau domaine métier n'est ajouté à NestJS, et les sources de vérité financières ne sont jamais dupliquées.
 
-Les questions ouvertes de chaque décision ne doivent pas être tranchées par supposition. Celles du nouveau backend sont dans [0006](decisions/0006-backend-java-spring-boot.md#questions-ouvertes).
-
 ## Invariants financiers
 
-À préserver quel que soit le langage ou le framework. Ils sont exercés sur PostgreSQL réel par [`backend/test/financial-integrity.e2e-spec.ts`](../backend/test/financial-integrity.e2e-spec.ts).
+À préserver quel que soit le langage ou le framework. **Ils s'imposent aux futurs modules Java.** `core/` ne manipule encore aucun montant : aujourd'hui, seuls le 5 et le principe d'immuabilité y sont en vigueur. Les autres sont exercés sur PostgreSQL réel par [`backend/test/financial-integrity.e2e-spec.ts`](../backend/test/financial-integrity.e2e-spec.ts), qui décrit le comportement à reproduire.
 
-1. **Solde sérialisé.** Toute écriture de `debtCents` ou `creditCents` lit le solde sous le verrou de ligne de l'élève (`lockStudentBalance`), dans la transaction de l'écriture.
+1. **Solde sérialisé.** Toute écriture de `debtCents` ou `creditCents` lit le solde sous le verrou de ligne de l'élève (`lockStudentBalance` côté NestJS), dans la transaction de l'écriture.
 2. **Atomicité.** Mouvement, outbox et audit d'un encaissement, d'une confirmation ou d'une annulation sont validés ensemble.
 3. **Ordre de verrouillage.** Élève, puis compte virtuel. Ne jamais l'inverser.
 4. **Une seule comptabilisation.** Clé d'idempotence unique par établissement, confirmation mobile gardée par le statut `PENDING`, référence de grand livre unique.
-5. **Établissement explicite.** Toute ressource est cherchée avec son `tenantId`, y compris les références vers une classe. La clé étrangère seule ne le garantit pas.
+5. **Établissement explicite.** Toute ressource est cherchée avec son établissement, y compris les références entre ressources. Dans `core/`, les clés composites le garantissent aussi en base.
 6. **Grand livre immuable.** Un trigger PostgreSQL interdit la modification et la suppression de `ledger_entries`.
 7. **Cash et numérique séparés.** Le cash ne crédite pas le compte virtuel. Un paiement numérique ne s'annule pas sans remboursement réel.
 8. **Fermé par défaut.** Sans configuration, aucun prestataire n'est actif. `mock` et `kadryza` n'existent qu'avec `NODE_ENV` à `development` ou `test`. Une valeur inconnue empêche le démarrage.
@@ -105,14 +129,26 @@ Les questions ouvertes de chaque décision ne doivent pas être tranchées par s
 L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 
 - **D-001 à D-005** ([détail](architecture-scolapay-2.md)) : monolithe modulaire, isolation par établissement, unités historiques, prestataires fermés par défaut, migrations séparées du démarrage.
-- **0006 et 0007**, acceptées le 2026-11-06 : nouveau backend en Java/Spring Boot, construit directement, avec le code NestJS conservé comme référence, puis portail web des familles avant l'application Android.
+- **0006 et 0007**, acceptées : nouveau backend en Java/Spring Boot, construit directement, avec le code NestJS conservé comme référence, puis portail web des familles avant l'application Android.
 - **0008**, orientation validée : Go envisagé pour de futurs services financiers, sans introduction immédiate.
+- **0009 à 0011**, acceptées : fondation technique, modèle d'identité et d'accès, transition depuis NestJS.
 
 ## Priorités actuelles
 
-1. **Construire la fondation Java/Spring Boot de ScolaPay 2.0** : chantier distinct, à cadrer avec ses objectifs métier et architecturaux. **Il n'est pas commencé.** Le code et les tests NestJS servent de référence : les correctifs de la Mission 001 ne sont pas à reprendre.
+1. **Moteur de facturation scolaire** : prochain chantier, à cadrer. Il s'appuie sur `schooling` sans refaire les utilisateurs ni les établissements. Voir ses [prérequis](#prochaines-étapes).
 
 ## Risques connus
+
+Dans `core/`, les limites connues sont listées dans [0010](decisions/0010-identite-et-acces.md#limites-connues). Les plus structurantes :
+
+| Risque | Conséquence | Où |
+| --- | --- | --- |
+| Invitations non remises | Le jeton transite par la personne qui invite. Un service de notification est nécessaire avant tout usage réel | `core`, `identity` |
+| Tuteur d'un enfant devenu majeur | Il garde l'accès jusqu'à révocation. Question de droit à trancher | [0010](decisions/0010-identite-et-acces.md#questions-ouvertes) |
+| Pas de limitation de débit par adresse | Le verrouillage par compte permet de gêner un compte connu | `core`, `identity` |
+| Événements non durables | Publiés de façon synchrone, sans outbox : à résoudre avant la facturation | [0009](decisions/0009-fondation-technique-core.md#conséquences) |
+
+Dans le code historique :
 
 | Risque | Conséquence | Où |
 | --- | --- | --- |
@@ -120,7 +156,7 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 | Rapports limités au cash | `MOBILE_PAYMENT` n'entre ni dans le rapport d'encaissements ni dans le tableau de bord. À trancher avant d'activer un prestataire | `reports.controller.ts`, `dashboard.service.ts` |
 | Contrat Kadryza inconnu | Webhook provisoire : montant et devise non rapprochés, états incertains après un délai réseau non définis | [D-004](architecture-scolapay-2.md#décision-004--prestataires-financiers-fermés-par-défaut) |
 | Unités monétaires | `Cents` affiché divisé par 100 pour XAF, sans exposant ISO. À contractualiser avant un prestataire | [D-003](architecture-scolapay-2.md#décision-003--conserver-les-unités-financières-historiques) |
-| Isolation applicative seule | Pas de clé étrangère composite `(tenantId, id)` | [D-002](architecture-scolapay-2.md#décision-002--isolation-explicite-par-établissement) |
+| Isolation applicative seule | Pas de clé étrangère composite `(tenantId, id)`. Résolu dans `core/`, pas dans `backend/` | [D-002](architecture-scolapay-2.md#décision-002--isolation-explicite-par-établissement) |
 | Une seule instance d'API | Le garde du worker outbox est en mémoire : deux instances pourraient traiter le même événement | `outbox-worker.service.ts` |
 | Connexion sans limitation de débit | Aucune limite côté API ni Nginx | `modules/auth`, `nginx/` |
 | Jeton web dans `localStorage` | Exposé en cas de XSS | `web/src/lib/auth.tsx` |
@@ -139,23 +175,29 @@ Ce serait un nouveau déploiement, avec des secrets neufs :
 - Ne pas exécuter le seed : ses comptes de démonstration ont des mots de passe publics.
 - Définir HTTPS, les origines, les limites du proxy et une sauvegarde restaurée : voir les [conditions de production](architecture-scolapay-2.md#conditions-avant-une-future-ouverture-en-production).
 
-**Prochaine grande mission : fondation Java/Spring Boot de ScolaPay 2.0**
+**Prochain chantier : moteur de facturation scolaire**
 
-Chantier distinct, à préparer avec ses objectifs. Il devra notamment répondre aux [questions ouvertes de 0006](decisions/0006-backend-java-spring-boot.md#questions-ouvertes) et évaluer Spring Modulith.
+À trancher au cadrage :
+
+- **Unités monétaires** : `Cents` divisé par 100 pour XAF dans l'historique, alors que le XAF n'a pas de décimales selon ISO 4217. Voir [D-003](architecture-scolapay-2.md#décision-003--conserver-les-unités-financières-historiques).
+- **Outbox durable** : le registre de publication de Spring Modulith est le candidat à évaluer.
+- **Catalogue de frais** : `enrollments.level` est un texte libre. La tarification par niveau demandera sans doute un catalogue de niveaux ou de classes.
+- **Soldes** : ils seront dérivés de factures et de paiements, sans modification directe comme dans NestJS.
 
 **Ensuite, sans ordre arrêté**
 
-- Concevoir l'identité et le lien famille-élève, puis le portail ([0007](decisions/0007-portail-familles-avant-apk.md)).
-- Remplacer la modification directe des soldes par des écritures d'ajustement.
-- Obtenir le contrat d'un prestataire réel, puis évaluer les besoins de services dédiés ([0008](decisions/0008-go-services-paiement.md)).
+- Service de notification, pour remettre les invitations par SMS ou e-mail.
+- Portail web des familles ([0007](decisions/0007-portail-familles-avant-apk.md)), avec réinitialisation de mot de passe et renouvellement de session.
+- Portage de la caisse, des reçus et de la trésorerie vers `core/`.
+- Contrat d'un prestataire réel, puis besoins de services dédiés ([0008](decisions/0008-go-services-paiement.md)).
 
 ## Vérifier le projet
 
-La CI GitHub (`.github/workflows/ci.yml`) est la source de preuve : backend avec PostgreSQL jetable, web avec Playwright, Android avec émulateur. `containers.yml` valide les images et le proxy. Aucun workflow ne déploie, ne lit de secret de production ni n'appelle de prestataire réel.
+La CI GitHub (`.github/workflows/ci.yml`) est la source de preuve : `core` avec Testcontainers et démarrage du JAR, backend NestJS avec PostgreSQL jetable, web avec Playwright, Android avec émulateur. `containers.yml` valide les images et le proxy. Aucun workflow ne déploie, ne lit de secret de production ni n'appelle de prestataire réel.
 
 Le poste de développement (8 Go) est réservé aux éditions légères. Les commandes locales figurent dans le [README](../README.md).
 
-Dernier résultat complet (2026-11-06) : 190 tests unitaires et 35 E2E backend, 47 tests Playwright, compilation et lancement Android. Détail et limites dans le [journal de validation](mission-001-validation.md#résultats-finaux).
+Derniers résultats : 69 tests pour `core/`, dont une campagne de mutations ([Mission 002](mission-002-validation.md)) ; 190 tests unitaires et 35 E2E pour le backend NestJS, 47 tests Playwright, compilation et lancement Android ([Mission 001](mission-001-validation.md#résultats-finaux)).
 
 ## Carte de la documentation
 
@@ -164,7 +206,9 @@ Dernier résultat complet (2026-11-06) : 190 tests unitaires et 35 E2E backend, 
 | `docs/PROJECT_CONTEXT.md` | Ce document : état et orientation |
 | [`docs/decisions/`](decisions/README.md) | Décisions majeures |
 | [`docs/architecture-scolapay-2.md`](architecture-scolapay-2.md) | D-001 à D-005 et conditions de production |
-| [`docs/mission-001-validation.md`](mission-001-validation.md) | Versions retenues et résultats de validation |
+| [`docs/mission-001-validation.md`](mission-001-validation.md) | Socle historique : versions et résultats |
+| [`docs/mission-002-validation.md`](mission-002-validation.md) | Fondation Java : versions, résultats et limites |
+| [`core/README.md`](../core/README.md) | Démarrer le backend Java, ajouter un module |
 | [`README.md`](../README.md) | Démarrage et déploiement |
 | [`AGENTS.md`](../AGENTS.md) | Règles pour les agents de développement |
 | [`implementation_plan.md`](../implementation_plan.md) | Historique arrêté au 2026-06-26, à ne pas prendre pour l'état actuel |

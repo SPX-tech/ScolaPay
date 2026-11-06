@@ -1,12 +1,13 @@
 # ScolaPay
 
-ScolaPay est une application de gestion des paiements scolaires cash.
+ScolaPay est une plateforme financière scolaire en construction. Ce dépôt contient le nouveau backend Java (`core/`) et l'application historique de gestion des paiements cash, conservée comme référence.
 
 **Commencer par [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md)** : vision, état réel du projet, priorités, risques et prochaines étapes. Les décisions majeures sont dans [`docs/decisions/`](docs/decisions/README.md).
 
 Le projet est organise autour de trois parties:
 
-- `backend/`: API REST NestJS, Prisma et PostgreSQL.
+- `core/`: nouveau backend Java et Spring Boot de ScolaPay 2.0, voir [`core/README.md`](core/README.md).
+- `backend/`: API REST NestJS, Prisma et PostgreSQL, conservée comme référence.
 - `web/`: dashboard admin Next.js.
 - `android/`: application mobile Android native en Kotlin et Jetpack Compose.
 
