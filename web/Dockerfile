@@ -1,7 +1,7 @@
 # ============================================================
 # STAGE 1: Install ALL dependencies
 # ============================================================
-FROM node:24.22.1-alpine AS base
+FROM node:26.12.1-alpine AS base
 RUN npm install --global npm@11.19.1
 
 FROM base AS deps
