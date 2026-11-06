@@ -1,6 +1,6 @@
 # Mission 002 : journal de validation
 
-Fondation du backend Java de ScolaPay 2.0. Les choix sont dans [0009](decisions/0009-fondation-technique-core.md), [0010](decisions/0010-identite-et-acces.md) et [0011](decisions/0011-transition-depuis-nestjs.md).
+Fondation du backend Java de ScolaPay 2.0. Les choix sont dans [0009](decisions/0009-fondation-technique-core.md), [0010](decisions/0010-identite-et-acces.md), [0011](decisions/0011-transition-depuis-nestjs.md), [0012](decisions/0012-convention-monetaire.md) et [0013](decisions/0013-majorite-et-autorisations-familiales.md).
 
 ## Versions retenues
 
@@ -22,20 +22,23 @@ Exécutés sur la CI de la [PR #17](https://github.com/SPX-tech/ScolaPay/pull/17
 | Suite | Tests | Ce qu'elle prouve |
 | --- | --- | --- |
 | `FoundationJourneyTest` | 9 | Parcours complet, parent à deux établissements, rôles par établissement, étudiant majeur, révocation, dernier administrateur |
+| `FamilyAccessTest` | 14 | Passage à la majorité, consentement de l'étudiant, contributeur sans accès au dossier, âge légal non configurable |
 | `TenantIsolationTest` | 13 | Matrice sur toutes les routes réelles : anonyme, autre établissement, opérateur, parent, membre suspendu ou révoqué. Identifiants étrangers, établissement suspendu |
 | `SecurityHardeningTest` | 16 | Connexion et verrouillage, jetons falsifiés, révocation, invitations, validation, plafond de corps, surface Actuator |
 | `ConcurrencyTest` | 4 | Inscriptions, acceptations, rétrogradations et échecs de connexion simultanés |
-| `DatabaseGuardsTest` | 7 | Clés composites, immuabilité, contraintes, version de PostgreSQL, rejeu des migrations |
+| `DatabaseGuardsTest` | 9 | Clés composites, immuabilité, contraintes, version de PostgreSQL, rejeu des migrations |
 | `ModularityTest` | 2 | Frontières de modules vérifiées par Spring Modulith |
-| Tests unitaires | 18 | Identifiants, permissions des rôles, règle de majorité |
+| Tests unitaires | 19 | Identifiants, permissions des rôles, règle de majorité |
 
-Les tests d'intégration utilisent le vrai serveur HTTP, la vraie chaîne de sécurité et un vrai PostgreSQL 18.6.
+Total : 86 tests. Les tests d'intégration utilisent le vrai serveur HTTP, la vraie chaîne de sécurité et un vrai PostgreSQL 18.6.
 
 La CI vérifie aussi le JAR lui-même : il refuse de démarrer sans secret ou avec un secret trop court, puis, correctement configuré, il applique ses migrations sur une base vide, répond sur `/actuator/health` et renvoie 401 sur les routes protégées. L'image Docker est construite par le workflow `Containers`, sans être démarrée.
 
 ### Les tests savent-ils échouer ?
 
-La première exécution ayant tout passé, 14 garanties ont été cassées volontairement sur une branche jetable, supprimée depuis : [exécution de contrôle](https://github.com/SPX-tech/ScolaPay/actions/runs/42200563613). Résultat : 24 tests sur 68 en échec, et **toutes les mutations détectées**.
+La première exécution ayant tout passé, des garanties ont été cassées volontairement sur des branches jetables, supprimées depuis. **Les 23 mutations ont toutes été détectées.**
+
+Première campagne, sur la fondation : 14 mutations, 24 tests en échec sur 68 ([exécution de contrôle](https://github.com/SPX-tech/ScolaPay/actions/runs/42200563613)).
 
 | Garantie cassée | Détectée par |
 | --- | --- |
@@ -54,6 +57,20 @@ La première exécution ayant tout passé, 14 garanties ont été cassées volon
 | Permission d'écriture ajoutée à la caisse | Permissions par rôle, `StaffRoleTest` |
 | Dépendance vers un paquet interne d'un autre module | `ModularityTest` |
 
+Seconde campagne, sur la majorité et les autorisations familiales : 9 mutations, en deux exécutions pour éviter qu'une fuite de données soit masquée par les autres mutations ([règles d'accès](https://github.com/SPX-tech/ScolaPay/actions/runs/42204253063), [minimisation des données](https://github.com/SPX-tech/ScolaPay/actions/runs/42204282942)).
+
+| Garantie cassée | Détectée par |
+| --- | --- |
+| Consentement de l'étudiant majeur ignoré | `lAccesAcademiqueDuTuteurCesseDesLaMajorite`, `unEtudiantMajeurDecide`, `sansCompteDeLEtudiantMajeur` |
+| Minorité non établie laissant passer l'accès | `uneMinoriteNonEtablieNOuvreAucunAccesAcademique` |
+| Contributeur financier obtenant l'accès sur un mineur | `unContributeurFinancierNAJamaisAccesAuDossier` |
+| Consentement géré par un autre lien que l'étudiant | `seulLEtudiantLuiMemeDecide` |
+| Établissement accordant l'accès au dossier d'un majeur | `lEtablissementNePeutPasAccorderLuiMemeLAccesAuDossierDUnMajeur` |
+| Lien sans aucun droit accepté par la base | `unLienSansAucunDroitEstRefuseParLaBase` |
+| Établissement créé sans vérifier la règle du pays | `unPaysSansRegleJuridiqueEstRefuse` |
+| Règle du Tchad déclarée confirmée sans validation | `laRegleDuTchadResteProvisoireTantQuElleNEstPasConfirmee` |
+| Matricule et inscriptions visibles sans accès académique | 7 tests de `FamilyAccessTest` |
+
 ## Limites de cette validation
 
 - Aucun déploiement, aucun paiement, aucune donnée réelle.
@@ -62,6 +79,8 @@ La première exécution ayant tout passé, 14 garanties ont été cassées volon
 - La résistance à la charge n'a pas été mesurée. La concurrence testée reste modeste : 2 à 8 requêtes simultanées.
 - Les clients web et Android n'utilisent pas encore `/api/v2`.
 - Les mutations choisies couvrent les garanties jugées critiques, pas l'ensemble du code.
+- L'âge légal du Tchad est une valeur provisoire : **aucune règle juridique n'a été validée**. Voir [0013](decisions/0013-majorite-et-autorisations-familiales.md#limites-et-conditions).
+- La convention monétaire est une décision écrite : aucun code ne manipule encore de montant.
 - Aucun outil de mesure de couverture n'a été mis en place.
 
 Les limites fonctionnelles sont listées dans [0010](decisions/0010-identite-et-acces.md#limites-connues).
