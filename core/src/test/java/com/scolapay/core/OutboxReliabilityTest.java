@@ -231,6 +231,25 @@ class OutboxReliabilityTest {
         await("l'alerte", () -> instance.log().contains("Outbox : 3 publication(s) non traitée(s)"));
     }
 
+    /** Un service en panne ne doit pas être sollicité à chaque passage de la reprise. */
+    @Test
+    void leDelaiDeRepriseEspaceLesEssais() throws InterruptedException {
+        List<String> longDelay = new ArrayList<>(FAST_RECOVERY);
+        longDelay.add("--scolapay.outbox.retry-delay=PT1H");
+        longDelay.add("--scolapay.outbox.max-retry-delay=PT1H");
+        Instance instance = start("delai", longDelay);
+        School school = instance.api().newSchool();
+        UUID student = school.newStudent();
+        behave(student, "FAIL_ONCE");
+
+        assertThat(school.enroll(student).status()).isEqualTo(201);
+        await("le premier essai", () -> attempts(student) == 1);
+        Thread.sleep(3_000);
+
+        assertThat(attempts(student)).isEqualTo(1);
+        assertThat(statusOfTheOnlyPublication()).isEqualTo("FAILED");
+    }
+
     /** L'API du registre ignore cette ligne : seule la supervision en SQL peut la signaler. */
     @Test
     void unTypeDEvenementDisparuEstSignaleSansBloquerLaReprise() {

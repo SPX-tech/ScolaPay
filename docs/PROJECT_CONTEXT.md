@@ -48,10 +48,10 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Audit | Vérifié | Immuable par trigger, écrit dans la transaction | `audit`, `DatabaseGuardsTest` |
 | Frontière vers la facturation | Vérifié, sans consommateur | `StudentDirectory`, événements `StudentEnrolled` et `EnrollmentEnded`, contributeurs financiers | `schooling` |
 | Facturation | Prévu, modèle accepté | Rien pour l'instant | [Cadrage](missions/mission-003-billing-engine.md), [0015](decisions/0015-modele-de-facturation.md) |
-| Outbox durable | Prévu, lot 1 | Rien : événements synchrones uniquement | [0016](decisions/0016-outbox-durable.md) |
-| Contrôles de mise en service | Prévu, lot 1 | **Rien : aucun code n'empêche encore d'ouvrir le portail** | [0017](decisions/0017-controles-de-mise-en-service.md) |
+| Outbox durable | Vérifié | Registre Spring Modulith, reprise après arrêt brutal et entre deux instances. **Aucun listener de production ne l'utilise encore** | `core/`, `OutboxReliabilityTest`, [0016](decisions/0016-outbox-durable.md) |
+| Contrôles de mise en service | Vérifié | Portail fermé par défaut, démarrage refusé si une condition manque. **Il ne peut pas être ouvert aujourd'hui** : règle du Tchad non confirmée, aucun canal d'invitation | `core/`, `GoLiveTest`, [0017](decisions/0017-controles-de-mise-en-service.md) |
 | Encaissement réel, comptabilité | Prévu | Rien | [0006](decisions/0006-backend-java-spring-boot.md) |
-| Portail web des familles | Prévu | L'API `/api/v2/me` existe, aucune interface | [0007](decisions/0007-portail-familles-avant-apk.md) |
+| Portail web des familles | Prévu | L'API `/api/v2/me/students` existe mais reste fermée par défaut, aucune interface | [0007](decisions/0007-portail-familles-avant-apk.md) |
 | Application Android des familles | Hors feuille de route active | Rien. L'application `android/` sert le personnel | [0014](decisions/0014-android-hors-feuille-de-route.md) |
 | Services Go de paiement | Envisagé, sans échéance | Aucun code | [0008](decisions/0008-go-services-paiement.md) |
 
@@ -109,8 +109,8 @@ Android Compose ┘            monolithe modulaire, Prisma 7
 | Élément | Décision | Référence |
 | --- | --- | --- |
 | Facturation (Mission 003) | Frais, obligations, échéances, remises et ajustements, en module Java au-dessus de `schooling`, indépendant de l'encaissement réel. Redevable, responsable et contributeur sont distincts | [0015](decisions/0015-modele-de-facturation.md) |
-| Outbox | Durable, avant les premiers événements asynchrones critiques | [0016](decisions/0016-outbox-durable.md), à prouver |
-| Ouverture du portail | L'application refuse de démarrer tant que les règles juridiques ne sont pas confirmées | [0017](decisions/0017-controles-de-mise-en-service.md), non implémentée |
+| Outbox | Durable, avant les premiers événements asynchrones critiques | [0016](decisions/0016-outbox-durable.md) |
+| Ouverture du portail | L'application refuse de démarrer tant que les règles juridiques ne sont pas confirmées | [0017](decisions/0017-controles-de-mise-en-service.md) |
 | Montants | Entiers dans l'unité minimale ISO : francs entiers pour le XAF. Conversions de prestataire dans leurs connecteurs | [0012](decisions/0012-convention-monetaire.md) |
 | Web | Next.js/TypeScript conservé, écrans portés vers `/api/v2` au fil des domaines | [0011](decisions/0011-transition-depuis-nestjs.md) |
 | Familles | Véritable site web d'abord. L'APK vient dans une phase ultérieure | [0007](decisions/0007-portail-familles-avant-apk.md), [0014](decisions/0014-android-hors-feuille-de-route.md) |
@@ -142,7 +142,7 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 - **0008**, orientation validée : Go envisagé pour de futurs services financiers, sans introduction immédiate.
 - **0009 à 0013**, acceptées : fondation technique, modèle d'identité et d'accès, transition depuis NestJS, convention monétaire, majorité légale et autorisations familiales. Les modalités juridiques de 0013 restent à confirmer.
 - **0014**, acceptée : Android hors de la feuille de route active.
-- **0015 et 0017**, acceptées : modèle de facturation, contrôles de mise en service. **0016**, besoin accepté : outbox durable, choix technique à prouver.
+- **0015 à 0017**, acceptées : modèle de facturation, outbox durable sur le registre Spring Modulith, contrôles de mise en service.
 
 ## Priorités actuelles
 
@@ -156,10 +156,10 @@ Dans `core/`, les limites connues sont listées dans [0010](decisions/0010-ident
 | Risque | Conséquence | Où |
 | --- | --- | --- |
 | Invitations non remises | Le jeton transite par la personne qui invite. Un service de notification est nécessaire avant tout usage réel | `core`, `identity` |
-| Règles juridiques non confirmées | L'âge légal enregistré pour le Tchad est provisoire, et **aucun code n'empêche encore l'ouverture du portail** | [0013](decisions/0013-majorite-et-autorisations-familiales.md#limites-et-conditions), [0017](decisions/0017-controles-de-mise-en-service.md) |
+| Règles juridiques non confirmées | L'âge légal enregistré pour le Tchad est provisoire. L'application refuse d'ouvrir le portail tant qu'il n'est pas confirmé | [0013](decisions/0013-majorite-et-autorisations-familiales.md#limites-et-conditions), [0017](decisions/0017-controles-de-mise-en-service.md) |
 | Dégradation silencieuse d'Android | Plus vérifié à chaque PR : accepté tant qu'il est hors feuille de route | [0014](decisions/0014-android-hors-feuille-de-route.md) |
 | Pas de limitation de débit par adresse | Le verrouillage par compte permet de gêner un compte connu | `core`, `identity` |
-| Événements non durables | Publiés de façon synchrone, sans outbox : à résoudre avant la facturation | [0016](decisions/0016-outbox-durable.md) |
+| Limites de l'outbox | Un listener peut s'exécuter deux fois et sans ordre garanti : l'émission des obligations devra être idempotente par contrainte PostgreSQL. L'alerte n'est qu'une ligne de journal | [0016](decisions/0016-outbox-durable.md#limites-à-respecter) |
 
 Dans le code historique :
 
@@ -190,7 +190,7 @@ Ce serait un nouveau déploiement, avec des secrets neufs :
 
 **Prochain chantier : Mission 003, ScolaPay Billing Engine**
 
-Périmètre, critères d'acceptation et état des lots dans le [cadrage](missions/mission-003-billing-engine.md). Le premier lot construit l'outbox durable et le contrôle de mise en service.
+Périmètre, critères d'acceptation et état des lots dans le [cadrage](missions/mission-003-billing-engine.md). L'outbox durable et le contrôle de mise en service sont en place. Le prochain lot est le catalogue académique structuré.
 
 **Ensuite, sans ordre arrêté**
 
@@ -205,7 +205,7 @@ La CI GitHub (`.github/workflows/ci.yml`) est la source de preuve : `core` avec 
 
 Le poste de développement (8 Go) est réservé aux éditions légères. Les commandes locales figurent dans le [README](../README.md).
 
-Derniers résultats : 86 tests pour `core/`, et 23 mutations toutes détectées ([Mission 002](mission-002-validation.md)) ; 190 tests unitaires et 35 E2E pour le backend NestJS, 47 tests Playwright, compilation et lancement Android ([Mission 001](mission-001-validation.md#résultats-finaux)).
+Derniers résultats : 110 tests pour `core/`, dont des JVM réellement tuées pour l'outbox, et 23 mutations toutes détectées à la [Mission 002](mission-002-validation.md) ; 190 tests unitaires et 35 E2E pour le backend NestJS, 47 tests Playwright, compilation et lancement Android ([Mission 001](mission-001-validation.md#résultats-finaux)).
 
 ## Carte de la documentation
 
