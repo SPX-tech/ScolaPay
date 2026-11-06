@@ -239,10 +239,10 @@ class ObligationReviewTest extends BillingScenarioTest {
         Tenant tenant = school.tenant();
         UUID student = enrolledAndBilled(school);
         UUID obligation = obligationOf(student);
-        reenrollOnLevelPricedAt(school, student, 130_000);
-        JsonNode signal = onlySignal(school);
-        UUID issued = UUID.fromString(entries(tenant, obligation).get(0).path("id").asString());
         UUID otherObligation = issuedObligation(school);
+        reenrollOnLevelPricedAt(school, student, 130_000);
+        JsonNode signal = reviews(tenant, school.year()).body().path("signals").get(0);
+        UUID issued = UUID.fromString(entries(tenant, obligation).get(0).path("id").asString());
         UUID foreign = UUID.fromString(discount(tenant, tenant.adminToken(), otherObligation, 1_000).text("entryId"));
 
         assertThat(decide(school, signal, "ADJUSTED", null, "Sans écriture").code()).isEqualTo("ENTRY_REQUIRED_IF_ADJUSTED");

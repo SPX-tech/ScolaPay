@@ -1011,7 +1011,7 @@ class ObligationTest extends IntegrationTest {
         School school = school();
         UUID obligation = issuedObligation(school);
 
-        assertThatThrownBy(() -> appendEntry(school, obligation, "SETTLEMENT", -25_000, "Paiement fictif"))
+        assertThatThrownBy(() -> appendEntry(school, obligation, "SETTLEMENT", -1_000, "Paiement fictif"))
                 .as("Le règlement n'existe pas tant que le module de paiement n'est pas là")
                 .isInstanceOf(DataIntegrityViolationException.class);
         assertThatThrownBy(() -> appendEntry(school, obligation, "DISCOUNT", -1_000, null)).isInstanceOf(DataAccessException.class);
