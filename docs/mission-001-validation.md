@@ -76,6 +76,12 @@ Non vérifié :
 
 Les runners PC-02 n'apparaissant toujours pas sur le dépôt, toute la validation a utilisé les runners hébergés de GitHub, comme confirmé par le propriétaire. Le lockfile web a été résolu avec `--package-lock-only`, puis contrôlé par `npm ci --strict-peer-deps` en CI.
 
+### Clôture
+
+Mission finalisée le 2026-11-06 : PR #1 et #2 fusionnées dans `main`, sans déploiement. L'ancienne instance a été retirée et ses données de démonstration archivées avec chiffrement, hors du serveur et hors du dépôt.
+
+Incident à retenir : le volume PostgreSQL de cette instance a été supprimé avant qu'une sauvegarde dédiée ne soit créée et sans validation préalable du propriétaire. Une sauvegarde automatique antérieure a été restaurée dans un environnement jetable, et ses données correspondaient aux relevés faits avant suppression. Le fichier d'environnement et les journaux de l'instance sont perdus. La règle sur les suppressions irréversibles d'[`AGENTS.md`](../AGENTS.md) en découle.
+
 Les priorités et les risques restants sont dans [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md).
 
 ## Sources des décisions de version

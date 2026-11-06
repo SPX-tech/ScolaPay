@@ -2,7 +2,17 @@
 
 Référence stratégique et technique du projet, lisible sans l'historique des conversations. En cas de désaccord entre ce document et le code, **le code prime** : corriger le document.
 
-**Dernière mise à jour : 2026-11-06.** Le statut des fonctionnalités décrit le code des branches `mission001/ci-baseline` et `mission001/financial-hardening`, **pas encore fusionnées dans `main`**. **Aucune instance de ScolaPay n'est en service** : « implémenté » ne signifie pas « déployé ».
+**Dernière mise à jour : 2026-11-06.** Le statut des fonctionnalités décrit le code de `main`. **Aucune instance de ScolaPay n'est en service** : « implémenté » ne signifie pas « déployé ».
+
+## État du projet en bref
+
+| Sujet | État |
+| --- | --- |
+| Mission 001 (socle et durcissement financier) | **Finalisée**, PR #1 et #2 fusionnées dans `main` le 2026-11-06 |
+| Ancien déploiement | **Retiré** le 2026-11-06. Il ne contenait qu'un établissement de démonstration |
+| Données de l'ancienne instance | **Archivées**, chiffrées, hors du serveur et hors du dépôt, avec restauration et relecture vérifiées. La clé est conservée séparément |
+| Nouveau backend Java/Spring Boot | **Approuvé, pas implémenté.** Aucun code Java dans le dépôt |
+| Prochain chantier | Construction du nouveau backend ScolaPay 2.0 |
 
 ## Vision
 
@@ -55,7 +65,7 @@ Android Compose ┘            monolithe modulaire, Prisma 7
 ```
 
 - **Node 24**, TypeScript 6 côté backend et 5.9 côté web, React 19, Kotlin 2.4, AGP 9.3. Détail et motifs dans le [journal de validation](mission-001-validation.md).
-- **Déploiement par `docker compose`** : une image `migrate` applique les migrations avant l'API. Une seule instance d'API est supposée (voir les risques). L'ancienne instance a été retirée le 2026-11-06 : elle ne contenait qu'un établissement de démonstration, et ses données sont archivées hors du dépôt.
+- **Déploiement par `docker compose`** : une image `migrate` applique les migrations avant l'API. Une seule instance d'API est supposée (voir les risques). Ce mode de déploiement n'est plus utilisé depuis le retrait de l'ancienne instance.
 - **Modèle de données** : [`backend/prisma/schema.prisma`](../backend/prisma/schema.prisma). Montants en `BIGINT`, exposés en chaînes dans le JSON.
 
 ### Cible validée pour ScolaPay 2.0
@@ -100,18 +110,7 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 
 ## Priorités actuelles
 
-1. **Clore la Mission 001** : faire examiner et fusionner les PR [#1](https://github.com/SPX-tech/ScolaPay/pull/1) puis [#2](https://github.com/SPX-tech/ScolaPay/pull/2), selon la [procédure ci-dessous](#intégrer-les-pr-de-la-mission-001). La fusion et le déploiement attendent l'autorisation explicite du propriétaire.
-2. **Préparer la fondation Java/Spring Boot** : chantier distinct, à cadrer avec ses objectifs métier et architecturaux. **Il n'est pas commencé.**
-
-### Intégrer les PR de la Mission 001
-
-État au 2026-11-06 : `main` n'a pas bougé depuis la création du socle, aucun conflit, CI et conteneurs verts sur les deux têtes.
-
-1. **Fusionner #1 dans `main`** avec un commit de fusion, sans squash : #2 repose sur ses commits.
-2. **Recibler #2 sur `main`** : elle vise le socle, et le dépôt ne le fait pas automatiquement.
-3. **Fusionner #2** aussitôt, puis vérifier la CI du commit de `main`. Le socle seul ne contient pas les correctifs financiers : ne rien déployer entre ces deux fusions.
-
-L'arbre obtenu est identique à la tête de `mission001/financial-hardening`, déjà validée en CI.
+1. **Construire la fondation Java/Spring Boot de ScolaPay 2.0** : chantier distinct, à cadrer avec ses objectifs métier et architecturaux. **Il n'est pas commencé.** Le code et les tests NestJS servent de référence : les correctifs de la Mission 001 ne sont pas à reprendre.
 
 ## Risques connus
 

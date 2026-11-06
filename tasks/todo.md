@@ -6,6 +6,6 @@
 - [x] Contrats : dates ISO, montants exacts, pagination, identifiants et routes cohérents.
 - [x] Finance : tests réels de concurrence et d'isolation, simulation exclue de production.
 - [x] Android : compilation, lint et tests de désérialisation des contrats.
-- [x] Livraison : décisions d'architecture, résultats documentés et PR prêtes à examiner.
+- [x] Livraison : décisions d'architecture, résultats documentés, PR fusionnées.
 
-Mission close côté développement. Suite : [`docs/PROJECT_CONTEXT.md`](../docs/PROJECT_CONTEXT.md).
+Mission finalisée le 2026-11-06. Suite : [`docs/PROJECT_CONTEXT.md`](../docs/PROJECT_CONTEXT.md).
