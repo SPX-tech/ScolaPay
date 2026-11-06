@@ -2,7 +2,7 @@
 
 - **Statut** : Principes acceptés par le propriétaire. Le traitement fiscal reste **à valider avec un conseil fiscal et la DGI**.
 - **Date** : 2026-11-06
-- **Implémentation** : aucune. Le lot 4 de la Mission 003 doit intégrer cette distinction dans son modèle.
+- **Implémentation** : la référence interne et la séparation de l'obligation sont en place, voir [0021](0021-obligations-et-journal.md). Aucun appel de frais, facture fiscale ni reçu n'existe.
 
 ## Décision
 

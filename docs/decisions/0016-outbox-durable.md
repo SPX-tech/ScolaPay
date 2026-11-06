@@ -3,7 +3,7 @@
 - **Statut** : Acceptée, sur la base des tests ci-dessous
 - **Date** : 2026-11-06
 - **Décideur** : propriétaire du projet, évaluation menée au lot 1 de la Mission 003
-- **Implémentation** : registre en place dans `core/`. **Aucun listener de production ne l'utilise encore** : le premier sera l'émission des obligations, au lot 4.
+- **Implémentation** : registre en place dans `core/`. Le premier listener de production est l'[émission des obligations](0021-obligations-et-journal.md).
 
 ## Contexte
 

@@ -80,7 +80,7 @@ Décisions du propriétaire pour le lot 4 :
 | Tarif modifié alors qu'un frais est déjà émis | Rien ne change sur l'obligation émise. Un écart passe par un ajustement autorisé |
 | Frais retiré d'une nouvelle version | Rien ne change sur l'obligation émise |
 
-Les émissions sont idempotentes, y compris en concurrence, à la reprise d'un événement ou après une nouvelle publication.
+Les émissions sont idempotentes, y compris en concurrence, à la reprise d'un événement ou après une nouvelle publication. Voir [0021](0021-obligations-et-journal.md).
 
 ## Montants
 

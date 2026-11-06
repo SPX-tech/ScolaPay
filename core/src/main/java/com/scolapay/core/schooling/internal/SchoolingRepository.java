@@ -1,5 +1,6 @@
 package com.scolapay.core.schooling.internal;
 
+import com.scolapay.core.schooling.AcademicCatalog.EnrollmentSummary;
 import com.scolapay.core.shared.Columns;
 import com.scolapay.core.shared.PageQuery;
 import java.sql.ResultSet;
@@ -216,6 +217,48 @@ public class SchoolingRepository {
                         Columns.instant(rs, "enrolled_at"),
                         Columns.instant(rs, "ended_at")))
                 .list();
+    }
+
+    public Optional<EnrollmentSummary> findEnrollmentSummary(UUID establishmentId, UUID id) {
+        return jdbc.sql("""
+                SELECT id, student_record_id, academic_year_id, academic_unit_id, status
+                FROM enrollments WHERE establishment_id = :establishmentId AND id = :id
+                """)
+                .param("establishmentId", establishmentId)
+                .param("id", id)
+                .query(SchoolingRepository::enrollmentSummary)
+                .optional();
+    }
+
+    public List<EnrollmentSummary> activeEnrollments(UUID establishmentId, UUID academicYearId, List<UUID> unitsOrAll, int limit) {
+        if (unitsOrAll != null && unitsOrAll.isEmpty()) {
+            return List.of();
+        }
+        String filter = unitsOrAll == null ? "" : "AND academic_unit_id IN (:units)\n";
+        JdbcClient.StatementSpec statement = jdbc.sql("""
+                SELECT id, student_record_id, academic_year_id, academic_unit_id, status
+                FROM enrollments
+                WHERE establishment_id = :establishmentId AND academic_year_id = :yearId AND status = 'ACTIVE'
+                """ + filter + """
+                ORDER BY id
+                LIMIT :limit
+                """)
+                .param("establishmentId", establishmentId)
+                .param("yearId", academicYearId)
+                .param("limit", limit);
+        if (unitsOrAll != null) {
+            statement = statement.param("units", unitsOrAll);
+        }
+        return statement.query(SchoolingRepository::enrollmentSummary).list();
+    }
+
+    private static EnrollmentSummary enrollmentSummary(ResultSet rs, int rowNum) throws SQLException {
+        return new EnrollmentSummary(
+                Columns.uuid(rs, "id"),
+                Columns.uuid(rs, "student_record_id"),
+                Columns.uuid(rs, "academic_year_id"),
+                Columns.uuid(rs, "academic_unit_id"),
+                rs.getString("status"));
     }
 
     public Map<UUID, Long> activeEnrollmentsByUnit(UUID establishmentId, UUID academicYearId) {
