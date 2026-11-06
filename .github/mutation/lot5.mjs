@@ -20,7 +20,10 @@ const added = {
   'status-cancelled-seen-as-other': never(O, 'obligation.cancelled()'),
   'status-always-corrected': [[O, 'return obligation.discounted() ? WAIVED : CORRECTED;', 'return CORRECTED;']],
   'status-always-waived': [[O, 'return obligation.discounted() ? WAIVED : CORRECTED;', 'return WAIVED;']],
-  'status-cancel-ignores-reversal': [[R, 'AND NOT EXISTS (SELECT 1 FROM obligation_entries r WHERE r.reverses_entry_id = e.id)) AS cancelled,', ') AS cancelled,']],
+  'status-cancel-ignores-reversal': {
+    steps: [[R, 'AND NOT EXISTS (SELECT 1 FROM obligation_entries r WHERE r.reverses_entry_id = e.id)) AS cancelled,', ') AS cancelled,']],
+    mustFail: ['AdjustmentTest.uneAnnulationContrepasseeNeLaissePasLeStatutCancelled'],
+  },
   'status-discount-ignores-reversal': [[R, 'AND NOT EXISTS (SELECT 1 FROM obligation_entries r WHERE r.reverses_entry_id = e.id)) AS discounted,', ') AS discounted,']],
 
   // Protection renforcée
@@ -77,7 +80,10 @@ const added = {
   },
   'db-zero-without-second-person': [[V, `IF NEW.kind <> 'ISSUED' AND due + NEW.amount_minor = 0 AND NEW.approved_by IS NULL THEN`, 'IF FALSE THEN']],
   'db-partial-cancellation': [[V, `IF NEW.kind = 'CANCELLATION' AND due + NEW.amount_minor <> 0 THEN`, 'IF FALSE THEN']],
-  'db-reversal-any-kind': [[V, `IF original_kind IN ('ISSUED', 'REVERSAL') THEN`, 'IF FALSE THEN']],
+  'db-reversal-any-kind': {
+    steps: [[V, `IF original_kind IN ('ISSUED', 'REVERSAL') THEN`, 'IF FALSE THEN']],
+    mustFail: ['AdjustmentTest.laBaseRefuseDeContrepasserUneEmissionOuUneContrepassee'],
+  },
   'db-reversal-any-amount': [[V, 'IF original_amount <> -NEW.amount_minor THEN', 'IF FALSE THEN']],
   'db-self-approved-entry': [[V, '  ADD CONSTRAINT obligation_entries_second_person CHECK (approved_by IS NULL OR approved_by <> recorded_by),\n', '']],
   'db-reversal-other-obligation': [[V, `ALTER TABLE obligation_entries ADD CONSTRAINT obligation_entries_reverses_fk

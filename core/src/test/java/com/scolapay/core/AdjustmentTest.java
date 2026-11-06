@@ -323,6 +323,21 @@ class AdjustmentTest extends BillingScenarioTest {
         assertDue(tenant, obligation, 0, "CORRECTED");
     }
 
+    /** Une annulation défaite ne compte plus : le statut suit l'opération qui a réellement soldé le dû. */
+    @Test
+    void uneAnnulationContrepasseeNeLaissePasLeStatutCancelled() throws Exception {
+        School school = school();
+        Tenant tenant = school.tenant();
+        String accountant = newStaff(tenant, "ACCOUNTANT");
+        UUID obligation = issuedObligation(school);
+        String cancelled = approve(tenant, accountant, requestIdOf(cancellation(tenant, tenant.adminToken(), obligation))).text("id");
+        approve(tenant, accountant, requestIdOf(reversal(tenant, tenant.adminToken(), obligation, cancelled)));
+
+        approve(tenant, accountant, requestIdOf(discount(tenant, tenant.adminToken(), obligation, AMOUNT)));
+
+        assertDue(tenant, obligation, 0, "WAIVED");
+    }
+
     // Aucune de ces opérations n'est un encaissement, ni ne permet de refacturer
 
     @Test
@@ -632,6 +647,29 @@ class AdjustmentTest extends BillingScenarioTest {
         assertThatThrownBy(() -> insertEntry(tenant, obligation, "REVERSAL", 10_000, discount, null))
                 .as("Une seule contrepassée par écriture")
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    /** Montants exacts et dû suffisant : seule la règle sur la nature de l'écriture peut refuser ici. */
+    @Test
+    void laBaseRefuseDeContrepasserUneEmissionOuUneContrepassee() throws Exception {
+        School school = school();
+        Tenant tenant = school.tenant();
+        UUID obligation = issuedObligation(school);
+        UUID issued = UUID.fromString(entries(tenant, obligation).get(0).path("id").asString());
+        UUID approver = accountantId(tenant);
+
+        assertThatThrownBy(() -> insertEntry(tenant, obligation, "REVERSAL", -AMOUNT, issued, approver))
+                .as("L'émission")
+                .isInstanceOf(DataAccessException.class)
+                .hasMessageContaining("ne se contrepasse pas");
+
+        UUID discount = UUID.fromString(entryId(discount(tenant, tenant.adminToken(), obligation, 10_000)));
+        UUID reversal = UUID.fromString(entryId(reversal(tenant, tenant.adminToken(), obligation, discount.toString())));
+
+        assertThatThrownBy(() -> insertEntry(tenant, obligation, "REVERSAL", -10_000, reversal, null))
+                .as("Une contrepassée")
+                .isInstanceOf(DataAccessException.class)
+                .hasMessageContaining("ne se contrepasse pas");
     }
 
     @Test
