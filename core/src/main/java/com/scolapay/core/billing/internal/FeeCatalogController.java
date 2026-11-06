@@ -1,5 +1,6 @@
 package com.scolapay.core.billing.internal;
 
+import com.scolapay.core.billing.internal.FeeCatalogRepository.Definition;
 import com.scolapay.core.billing.internal.FeeCatalogRepository.Installment;
 import com.scolapay.core.billing.internal.FeeCatalogRepository.Item;
 import com.scolapay.core.billing.internal.FeeCatalogRepository.Period;
@@ -44,23 +45,26 @@ class FeeCatalogController {
 
     record UpdatePeriodRequest(@Size(max = 100) String name, @Pattern(regexp = "^(ACTIVE|ARCHIVED)$") String status) {}
 
+    record CreateDefinitionRequest(
+            @NotNull UUID academicYearId, @NotNull UUID billingPeriodId, @NotBlank @Size(max = 200) String name) {}
+
     record CreateDraftRequest(@NotNull UUID academicYearId) {}
 
     record InstallmentRequest(@NotNull LocalDate dueOn, @NotNull @Pattern(regexp = AMOUNT) String amountMinor) {}
 
     record ItemRequest(
+            @NotNull UUID feeDefinitionId,
             @NotNull @Pattern(regexp = CODE) String feeCode,
             @NotBlank @Size(max = 200) String label,
             @NotNull @Pattern(regexp = "^(REGISTRATION|TUITION|EXAM|TRANSPORT|CANTEEN|OTHER)$") String category,
             @NotNull @Pattern(regexp = "^(AUTOMATIC|ON_REQUEST)$") String application,
             @NotNull @Pattern(regexp = AMOUNT) String amountMinor,
-            @NotNull UUID billingPeriodId,
             UUID academicUnitId,
             @NotEmpty @Size(max = 100) List<@Valid @NotNull InstallmentRequest> installments) {
 
         Item toItem() {
             return new Item(
-                    null, feeCode, label, category, application, Long.parseLong(amountMinor), billingPeriodId, academicUnitId,
+                    null, feeDefinitionId, feeCode, label, category, application, Long.parseLong(amountMinor), null, academicUnitId,
                     installments.stream()
                             .map(installment -> new Installment(installment.dueOn(), Long.parseLong(installment.amountMinor())))
                             .toList());
@@ -71,6 +75,7 @@ class FeeCatalogController {
 
     record ItemView(
             UUID id,
+            UUID feeDefinitionId,
             String feeCode,
             String label,
             String category,
@@ -82,7 +87,7 @@ class FeeCatalogController {
 
         static ItemView of(Item item) {
             return new ItemView(
-                    item.id(), item.feeCode(), item.label(), item.category(), item.application(),
+                    item.id(), item.feeDefinitionId(), item.feeCode(), item.label(), item.category(), item.application(),
                     String.valueOf(item.amountMinor()), item.billingPeriodId(), item.academicUnitId(),
                     item.installments().stream()
                             .map(installment -> new InstallmentView(installment.dueOn(), String.valueOf(installment.amountMinor())))
@@ -137,6 +142,19 @@ class FeeCatalogController {
     Period updatePeriod(
             @PathVariable UUID establishmentId, @PathVariable UUID periodId, @Valid @RequestBody UpdatePeriodRequest request) {
         return periods.update(establishmentId, periodId, request.name(), request.status());
+    }
+
+    // Identité des charges : une nouvelle charge se crée ici, intentionnellement
+
+    @PostMapping("/fee-definitions")
+    @ResponseStatus(HttpStatus.CREATED)
+    Definition createDefinition(@PathVariable UUID establishmentId, @Valid @RequestBody CreateDefinitionRequest request) {
+        return catalogs.createDefinition(establishmentId, request.academicYearId(), request.billingPeriodId(), request.name());
+    }
+
+    @GetMapping("/fee-definitions")
+    List<Definition> listDefinitions(@PathVariable UUID establishmentId, @RequestParam UUID academicYearId) {
+        return catalogs.listDefinitions(establishmentId, academicYearId);
     }
 
     // Catalogue

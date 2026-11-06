@@ -1,6 +1,6 @@
 # 0020 : catalogue de frais et périodes de facturation
 
-- **Statut** : Exigences du propriétaire, modèle proposé dans la PR du lot 3 de la Mission 003
+- **Statut** : Acceptée
 - **Date** : 2026-11-06
 - **Implémentation** : en place dans `core/`. **Aucune dette n'existe encore**, l'émission viendra au lot 4.
 - **Précise** : [0015](0015-modele-de-facturation.md)
@@ -10,32 +10,48 @@
 - Une université doit pouvoir facturer par semestre ou par session, avec une inscription qui reste annuelle : **période d'inscription et période de facturation sont deux choses distinctes**.
 - Un établissement crée des frais adaptés à son organisation, sans jamais modifier rétroactivement un tarif publié ou appliqué.
 - Aucun élève déjà inscrit n'est facturé deux fois, et aucune dette ne naît silencieusement d'un catalogue non publié.
+- **Une correction de code ou une modification de tarif n'est jamais une nouvelle charge. Une véritable nouvelle charge reste possible, mais se crée intentionnellement.**
 
 ## Modèle
 
 | Table | Rôle |
 | --- | --- |
 | `billing_periods` | Période de facturation d'une année : `ANNEE`, `T1`, `S1`, `RATTRAPAGE`. Plusieurs peuvent se chevaucher. Ses dates et son code sont figés |
+| `fee_definitions` | **L'identité stable d'une charge pour une année**, liée à sa période. Sans montant ni code d'affichage, et immuable |
 | `fee_catalog_versions` | Version du catalogue d'une année : `DRAFT`, puis `PUBLISHED`, puis `SUPERSEDED` |
-| `fee_items` | Un frais pour une unité académique, ou pour tout l'établissement |
+| `fee_items` | Le tarif d'une charge pour une unité académique, ou pour tout l'établissement, avec son code et son libellé |
 | `fee_item_installments` | Ses échéances, dont la somme égale le montant |
 
 | Établissement | Exemple |
 | --- | --- |
 | École | Période `ANNEE`, frais `SCOLARITE` par niveau en trois échéances |
-| Université | Périodes `S1` et `S2`, frais `SCOL-S1` et `SCOL-S2` sur un niveau ou un programme, et `INSCRIPTION` sur `ANNEE` |
+| Université | Périodes `S1` et `S2`, deux charges distinctes aux codes `SCOL-S1` et `SCOL-S2`, sur un niveau ou un programme, et `INSCRIPTION` sur `ANNEE` |
 
-### Le code de frais et sa période
+### L'identité d'une charge
 
-**`fee_code` est l'identité stable d'une charge, et il reste attaché à une seule période pour toute l'année**, d'une version à l'autre. Un semestre a donc son propre code.
+**Une charge a une identité propre, `fee_definitions`, distincte de son code et de son libellé.** La protection contre la double facturation repose sur cette identité, et non sur un texte que l'établissement peut corriger.
 
-C'est ce qui garde valable la contrainte de [0015](0015-modele-de-facturation.md#empêcher-la-double-facturation), `UNIQUE (établissement, dossier, année, fee_code)`. Si un même code pouvait changer de période, déplacer un frais de S1 à S2 le ferait passer pour une nouvelle charge et le facturerait deux fois. La base refuse donc de publier une version qui romprait ce lien. Un brouillon abandonné ne retient rien.
+| Situation | Ce qui se passe |
+| --- | --- |
+| Corriger un code : `SCOL` devient `SCOLARITE` | Même charge. L'aperçu d'impact indique `RENAMED` et l'ancien code |
+| Modifier un tarif ou un libellé | Même charge. L'aperçu indique `CHANGED` |
+| Créer une nouvelle charge | Acte explicite : `POST .../billing/fee-definitions`. L'aperçu indique `NEW` |
+| Saisir une ligne sans identité existante | Refusé : **un code seul ne crée jamais une charge** |
+| Réutiliser un ancien code pour une autre charge | Refusé : ce code désigne pour toute l'année la charge qui l'a publié |
+| Déplacer une charge sur une autre période | Impossible : la période appartient à l'identité. Il faut créer une autre charge, intentionnellement |
+
+Une charge porte **un seul code par version publiée**, et un code désigne **une seule charge**. La première règle se vérifie à la publication, car renommer une charge présente sur plusieurs unités passe par un brouillon où ses lignes portent un temps deux codes. La base refuse de publier une version qui romprait l'une de ces règles. Un brouillon abandonné ne retient aucun code, mais l'identité qu'il utilisait reste disponible.
+
+La contrainte d'unicité du [lot 4](0015-modele-de-facturation.md#empêcher-la-double-facturation) portera donc sur `(établissement, dossier, fee_definition_id)`. L'identité appartenant à une seule année, celle-ci n'a pas à y figurer.
+
+Cette identité vaut **pour une année**. D'une année à l'autre, une charge est nouvelle, ce qui est le comportement attendu : la scolarité 2027-2028 n'est pas celle de 2026-2027.
 
 ### Règles d'applicabilité
 
 - **Cible** : une unité et ses descendants, ou tout l'établissement.
-- **La ligne la plus proche l'emporte** pour un même code : l'unité, puis ses programmes en remontant, puis l'établissement. Une unité reçoit donc au plus une ligne par code, sans ambiguïté, et un tarif général peut être précisé pour un niveau.
+- **La ligne la plus proche l'emporte** pour une même charge : l'unité, puis ses programmes en remontant, puis l'établissement. Une unité reçoit donc au plus une ligne par charge, sans ambiguïté, et un tarif général peut être précisé pour un niveau.
 - **Application** : `AUTOMATIC` pour tous les concernés, `ON_REQUEST` pour un frais facultatif comme la cantine ou le transport. Ce frais n'est jamais imputé d'office.
+- **Ces deux critères sont les seuls, par décision du propriétaire.** Les règles sur les fratries, les nouveaux élèves ou les avantages commerciaux **ne passent pas par un frais facultatif** : elles relèvent des remises et ajustements du lot 5, puis éventuellement de futures règles d'éligibilité.
 - **Catégorie** : `REGISTRATION`, `TUITION`, `EXAM`, `TRANSPORT`, `CANTEEN`, `OTHER`. Elle fournira le libellé neutre prévu par [0015](0015-modele-de-facturation.md#ce-que-chacun-voit).
 
 ### Publication et versions
@@ -54,17 +70,17 @@ C'est ce qui garde valable la contrainte de [0015](0015-modele-de-facturation.md
 
 `GET .../fee-catalogs/{id}/impact` montre, sans rien écrire, ce que la version changerait : frais nouveaux, modifiés, inchangés ou retirés, et nombre d'inscrits concernés.
 
-Pour le lot 4, proposition à valider :
+Décisions du propriétaire pour le lot 4 :
 
 | Situation | Comportement |
 | --- | --- |
-| Inscription après la publication | Émission automatique des frais `AUTOMATIC` en vigueur, via l'[outbox](0016-outbox-durable.md) |
-| Inscription sans tarif publié | Aucune dette. L'inscription reste valable |
 | Élèves inscrits avant la publication | **Émission en lot, explicite et confirmée après un aperçu**, jamais déclenchée par la publication |
+| Nouvelle inscription | Les obligations qui seront générées sont **visibles avant la confirmation**. Une inscription ne crée pas de dette inattendue pour le personnel |
+| Inscription sans tarif publié | Aucune dette. L'inscription reste valable |
 | Tarif modifié alors qu'un frais est déjà émis | Rien ne change sur l'obligation émise. Un écart passe par un ajustement autorisé |
 | Frais retiré d'une nouvelle version | Rien ne change sur l'obligation émise |
 
-Dans tous les cas, la contrainte d'unicité par `fee_code` empêche de facturer deux fois.
+Les émissions sont idempotentes, y compris en concurrence, à la reprise d'un événement ou après une nouvelle publication.
 
 ## Montants
 
@@ -72,15 +88,11 @@ Convention de [0012](0012-convention-monetaire.md) : `BIGINT` nommé `*_minor`, 
 
 ## Volontairement non construit
 
-- **Autres critères d'applicabilité** : nouvel ou ancien élève, âge, fratrie. Ils s'ajouteraient comme des règles supplémentaires si un besoin réel apparaît.
+- **Autres critères d'applicabilité** : voir ci-dessus, ils relèvent des remises et ajustements.
 - **Pénalités et remises** : les remises relèvent du lot 5, les pénalités sont exclues.
 - **Traitement fiscal** : voir [0019](0019-nature-des-documents-et-numerotation.md). Une catégorie n'a aucune portée fiscale.
 - **Contenance d'une période dans l'année** : non imposée, car une session de rattrapage peut déborder de l'année académique.
 
 ## Preuves
 
-`FeeCatalogTest` passe par la vraie API, et écrit directement en base pour les garanties de PostgreSQL. Sur 41 défauts injectés un à un, 40 ont été détectés d'emblée. Le dernier, la suppression du verrou de la base pendant une publication, survivait parce que le service verrouille aussi : un test sur deux connexions directes le couvre désormais.
-
-## Risques
-
-- Si un établissement renomme un code au lieu de le conserver (`SCOL` devient `SCOLARITE`), le système y voit une nouvelle charge. L'aperçu d'impact la signale `NEW` avec le nombre d'inscrits concernés, et l'émission en lot l'affichera avant confirmation : **la protection est humaine sur ce point**.
+`FeeCatalogTest` passe par la vraie API, et écrit directement en base pour les garanties de PostgreSQL. Tous les défauts injectés un à un sont détectés, y compris la suppression du verrou de la base pendant une publication, qui survivait d'abord parce que le service verrouille aussi : un test sur deux connexions directes la couvre désormais.

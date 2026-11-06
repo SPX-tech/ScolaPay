@@ -12,9 +12,9 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Détermine les frais d'une unité académique. Pour un même code, la ligne la plus proche de l'unité
+ * Détermine les frais d'une unité académique. Pour une même charge, la ligne la plus proche de l'unité
  * l'emporte : l'unité elle-même, puis ses programmes en remontant, puis l'établissement entier. Une
- * unité reçoit donc au plus une ligne par code, sans ambiguïté possible.
+ * unité reçoit donc au plus une ligne par charge, sans ambiguïté possible.
  */
 final class FeeResolution {
 
@@ -22,25 +22,25 @@ final class FeeResolution {
 
     static List<Item> applicableTo(UUID unitId, List<Item> items, Map<UUID, UnitSummary> units) {
         List<UUID> lineage = lineage(unitId, units);
-        Set<String> codes = items.stream().map(Item::feeCode).collect(Collectors.toSet());
+        Set<UUID> definitions = items.stream().map(Item::feeDefinitionId).collect(Collectors.toSet());
         List<Item> applicable = new ArrayList<>();
-        for (String code : codes) {
-            nearest(code, lineage, items).ifPresent(applicable::add);
+        for (UUID definition : definitions) {
+            nearest(definition, lineage, items).ifPresent(applicable::add);
         }
         applicable.sort(Comparator.comparing(Item::feeCode));
         return applicable;
     }
 
-    private static java.util.Optional<Item> nearest(String code, List<UUID> lineage, List<Item> items) {
+    private static java.util.Optional<Item> nearest(UUID definition, List<UUID> lineage, List<Item> items) {
         for (UUID unit : lineage) {
             for (Item item : items) {
-                if (item.feeCode().equals(code) && Objects.equals(item.academicUnitId(), unit)) {
+                if (item.feeDefinitionId().equals(definition) && Objects.equals(item.academicUnitId(), unit)) {
                     return java.util.Optional.of(item);
                 }
             }
         }
         return items.stream()
-                .filter(item -> item.feeCode().equals(code) && item.academicUnitId() == null)
+                .filter(item -> item.feeDefinitionId().equals(definition) && item.academicUnitId() == null)
                 .findFirst();
     }
 

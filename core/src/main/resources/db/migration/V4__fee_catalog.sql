@@ -56,28 +56,46 @@ CREATE TABLE fee_catalog_versions (
 CREATE UNIQUE INDEX fee_catalog_versions_one_draft ON fee_catalog_versions (establishment_id, academic_year_id) WHERE status = 'DRAFT';
 CREATE UNIQUE INDEX fee_catalog_versions_one_published ON fee_catalog_versions (establishment_id, academic_year_id) WHERE status = 'PUBLISHED';
 
--- Une ligne par combinaison de frais et d'unité académique visée. Une unité nulle vise tout
--- l'établissement. fee_code est l'identité stable d'une charge : il ne change pas de période
--- d'une version à l'autre, ce qui permet de refuser une double facturation sur ce seul code.
+-- L'identité métier d'une charge pour une année, créée explicitement. Elle ne porte ni montant ni
+-- code d'affichage : corriger un code ou un tarif ne crée donc jamais une nouvelle charge, et c'est
+-- sur cette identité que repose la protection contre la double facturation. Elle ne change jamais.
+
+CREATE TABLE fee_definitions (
+  id                uuid PRIMARY KEY,
+  establishment_id  uuid NOT NULL,
+  academic_year_id  uuid NOT NULL,
+  billing_period_id uuid NOT NULL,
+  name              text NOT NULL CHECK (length(name) BETWEEN 1 AND 200),
+  created_at        timestamptz NOT NULL,
+  created_by        uuid NOT NULL REFERENCES accounts (id),
+  UNIQUE (establishment_id, academic_year_id, id),
+  FOREIGN KEY (establishment_id, academic_year_id, billing_period_id)
+    REFERENCES billing_periods (establishment_id, academic_year_id, id)
+);
+CREATE TRIGGER fee_definitions_immutable BEFORE UPDATE OR DELETE ON fee_definitions
+  FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+
+-- Une ligne par combinaison de charge et d'unité académique visée. Une unité nulle vise tout
+-- l'établissement. fee_code n'est qu'un code d'affichage, qui peut changer d'une version à l'autre.
 
 CREATE TABLE fee_items (
   id                 uuid PRIMARY KEY,
   establishment_id   uuid NOT NULL,
   academic_year_id   uuid NOT NULL,
   catalog_version_id uuid NOT NULL,
+  fee_definition_id  uuid NOT NULL,
   fee_code           text NOT NULL CHECK (fee_code ~ '^[A-Z0-9][A-Z0-9-]{0,30}$'),
   label              text NOT NULL CHECK (length(label) BETWEEN 1 AND 200),
   category           text NOT NULL CHECK (category IN ('REGISTRATION', 'TUITION', 'EXAM', 'TRANSPORT', 'CANTEEN', 'OTHER')),
   application        text NOT NULL CHECK (application IN ('AUTOMATIC', 'ON_REQUEST')),
   amount_minor       bigint NOT NULL CHECK (amount_minor BETWEEN 1 AND 999999999999999),
-  billing_period_id  uuid NOT NULL,
   academic_unit_id   uuid,
   UNIQUE (establishment_id, catalog_version_id, id),
-  UNIQUE NULLS NOT DISTINCT (catalog_version_id, fee_code, academic_unit_id),
+  UNIQUE NULLS NOT DISTINCT (catalog_version_id, fee_definition_id, academic_unit_id),
   FOREIGN KEY (establishment_id, academic_year_id, catalog_version_id)
     REFERENCES fee_catalog_versions (establishment_id, academic_year_id, id),
-  FOREIGN KEY (establishment_id, academic_year_id, billing_period_id)
-    REFERENCES billing_periods (establishment_id, academic_year_id, id),
+  FOREIGN KEY (establishment_id, academic_year_id, fee_definition_id)
+    REFERENCES fee_definitions (establishment_id, academic_year_id, id),
   FOREIGN KEY (establishment_id, academic_unit_id) REFERENCES academic_units (establishment_id, id)
 );
 CREATE INDEX fee_items_code_idx ON fee_items (establishment_id, academic_year_id, fee_code);
@@ -164,15 +182,21 @@ BEGIN
       RAISE EXCEPTION 'La somme des échéances doit égaler le montant du frais';
     END IF;
     IF EXISTS (
+         SELECT 1 FROM fee_items WHERE catalog_version_id = NEW.id
+         GROUP BY fee_definition_id HAVING count(DISTINCT fee_code) > 1) THEN
+      RAISE EXCEPTION 'Une charge porte un seul code dans une version';
+    END IF;
+    -- Un code déjà publié ne peut pas désigner une autre charge : on ne les confondrait plus.
+    IF EXISTS (
          SELECT 1 FROM fee_items i
          JOIN fee_items other ON other.establishment_id = i.establishment_id
            AND other.academic_year_id = i.academic_year_id
            AND other.fee_code = i.fee_code
-           AND other.billing_period_id <> i.billing_period_id
+           AND other.fee_definition_id <> i.fee_definition_id
          JOIN fee_catalog_versions v ON v.id = other.catalog_version_id
          WHERE i.catalog_version_id = NEW.id
            AND (other.catalog_version_id = NEW.id OR v.status IN ('PUBLISHED', 'SUPERSEDED'))) THEN
-      RAISE EXCEPTION 'Un code de frais reste attaché à une seule période de facturation';
+      RAISE EXCEPTION 'Un code de frais désigne une seule charge';
     END IF;
   END IF;
   RETURN NEW;

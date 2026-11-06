@@ -58,7 +58,7 @@ Prouvés par des tests sur PostgreSQL réel, sans doubles, et par des mutations 
 
 **Fiabilité**
 - Les quatre tests de sortie de [0016](../decisions/0016-outbox-durable.md) sont verts.
-- Rejouer une inscription, relancer un lot, ou publier une nouvelle version du catalogue ne facture jamais deux fois le même frais.
+- Rejouer une inscription, relancer un lot, publier une nouvelle version du catalogue ou corriger un code de frais ne facture jamais deux fois la même charge.
 - Publier un tarif ne crée aucune dette. Un élève déjà inscrit n'est facturé que par une émission explicite.
 
 **Mise en service**
@@ -73,8 +73,8 @@ Chaque lot est une PR verte, indépendante, et met à jour `PROJECT_CONTEXT.md`.
 | --- | --- | --- | --- |
 | 1 | Outbox durable et ses tests de sortie, contrôle de mise en service | | **Terminé** |
 | 2 | Catalogue académique structuré dans `schooling`, voir [0018](../decisions/0018-catalogue-academique.md) | | **Terminé** |
-| 3 | Module `billing` : catalogue de frais, applicabilité, périodes de facturation, publication et versions, voir [0020](../decisions/0020-catalogue-de-frais-et-periodes.md) | Lot 2 | **Terminé, PR à valider** |
-| 4 | Obligations, échéances et journal, émission sans double facturation, élèves déjà inscrits, distinction des [documents](../decisions/0019-nature-des-documents-et-numerotation.md) | Lots 1 et 3 | À faire, décisions à présenter avant |
+| 3 | Module `billing` : catalogue de frais, identité stable des charges, applicabilité, périodes de facturation, publication et versions, voir [0020](../decisions/0020-catalogue-de-frais-et-periodes.md) | Lot 2 | **Terminé** |
+| 4 | Obligations, échéances et journal, émission sans double facturation, élèves déjà inscrits, distinction des [documents](../decisions/0019-nature-des-documents-et-numerotation.md) | Lots 1 et 3 | **En cours** |
 | 5 | Remises et ajustements, permissions, confirmation par une seconde personne, réexamen après retrait | Lot 4 | À faire |
 | 6 | Personnes physiques et morales, rôles, vues par rôle, retrait de `financial_contributor` | Lot 4 | À faire |
 | 7 | Campagne de mutations et clôture | Tous | À faire |

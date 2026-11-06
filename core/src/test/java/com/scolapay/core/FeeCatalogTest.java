@@ -20,6 +20,11 @@ class FeeCatalogTest extends IntegrationTest {
     @Autowired
     DataSource dataSource;
 
+    private record PeriodOwner(Tenant tenant, UUID year) {}
+
+    private final Map<UUID, PeriodOwner> periodOwners = new HashMap<>();
+    private final Map<String, UUID> charges = new HashMap<>();
+
     private UUID period(Tenant tenant, UUID year, String code) {
         Response created = post(tenant.path("/billing/periods"), tenant.adminToken(), Map.of(
                 "academicYearId", year.toString(),
@@ -28,7 +33,23 @@ class FeeCatalogTest extends IntegrationTest {
                 "startsOn", "2026-09-01",
                 "endsOn", "2027-01-31"));
         assertThat(created.status()).as(created.raw()).isEqualTo(201);
+        periodOwners.put(created.id("id"), new PeriodOwner(tenant, year));
         return created.id("id");
+    }
+
+    private Response createCharge(Tenant tenant, UUID year, UUID period, String name) {
+        return post(tenant.path("/billing/fee-definitions"), tenant.adminToken(), Map.of(
+                "academicYearId", year.toString(), "billingPeriodId", period.toString(), "name", name));
+    }
+
+    /** Dans ces tests, un même code sur une même période désigne la même charge, créée à son premier usage. */
+    private UUID charge(String code, UUID period) {
+        return charges.computeIfAbsent(period + "/" + code, key -> {
+            PeriodOwner owner = periodOwners.get(period);
+            Response created = createCharge(owner.tenant(), owner.year(), period, "Charge " + code);
+            assertThat(created.status()).as(created.raw()).isEqualTo(201);
+            return created.id("id");
+        });
     }
 
     private UUID draft(Tenant tenant, UUID year) {
@@ -37,14 +58,18 @@ class FeeCatalogTest extends IntegrationTest {
         return created.id("id");
     }
 
-    private static Map<String, Object> fee(String code, UUID period, UUID unit, long amount) {
+    private Map<String, Object> fee(String code, UUID period, UUID unit, long amount) {
+        return feeOf(charge(code, period), code, unit, amount);
+    }
+
+    private static Map<String, Object> feeOf(UUID charge, String code, UUID unit, long amount) {
         Map<String, Object> body = new HashMap<>();
+        body.put("feeDefinitionId", charge.toString());
         body.put("feeCode", code);
         body.put("label", "Frais " + code);
         body.put("category", "TUITION");
         body.put("application", "AUTOMATIC");
         body.put("amountMinor", String.valueOf(amount));
-        body.put("billingPeriodId", period.toString());
         body.put("academicUnitId", unit == null ? null : unit.toString());
         body.put("installments", List.of(Map.of("dueOn", "2026-10-01", "amountMinor", String.valueOf(amount))));
         return body;
@@ -359,10 +384,138 @@ class FeeCatalogTest extends IntegrationTest {
         assertThat(refusedPeriod.code()).isEqualTo("ACADEMIC_YEAR_CLOSED");
     }
 
-    // Identité d'un frais : ce qui empêchera la double facturation au lot 4
+    // Identité d'une charge : ce qui empêchera la double facturation au lot 4
 
     @Test
-    void unCodeDeFraisResteAttacheASaPeriodeDansUneVersion() {
+    void corrigerUnCodeNeCreePasDeNouvelleCharge() {
+        Tenant tenant = newTenant();
+        UUID year = openYear(tenant);
+        UUID level = newLevel(tenant);
+        UUID annual = period(tenant, year, "ANNEE");
+        UUID charge = charge("SCOL", annual);
+        UUID first = draft(tenant, year);
+        addOk(tenant, first, feeOf(charge, "SCOL", null, 25_000));
+        publishOk(tenant, first);
+        enrollOk(tenant, year, level);
+
+        UUID second = draft(tenant, year);
+        Response renamed = put(tenant.path("/billing/fee-catalogs/" + second + "/items/" + itemIdOf(tenant, second, "SCOL")), tenant.adminToken(),
+                feeOf(charge, "SCOLARITE", null, 25_000));
+        assertThat(renamed.status()).as(renamed.raw()).isEqualTo(200);
+
+        Response impact = get(tenant.path("/billing/fee-catalogs/" + second + "/impact"), tenant.adminToken());
+        assertThat(impact.body().path("fees").size()).as("Une seule charge, pas deux").isEqualTo(1);
+        JsonNode fee = impactOf(impact, "SCOLARITE");
+        assertThat(fee.path("change").asString()).isEqualTo("RENAMED");
+        assertThat(fee.path("previousFeeCode").asString()).isEqualTo("SCOL");
+        assertThat(fee.path("feeDefinitionId").asString()).isEqualTo(charge.toString());
+
+        publishOk(tenant, second);
+        JsonNode applied = applicable(tenant, year, level).body().path("fees").get(0);
+        assertThat(applied.path("feeCode").asString()).isEqualTo("SCOLARITE");
+        assertThat(applied.path("feeDefinitionId").asString()).as("La même identité avant et après").isEqualTo(charge.toString());
+    }
+
+    @Test
+    void changerLeTarifEtLeCodeEnsembleResteLaMemeCharge() {
+        Tenant tenant = newTenant();
+        UUID year = openYear(tenant);
+        UUID annual = period(tenant, year, "ANNEE");
+        UUID charge = charge("SCOL", annual);
+        UUID first = draft(tenant, year);
+        addOk(tenant, first, feeOf(charge, "SCOL", null, 25_000));
+        publishOk(tenant, first);
+
+        UUID second = draft(tenant, year);
+        assertThat(put(tenant.path("/billing/fee-catalogs/" + second + "/items/" + itemIdOf(tenant, second, "SCOL")), tenant.adminToken(),
+                feeOf(charge, "SCOLARITE", null, 30_000)).status()).isEqualTo(200);
+
+        Response impact = get(tenant.path("/billing/fee-catalogs/" + second + "/impact"), tenant.adminToken());
+        assertThat(impact.body().path("fees").size()).isEqualTo(1);
+        assertThat(impactOf(impact, "SCOLARITE").path("change").asString()).isEqualTo("CHANGED");
+        assertThat(impactOf(impact, "SCOLARITE").path("previousFeeCode").asString()).isEqualTo("SCOL");
+    }
+
+    @Test
+    void uneModificationDeLibelleNeCreePasDeNouvelleCharge() {
+        Tenant tenant = newTenant();
+        UUID year = openYear(tenant);
+        UUID annual = period(tenant, year, "ANNEE");
+        UUID charge = charge("SCOL", annual);
+        UUID first = draft(tenant, year);
+        addOk(tenant, first, feeOf(charge, "SCOL", null, 25_000));
+        publishOk(tenant, first);
+
+        UUID second = draft(tenant, year);
+        Map<String, Object> relabelled = feeOf(charge, "SCOL", null, 25_000);
+        relabelled.put("label", "Autre libellé");
+        assertThat(put(tenant.path("/billing/fee-catalogs/" + second + "/items/" + itemIdOf(tenant, second, "SCOL")), tenant.adminToken(), relabelled).status()).isEqualTo(200);
+
+        Response impact = get(tenant.path("/billing/fee-catalogs/" + second + "/impact"), tenant.adminToken());
+        assertThat(impactOf(impact, "SCOL").path("change").asString()).isEqualTo("CHANGED");
+        assertThat(impactOf(impact, "SCOL").path("feeDefinitionId").asString()).isEqualTo(charge.toString());
+    }
+
+    /** Un code seul ne crée rien : sans identité existante, la ligne est refusée. */
+    @Test
+    void uneNouvelleChargeNeNaitJamaisDUnCodeInconnu() {
+        Tenant tenant = newTenant();
+        UUID year = openYear(tenant);
+        UUID version = draft(tenant, year);
+
+        Map<String, Object> withoutIdentity = feeOf(UUID.randomUUID(), "INCONNU", null, 1_000);
+        withoutIdentity.remove("feeDefinitionId");
+        assertThat(add(tenant, version, withoutIdentity).status()).isEqualTo(400);
+
+        Response unknown = add(tenant, version, feeOf(UUID.randomUUID(), "INCONNU", null, 1_000));
+        assertThat(unknown.status()).as(unknown.raw()).isEqualTo(404);
+        assertThat(unknown.code()).isEqualTo("FEE_DEFINITION_NOT_FOUND");
+    }
+
+    @Test
+    void uneVeritableNouvelleChargeResteCreeeIntentionnellement() {
+        Tenant tenant = newTenant();
+        UUID year = openYear(tenant);
+        UUID annual = period(tenant, year, "ANNEE");
+        UUID first = draft(tenant, year);
+        addOk(tenant, first, fee("SCOL", annual, null, 25_000));
+        publishOk(tenant, first);
+
+        Response created = createCharge(tenant, year, annual, "Assurance scolaire");
+        assertThat(created.status()).as(created.raw()).isEqualTo(201);
+        UUID second = draft(tenant, year);
+        addOk(tenant, second, feeOf(created.id("id"), "ASSURANCE", null, 5_000));
+
+        Response impact = get(tenant.path("/billing/fee-catalogs/" + second + "/impact"), tenant.adminToken());
+        assertThat(impactOf(impact, "ASSURANCE").path("change").asString()).isEqualTo("NEW");
+        assertThat(impactOf(impact, "SCOL").path("change").asString()).isEqualTo("UNCHANGED");
+        assertThat(get(tenant.path("/billing/fee-definitions?academicYearId=" + year), tenant.adminToken()).body().size()).isEqualTo(2);
+    }
+
+    /** Sinon, un ancien code réutilisé ferait croire à la même charge qu'autrefois. */
+    @Test
+    void unCodeDejaPublieNePeutPasDesignerUneAutreCharge() {
+        Tenant tenant = newTenant();
+        UUID year = openYear(tenant);
+        UUID annual = period(tenant, year, "ANNEE");
+        UUID charge = charge("SCOL", annual);
+        UUID first = draft(tenant, year);
+        addOk(tenant, first, feeOf(charge, "SCOL", null, 25_000));
+        publishOk(tenant, first);
+
+        UUID second = draft(tenant, year);
+        assertThat(put(tenant.path("/billing/fee-catalogs/" + second + "/items/" + itemIdOf(tenant, second, "SCOL")), tenant.adminToken(),
+                feeOf(charge, "SCOLARITE", null, 25_000)).status()).isEqualTo(200);
+        publishOk(tenant, second);
+
+        Response refused = add(tenant, draft(tenant, year), feeOf(createCharge(tenant, year, annual, "Autre").id("id"), "SCOL", null, 1_000));
+
+        assertThat(refused.status()).as(refused.raw()).isEqualTo(409);
+        assertThat(refused.code()).isEqualTo("FEE_CODE_CONFLICT");
+    }
+
+    @Test
+    void deuxChargesNePartagentPasUnCodeDansUneVersion() {
         Tenant tenant = newTenant();
         UUID year = openYear(tenant);
         UUID s1 = period(tenant, year, "S1");
@@ -373,31 +526,62 @@ class FeeCatalogTest extends IntegrationTest {
         Response refused = add(tenant, version, fee("SCOLARITE", s2, newLevel(tenant), 150_000));
 
         assertThat(refused.status()).as(refused.raw()).isEqualTo(409);
-        assertThat(refused.code()).isEqualTo("FEE_CODE_BOUND_TO_PERIOD");
+        assertThat(refused.code()).isEqualTo("FEE_CODE_CONFLICT");
     }
 
-    /** Sinon, déplacer un frais vers S2 le ferait passer pour une nouvelle charge et le facturerait deux fois. */
+    /** Sans quoi une charge présente sur plusieurs niveaux ne pourrait jamais être renommée. */
     @Test
-    void unCodeDeFraisResteAttacheASaPeriodeDUneVersionALAutre() {
+    void renommerUneChargeSurPlusieursUnitesPasseParUnBrouillonEtExigeDesLignesAlignees() {
+        Tenant tenant = newTenant();
+        UUID year = openYear(tenant);
+        UUID charge = charge("SCOL", period(tenant, year, "ANNEE"));
+        UUID sixieme = newLevel(tenant);
+        UUID terminale = newLevel(tenant);
+        UUID first = draft(tenant, year);
+        addOk(tenant, first, feeOf(charge, "SCOL", sixieme, 1_000));
+        addOk(tenant, first, feeOf(charge, "SCOL", terminale, 2_000));
+        publishOk(tenant, first);
+
+        UUID second = draft(tenant, year);
+        JsonNode items = get(tenant.path("/billing/fee-catalogs/" + second), tenant.adminToken()).body().path("items");
+        String path = tenant.path("/billing/fee-catalogs/" + second + "/items/");
+        JsonNode firstLine = items.get(0);
+        JsonNode secondLine = items.get(1);
+        UUID firstUnit = UUID.fromString(firstLine.path("academicUnitId").asString());
+        UUID secondUnit = UUID.fromString(secondLine.path("academicUnitId").asString());
+
+        assertThat(put(path + firstLine.path("id").asString(), tenant.adminToken(),
+                feeOf(charge, "SCOLARITE", firstUnit, firstLine.path("amountMinor").asLong())).status()).isEqualTo(200);
+
+        Response half = publish(tenant, second);
+        assertThat(half.status()).as(half.raw()).isEqualTo(409);
+        assertThat(half.code()).isEqualTo("FEE_DEFINITION_CODE_CONFLICT");
+
+        assertThat(put(path + secondLine.path("id").asString(), tenant.adminToken(),
+                feeOf(charge, "SCOLARITE", secondUnit, secondLine.path("amountMinor").asLong())).status()).isEqualTo(200);
+        publishOk(tenant, second);
+
+        Response impact = get(tenant.path("/billing/fee-catalogs/" + second + "/impact"), tenant.adminToken());
+        assertThat(impact.body().path("fees").size()).isEqualTo(1);
+        assertThat(impactOf(impact, "SCOLARITE").path("change").asString()).isEqualTo("RENAMED");
+    }
+
+    @Test
+    void uneChargeResteSurSaPeriode() {
         Tenant tenant = newTenant();
         UUID year = openYear(tenant);
         UUID s1 = period(tenant, year, "S1");
-        UUID s2 = period(tenant, year, "S2");
-        UUID first = draft(tenant, year);
-        addOk(tenant, first, fee("SCOLARITE", s1, null, 150_000));
-        publishOk(tenant, first);
-        UUID second = draft(tenant, year);
-        delete(tenant.path("/billing/fee-catalogs/" + second + "/items/" + get(tenant.path("/billing/fee-catalogs/" + second), tenant.adminToken())
-                .body().path("items").get(0).path("id").asString()), tenant.adminToken());
+        UUID version = draft(tenant, year);
+        addOk(tenant, version, fee("SCOL-S1", s1, null, 150_000));
 
-        Response refused = add(tenant, second, fee("SCOLARITE", s2, null, 150_000));
+        Response view = get(tenant.path("/billing/fee-catalogs/" + version), tenant.adminToken());
 
-        assertThat(refused.status()).as(refused.raw()).isEqualTo(409);
-        assertThat(refused.code()).isEqualTo("FEE_CODE_BOUND_TO_PERIOD");
+        assertThat(view.body().path("items").get(0).path("billingPeriodId").asString()).isEqualTo(s1.toString());
+        assertThat(view.raw()).contains(charge("SCOL-S1", s1).toString());
     }
 
     @Test
-    void unBrouillonAbandonneNeRetientPasLeCodeSurSaPeriode() {
+    void unBrouillonAbandonneNeRetientPasLeCode() {
         Tenant tenant = newTenant();
         UUID year = openYear(tenant);
         UUID s1 = period(tenant, year, "S1");
@@ -407,6 +591,51 @@ class FeeCatalogTest extends IntegrationTest {
         assertThat(delete(tenant.path("/billing/fee-catalogs/" + abandoned), tenant.adminToken()).status()).isEqualTo(204);
 
         addOk(tenant, draft(tenant, year), fee("SCOLARITE", s2, null, 150_000));
+    }
+
+    @Test
+    void uneChargeExigeUnePeriodeActiveDeSonAnneeEtUneAnneeOuverte() {
+        Tenant tenant = newTenant();
+        UUID year = openYear(tenant);
+        UUID otherYear = openYear(tenant);
+        UUID annual = period(tenant, year, "ANNEE");
+        UUID other = period(tenant, otherYear, "ANNEE");
+
+        assertThat(createCharge(tenant, year, other, "Mauvaise année").code()).isEqualTo("BILLING_PERIOD_NOT_FOUND");
+        assertThat(createCharge(tenant, UUID.randomUUID(), annual, "Année inconnue").code()).isEqualTo("ACADEMIC_YEAR_NOT_FOUND");
+        assertThat(post(tenant.path("/billing/fee-definitions"), tenant.adminToken(), Map.of(
+                "academicYearId", year.toString(), "billingPeriodId", annual.toString(), "name", "  ")).status()).isEqualTo(400);
+
+        patch(tenant.path("/billing/periods/" + annual), tenant.adminToken(), Map.of("status", "ARCHIVED"));
+        assertThat(createCharge(tenant, year, annual, "Période archivée").code()).isEqualTo("BILLING_PERIOD_ARCHIVED");
+
+        patch(tenant.path("/academic-years/" + otherYear), tenant.adminToken(), Map.of("status", "CLOSED"));
+        assertThat(createCharge(tenant, otherYear, other, "Année clôturée").code()).isEqualTo("ACADEMIC_YEAR_CLOSED");
+    }
+
+    @Test
+    void laBaseFigeLIdentiteDUneCharge() {
+        Tenant tenant = newTenant();
+        UUID year = openYear(tenant);
+        UUID s1 = period(tenant, year, "S1");
+        UUID s2 = period(tenant, year, "S2");
+        UUID charge = charge("A", s1);
+
+        assertThatThrownBy(() -> jdbc.sql("UPDATE fee_definitions SET billing_period_id = :period WHERE id = :id")
+                .param("period", s2).param("id", charge).update()).isInstanceOf(DataAccessException.class);
+        assertThatThrownBy(() -> jdbc.sql("UPDATE fee_definitions SET name = 'Autre' WHERE id = :id")
+                .param("id", charge).update()).isInstanceOf(DataAccessException.class);
+        assertThatThrownBy(() -> jdbc.sql("DELETE FROM fee_definitions WHERE id = :id")
+                .param("id", charge).update()).isInstanceOf(DataAccessException.class);
+    }
+
+    private String itemIdOf(Tenant tenant, UUID version, String code) {
+        for (JsonNode item : get(tenant.path("/billing/fee-catalogs/" + version), tenant.adminToken()).body().path("items")) {
+            if (item.path("feeCode").asString().equals(code)) {
+                return item.path("id").asString();
+            }
+        }
+        throw new AssertionError(code + " absent de la version " + version);
     }
 
     @Test
@@ -561,9 +790,9 @@ class FeeCatalogTest extends IntegrationTest {
         UUID annual = period(tenant, year, "ANNEE");
         UUID version = draft(tenant, year);
 
-        Response periodOfAnotherYear = add(tenant, version, fee("A", period(tenant, otherYear, "ANNEE"), null, 1));
-        assertThat(periodOfAnotherYear.status()).as(periodOfAnotherYear.raw()).isEqualTo(404);
-        assertThat(periodOfAnotherYear.code()).isEqualTo("BILLING_PERIOD_NOT_FOUND");
+        Response chargeOfAnotherYear = add(tenant, version, fee("A", period(tenant, otherYear, "ANNEE"), null, 1));
+        assertThat(chargeOfAnotherYear.status()).as(chargeOfAnotherYear.raw()).isEqualTo(404);
+        assertThat(chargeOfAnotherYear.code()).isEqualTo("FEE_DEFINITION_NOT_FOUND");
 
         assertThat(add(tenant, version, fee("A", annual, UUID.randomUUID(), 1)).code()).isEqualTo("ACADEMIC_UNIT_NOT_FOUND");
 
@@ -572,8 +801,9 @@ class FeeCatalogTest extends IntegrationTest {
         assertThat(add(tenant, version, fee("A", annual, archived, 1)).code()).isEqualTo("ACADEMIC_UNIT_ARCHIVED");
 
         UUID closedPeriod = period(tenant, year, "FERMEE");
+        Map<String, Object> onClosedPeriod = fee("A", closedPeriod, null, 1);
         patch(tenant.path("/billing/periods/" + closedPeriod), tenant.adminToken(), Map.of("status", "ARCHIVED"));
-        assertThat(add(tenant, version, fee("A", closedPeriod, null, 1)).code()).isEqualTo("BILLING_PERIOD_ARCHIVED");
+        assertThat(add(tenant, version, onClosedPeriod).code()).isEqualTo("BILLING_PERIOD_ARCHIVED");
     }
 
     // Permissions et audit
@@ -598,8 +828,15 @@ class FeeCatalogTest extends IntegrationTest {
         assertThat(draft.status()).as(draft.raw()).isEqualTo(201);
         String path = tenant.path("/billing/fee-catalogs/" + draft.text("id"));
 
-        assertThat(post(path + "/items", registrar, fee("A", created.id("id"), null, 1)).status()).isEqualTo(403);
-        assertThat(post(path + "/items", accountant, fee("A", created.id("id"), null, 1)).status()).isEqualTo(201);
+        Map<String, Object> newCharge = Map.of(
+                "academicYearId", year.toString(), "billingPeriodId", created.text("id"), "name", "Scolarité");
+        assertThat(post(tenant.path("/billing/fee-definitions"), registrar, newCharge).status()).isEqualTo(403);
+        Response charge = post(tenant.path("/billing/fee-definitions"), accountant, newCharge);
+        assertThat(charge.status()).as(charge.raw()).isEqualTo(201);
+        assertThat(get(tenant.path("/billing/fee-definitions?academicYearId=" + year), cashier).status()).isEqualTo(200);
+
+        assertThat(post(path + "/items", registrar, feeOf(charge.id("id"), "A", null, 1)).status()).isEqualTo(403);
+        assertThat(post(path + "/items", accountant, feeOf(charge.id("id"), "A", null, 1)).status()).isEqualTo(201);
 
         assertThat(post(path + "/publish", accountant, Map.of()).status()).as("Le comptable prépare, il ne publie pas").isEqualTo(403);
         assertThat(post(path + "/publish", registrar, Map.of()).status()).isEqualTo(403);
@@ -628,6 +865,7 @@ class FeeCatalogTest extends IntegrationTest {
 
         assertThat(actions).contains(
                 "billing.period.created",
+                "billing.fee_definition.created",
                 "billing.catalog.draft.created",
                 "billing.catalog.item.added",
                 "billing.catalog.item.updated",
@@ -657,7 +895,9 @@ class FeeCatalogTest extends IntegrationTest {
         assertThat(patch(b.path("/billing/periods/" + periodA), token, Map.of("name", "Volée")).status()).isEqualTo(404);
         assertThat(post(b.path("/billing/fee-catalogs"), token, Map.of("academicYearId", yearA.toString())).status()).isEqualTo(404);
 
-        assertThat(add(b, versionB, fee("B", periodA, null, 1)).code()).isEqualTo("BILLING_PERIOD_NOT_FOUND");
+        assertThat(add(b, versionB, fee("B", periodA, null, 1)).code()).isEqualTo("FEE_DEFINITION_NOT_FOUND");
+        assertThat(createCharge(b, yearB, periodA, "Volée").code()).isEqualTo("BILLING_PERIOD_NOT_FOUND");
+        assertThat(get(b.path("/billing/fee-definitions?academicYearId=" + yearA), token).body().size()).isZero();
         assertThat(add(b, versionB, fee("B", periodB, levelA, 1)).code()).isEqualTo("ACADEMIC_UNIT_NOT_FOUND");
         assertThat(get(b.path("/billing/periods?academicYearId=" + yearA), token).body().size()).isZero();
         assertThat(get(b.path("/billing/fee-catalogs?academicYearId=" + yearA), token).body().size()).isZero();
@@ -691,8 +931,8 @@ class FeeCatalogTest extends IntegrationTest {
         assertRefused("UPDATE fee_item_installments SET amount_minor = 1 WHERE fee_item_id = :id", item, "immuable");
         assertRefused("DELETE FROM fee_item_installments WHERE fee_item_id = :id", item, "immuable");
         assertThatThrownBy(() -> jdbc.sql("""
-                INSERT INTO fee_items (id, establishment_id, academic_year_id, catalog_version_id, fee_code, label, category, application, amount_minor, billing_period_id)
-                SELECT gen_random_uuid(), establishment_id, academic_year_id, catalog_version_id, 'INTRUS', label, category, application, 1, billing_period_id
+                INSERT INTO fee_items (id, establishment_id, academic_year_id, catalog_version_id, fee_definition_id, fee_code, label, category, application, amount_minor)
+                SELECT gen_random_uuid(), establishment_id, academic_year_id, catalog_version_id, gen_random_uuid(), 'INTRUS', label, category, application, 1
                 FROM fee_items WHERE id = :id
                 """).param("id", item).update())
                 .isInstanceOf(DataAccessException.class)
@@ -723,8 +963,8 @@ class FeeCatalogTest extends IntegrationTest {
             }
 
             java.util.concurrent.Future<Integer> intruder = executor.submit(() -> jdbc.sql("""
-                    INSERT INTO fee_items (id, establishment_id, academic_year_id, catalog_version_id, fee_code, label, category, application, amount_minor, billing_period_id)
-                    SELECT gen_random_uuid(), establishment_id, academic_year_id, catalog_version_id, 'INTRUS', label, category, application, 1, billing_period_id
+                    INSERT INTO fee_items (id, establishment_id, academic_year_id, catalog_version_id, fee_definition_id, fee_code, label, category, application, amount_minor)
+                    SELECT gen_random_uuid(), establishment_id, academic_year_id, catalog_version_id, gen_random_uuid(), 'INTRUS', label, category, application, 1
                     FROM fee_items WHERE id = :id
                     """).param("id", item).update());
 
@@ -773,12 +1013,33 @@ class FeeCatalogTest extends IntegrationTest {
         publishOk(tenant, empty);
 
         UUID next = draft(tenant, year);
-        jdbc.sql("UPDATE fee_items SET billing_period_id = :period WHERE catalog_version_id = :version")
-                .param("period", s2)
+        jdbc.sql("UPDATE fee_items SET fee_definition_id = :charge WHERE catalog_version_id = :version")
+                .param("charge", charge("AUTRE", s2))
                 .param("version", next)
                 .update();
         jdbc.sql("UPDATE fee_catalog_versions SET status = 'SUPERSEDED', superseded_at = now() WHERE id = :id").param("id", empty).update();
-        assertRefused(publishSql, next, "une seule période");
+        assertRefused(publishSql, next, "une seule charge");
+    }
+
+    @Test
+    void laBaseRefuseDePublierUneChargeAvecDeuxCodesOuUnCodePourDeuxCharges() {
+        Tenant tenant = newTenant();
+        UUID year = openYear(tenant);
+        UUID annual = period(tenant, year, "ANNEE");
+        UUID actor = accountOf(tenant);
+        String publishSql = "UPDATE fee_catalog_versions SET status = 'PUBLISHED', published_at = now(), published_by = '" + actor + "' WHERE id = :id";
+        UUID version = draft(tenant, year);
+        addOk(tenant, version, fee("A", annual, newLevel(tenant), 100));
+        UUID second = addOk(tenant, version, fee("A", annual, newLevel(tenant), 200));
+
+        jdbc.sql("UPDATE fee_items SET fee_code = 'B' WHERE id = :id").param("id", second).update();
+        assertRefused(publishSql, version, "un seul code");
+
+        jdbc.sql("UPDATE fee_items SET fee_code = 'A', fee_definition_id = :charge WHERE id = :id")
+                .param("charge", charge("AUTRE", annual))
+                .param("id", second)
+                .update();
+        assertRefused(publishSql, version, "une seule charge");
     }
 
     @Test
@@ -819,24 +1080,38 @@ class FeeCatalogTest extends IntegrationTest {
         UUID periodOtherYear = period(a, otherYearA, "ANNEE");
         UUID levelB = newLevel(b);
         UUID version = draft(a, yearA);
+        UUID chargeOtherYear = charge("X", periodOtherYear);
+        UUID chargeA = charge("Y", periodA);
         String insert = """
-                INSERT INTO fee_items (id, establishment_id, academic_year_id, catalog_version_id, fee_code, label, category, application, amount_minor, billing_period_id, academic_unit_id)
-                VALUES (gen_random_uuid(), :establishment, :year, :version, :code, 'L', 'OTHER', 'AUTOMATIC', 1, :period, :unit)
+                INSERT INTO fee_items (id, establishment_id, academic_year_id, catalog_version_id, fee_definition_id, fee_code, label, category, application, amount_minor, academic_unit_id)
+                VALUES (gen_random_uuid(), :establishment, :year, :version, :charge, :code, 'L', 'OTHER', 'AUTOMATIC', 1, :unit)
                 """;
 
         assertThatThrownBy(() -> jdbc.sql(insert)
                 .param("establishment", a.id()).param("year", yearA).param("version", version).param("code", "X")
-                .param("period", periodOtherYear).param("unit", null)
+                .param("charge", chargeOtherYear).param("unit", null)
                 .update())
                 .isInstanceOf(DataIntegrityViolationException.class)
-                .hasMessageContaining("billing_perio");
+                .hasMessageContaining("fee_definition");
 
         assertThatThrownBy(() -> jdbc.sql(insert)
                 .param("establishment", a.id()).param("year", yearA).param("version", version).param("code", "Y")
-                .param("period", periodA).param("unit", levelB)
+                .param("charge", chargeA).param("unit", levelB)
                 .update())
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining("academic_unit");
+
+        assertThatThrownBy(() -> jdbc.sql("""
+                INSERT INTO fee_definitions (id, establishment_id, academic_year_id, billing_period_id, name, created_at, created_by)
+                VALUES (gen_random_uuid(), :establishment, :year, :period, 'X', now(), :actor)
+                """)
+                .param("establishment", a.id())
+                .param("year", yearA)
+                .param("period", periodOtherYear)
+                .param("actor", accountOf(a))
+                .update())
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("billing_perio");
 
         assertThatThrownBy(() -> jdbc.sql("""
                 INSERT INTO billing_periods (id, establishment_id, academic_year_id, code, name, starts_on, ends_on, created_at, updated_at)

@@ -48,7 +48,7 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Audit | Vérifié | Immuable par trigger, écrit dans la transaction | `audit`, `DatabaseGuardsTest` |
 | Frontière vers la facturation | Vérifié, sans consommateur | `StudentDirectory`, événements `StudentEnrolled` et `EnrollmentEnded`, contributeurs financiers | `schooling` |
 | Catalogue académique | Vérifié | Programmes et niveaux par établissement, inscription sur un niveau. Sans semestres | `core/`, `AcademicCatalogTest`, [0018](decisions/0018-catalogue-academique.md) |
-| Catalogue de frais | Vérifié | Périodes de facturation, frais par unité académique, versions et publication immuables, aperçu d'impact. **Aucune dette n'existe encore** | `core/`, `FeeCatalogTest`, [0020](decisions/0020-catalogue-de-frais-et-periodes.md) |
+| Catalogue de frais | Vérifié | Périodes de facturation, identité stable des charges, frais par unité académique, versions et publication immuables, aperçu d'impact. **Aucune dette n'existe encore** | `core/`, `FeeCatalogTest`, [0020](decisions/0020-catalogue-de-frais-et-periodes.md) |
 | Obligations et dû | Prévu, lot 4 | Rien pour l'instant | [Cadrage](missions/mission-003-billing-engine.md), [0015](decisions/0015-modele-de-facturation.md) |
 | Outbox durable | Vérifié | Registre Spring Modulith, reprise après arrêt brutal et entre deux instances. **Aucun listener de production ne l'utilise encore** | `core/`, `OutboxReliabilityTest`, [0016](decisions/0016-outbox-durable.md) |
 | Contrôles de mise en service | Vérifié | Portail fermé par défaut, démarrage refusé si une condition manque. **Il ne peut pas être ouvert aujourd'hui** : règle du Tchad non confirmée, aucun canal d'invitation | `core/`, `GoLiveTest`, [0017](decisions/0017-controles-de-mise-en-service.md) |
@@ -147,7 +147,7 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 - **0015 à 0017**, acceptées : modèle de facturation, outbox durable sur le registre Spring Modulith, contrôles de mise en service.
 - **0018**, acceptée : catalogue académique.
 - **0019**, principes acceptés, traitement fiscal à valider : obligations, appels de frais, factures fiscales et reçus sont distincts. Aucun document n'est présenté comme fiscalement conforme.
-- **0020**, modèle proposé : catalogue de frais et périodes de facturation, indépendantes de l'inscription annuelle.
+- **0020**, acceptée : catalogue de frais, périodes de facturation indépendantes de l'inscription annuelle, identité stable des charges indépendante des codes.
 
 ## Priorités actuelles
 
@@ -197,7 +197,7 @@ Ce serait un nouveau déploiement, avec des secrets neufs :
 
 **Prochain chantier : Mission 003, ScolaPay Billing Engine**
 
-Périmètre, critères d'acceptation et état des lots dans le [cadrage](missions/mission-003-billing-engine.md). L'outbox durable et le contrôle de mise en service sont en place. Le catalogue académique et le catalogue de frais sont en place. Le prochain lot est l'émission des obligations, avec ses décisions à présenter au propriétaire avant de commencer.
+Périmètre, critères d'acceptation et état des lots dans le [cadrage](missions/mission-003-billing-engine.md). L'outbox durable et le contrôle de mise en service sont en place. Le catalogue académique et le catalogue de frais sont en place. Le lot en cours construit les obligations, les échéanciers, le journal immuable et l'émission idempotente.
 
 **Ensuite, sans ordre arrêté**
 

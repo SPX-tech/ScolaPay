@@ -48,6 +48,7 @@ Toutes les routes sont sous `/api/v2`. Les erreurs suivent la RFC 9457, avec un 
 | Créer puis ouvrir une année | `POST /establishments/{id}/academic-years`, `PATCH .../{yearId}` | Secrétariat |
 | Définir le catalogue : programmes et niveaux | `POST /establishments/{id}/academic-units`, `PATCH .../{unitId}` | Secrétariat |
 | Définir les périodes de facturation | `POST /establishments/{id}/billing/periods` | Comptable |
+| Créer une charge, intentionnellement | `POST /establishments/{id}/billing/fee-definitions` | Comptable |
 | Préparer un tarif | `POST /establishments/{id}/billing/fee-catalogs`, puis `POST .../{versionId}/items` | Comptable |
 | Voir son effet sur les inscrits, sans rien écrire | `GET .../fee-catalogs/{versionId}/impact` | Comptable |
 | Publier un tarif, qui devient immuable | `POST .../fee-catalogs/{versionId}/publish` | Administrateur |

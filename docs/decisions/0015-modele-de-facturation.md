@@ -24,9 +24,9 @@ Un module `billing`, au-dessus de `schooling`. Il ne lit ni n'écrit les tables 
 
 | Concept | Rôle | Écriture |
 | --- | --- | --- |
-| `fee_catalogs`, `fee_items` | Versions de frais d'une année, par [unité académique](0018-catalogue-academique.md) ou pour tous, avec leur plan d'échéances et leur [période de facturation](0020-catalogue-de-frais-et-periodes.md). Chaque frais porte un `fee_code` stable d'une version à l'autre | Modifiables en brouillon, figés à la publication |
+| `fee_catalogs`, `fee_items` | Versions de frais d'une année, par [unité académique](0018-catalogue-academique.md) ou pour tous, avec leur plan d'échéances et leur [période de facturation](0020-catalogue-de-frais-et-periodes.md). Chaque frais renvoie à une identité stable d'une version à l'autre | Modifiables en brouillon, figés à la publication |
 | `obligations` | Ce qu'un dossier doit pour une année. **Ce n'est pas une facture**, voir [0019](0019-nature-des-documents-et-numerotation.md). Porte une référence interne unique, stable et non réutilisable | Immuable après émission, hors statut |
-| `obligation_lines` | Copie figée d'un frais facturé : `fee_code`, libellé, montant et version de catalogue d'origine | Ajout seul, jamais modifiée |
+| `obligation_lines` | Copie figée d'un frais facturé : identité de la charge, code et libellé du moment, montant et version de catalogue d'origine | Ajout seul, jamais modifiée |
 | `installments` | Échéances datées d'une obligation. La somme égale le montant émis, l'arrondi va sur la dernière | Immuables, un rééchelonnement crée une nouvelle version |
 | `obligation_entries` | Journal immuable : `ISSUED`, `DISCOUNT`, `ADJUSTMENT`, et `SETTLEMENT` réservé au futur module de paiement | Ajout seul, trigger d'immuabilité |
 | `billing_parties` | Personnes physiques ou morales pouvant être liées à une obligation, avec ou sans compte | Ajout et correction tracée |
@@ -38,16 +38,16 @@ Une écriture porte une clé d'idempotence unique. Le verrou de ligne porte sur 
 
 ### Empêcher la double facturation
 
-La garantie est une **contrainte PostgreSQL**, pas une vérification applicative : `UNIQUE (establishment_id, student_record_id, academic_year_id, fee_code)` sur `obligation_lines`.
+La garantie est une **contrainte PostgreSQL**, pas une vérification applicative : `UNIQUE (establishment_id, student_record_id, fee_definition_id)` sur `obligation_lines`, où `fee_definition_id` est l'[identité stable de la charge](0020-catalogue-de-frais-et-periodes.md#lidentité-dune-charge).
 
 | Situation | Effet |
 | --- | --- |
 | Rejeu d'événement | La ligne existe déjà : rien n'est créé, le traitement réussit |
 | Émission en lot rejouée ou concurrente | Idem, élève par élève |
-| Nouvelle version du catalogue | Le `fee_code` déjà facturé n'est pas refacturé, un écart de tarif passe par un ajustement. Seul un nouveau `fee_code` crée une ligne |
+| Nouvelle version du catalogue | La charge déjà facturée ne l'est pas une seconde fois, même si son code ou son tarif a changé. Un écart de tarif passe par un ajustement. Seule une charge créée explicitement crée une nouvelle ligne |
 | Retrait puis réinscription la même année | Le frais déjà facturé ne l'est pas une seconde fois |
 
-La clé ne contient volontairement ni la version du catalogue ni l'inscription. La période de facturation n'y figure pas non plus, car un `fee_code` reste attaché à une seule période : voir [0020](0020-catalogue-de-frais-et-periodes.md#le-code-de-frais-et-sa-période).
+La clé ne contient volontairement ni la version du catalogue, ni l'inscription, ni le code d'affichage. L'année et la période de facturation n'y figurent pas non plus, car l'identité de la charge les porte.
 
 ### Remises et ajustements
 

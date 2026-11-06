@@ -25,8 +25,11 @@ class FeeResolutionTest {
         return new UnitSummary(id, parent, kind, "C", "N", "ACTIVE");
     }
 
+    private static final Map<String, UUID> DEFINITIONS = new java.util.concurrent.ConcurrentHashMap<>();
+
     private static Item item(String code, UUID unit, long amount) {
-        return new Item(UUID.randomUUID(), code, "L", "OTHER", "AUTOMATIC", amount, UUID.randomUUID(), unit, List.of());
+        UUID definition = DEFINITIONS.computeIfAbsent(code, ignored -> UUID.randomUUID());
+        return new Item(UUID.randomUUID(), definition, code, "L", "OTHER", "AUTOMATIC", amount, UUID.randomUUID(), unit, List.of());
     }
 
     private static List<Long> amounts(UUID unit, List<Item> items) {
@@ -49,6 +52,16 @@ class FeeResolutionTest {
     void lEtablissementSertDeRepliEtUneUniteEtrangereNeCompteJamais() {
         assertThat(amounts(LEVEL, List.of(item("A", null, 1), item("A", ELSEWHERE, 9)))).containsExactly(1L);
         assertThat(amounts(LEVEL, List.of(item("A", ELSEWHERE, 9)))).isEmpty();
+    }
+
+    /** Deux lignes d'une même charge se départagent même si leurs codes diffèrent. */
+    @Test
+    void laResolutionSuitLaChargeEtNonLeCode() {
+        UUID definition = UUID.randomUUID();
+        Item general = new Item(UUID.randomUUID(), definition, "ANCIEN", "L", "OTHER", "AUTOMATIC", 1, UUID.randomUUID(), null, List.of());
+        Item specific = new Item(UUID.randomUUID(), definition, "NOUVEAU", "L", "OTHER", "AUTOMATIC", 2, UUID.randomUUID(), LEVEL, List.of());
+
+        assertThat(FeeResolution.applicableTo(LEVEL, List.of(general, specific), UNITS)).containsExactly(specific);
     }
 
     @Test

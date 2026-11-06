@@ -1,6 +1,7 @@
 package com.scolapay.core.billing.internal;
 
 import com.scolapay.core.audit.AuditTrail;
+import com.scolapay.core.billing.internal.FeeCatalogRepository.Definition;
 import com.scolapay.core.billing.internal.FeeCatalogRepository.Installment;
 import com.scolapay.core.billing.internal.FeeCatalogRepository.Item;
 import com.scolapay.core.billing.internal.FeeCatalogRepository.Period;
@@ -14,13 +15,14 @@ import com.scolapay.core.shared.ApiException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -39,9 +41,11 @@ public class FeeCatalogService {
 
     public record Applicable(Version version, List<Item> items) {}
 
-    public enum FeeChange { NEW, CHANGED, UNCHANGED, REMOVED }
+    /** RENAMED : seul le code d'affichage change. Ni l'un ni l'autre n'est une nouvelle charge. */
+    public enum FeeChange { NEW, CHANGED, RENAMED, UNCHANGED, REMOVED }
 
-    public record FeeImpact(String feeCode, FeeChange change, String application, long eligibleEnrollments) {}
+    public record FeeImpact(
+            UUID feeDefinitionId, String feeCode, String previousFeeCode, FeeChange change, String application, long eligibleEnrollments) {}
 
     public record Impact(Version version, Integer previousVersion, long activeEnrollments, List<FeeImpact> fees) {}
 
@@ -69,6 +73,38 @@ public class FeeCatalogService {
         this.clock = clock;
     }
 
+    /**
+     * Crée l'identité d'une nouvelle charge. C'est le seul moyen d'en créer une : saisir un code ou un
+     * montant inconnu n'en fait jamais naître, ce qui rend toute nouvelle charge intentionnelle.
+     */
+    @Transactional
+    public Definition createDefinition(UUID establishmentId, UUID academicYearId, UUID billingPeriodId, String name) {
+        UUID actorId = access.require(establishmentId, Permission.FEES_MANAGE);
+        requireOpenYear(establishmentId, academicYearId);
+        Period period = repository.findPeriod(establishmentId, billingPeriodId)
+                .filter(found -> found.academicYearId().equals(academicYearId))
+                .orElseThrow(() -> ApiException.notFound("BILLING_PERIOD_NOT_FOUND", "Période de facturation introuvable pour cette année."));
+        if (!period.active()) {
+            throw ApiException.conflict("BILLING_PERIOD_ARCHIVED", "Cette période de facturation est archivée.");
+        }
+        String trimmed = name.trim();
+        if (trimmed.isEmpty()) {
+            throw ApiException.invalid("INVALID_NAME", "Le nom ne peut pas être vide.");
+        }
+        Definition definition = new Definition(UUID.randomUUID(), academicYearId, billingPeriodId, trimmed, clock.instant());
+        repository.insertDefinition(establishmentId, definition, actorId);
+        audit.record(
+                establishmentId, actorId, "billing.fee_definition.created", "fee_definition", definition.id(),
+                Map.of("academicYearId", academicYearId, "billingPeriodId", billingPeriodId));
+        return definition;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Definition> listDefinitions(UUID establishmentId, UUID academicYearId) {
+        access.require(establishmentId, Permission.ESTABLISHMENT_READ);
+        return repository.listDefinitions(establishmentId, academicYearId);
+    }
+
     /** Un nouveau brouillon part du tarif en vigueur : on ne saisit que ce qui change. */
     @Transactional
     public Catalog createDraft(UUID establishmentId, UUID academicYearId) {
@@ -89,7 +125,7 @@ public class FeeCatalogService {
         repository.publishedVersion(establishmentId, academicYearId).ifPresent(published -> {
             for (Item item : repository.items(establishmentId, published.id())) {
                 repository.insertItem(establishmentId, academicYearId, draft.id(), new Item(
-                        UUID.randomUUID(), item.feeCode(), item.label(), item.category(), item.application(),
+                        UUID.randomUUID(), item.feeDefinitionId(), item.feeCode(), item.label(), item.category(), item.application(),
                         item.amountMinor(), item.billingPeriodId(), item.academicUnitId(), item.installments()));
             }
         });
@@ -124,8 +160,7 @@ public class FeeCatalogService {
     public Item addItem(UUID establishmentId, UUID versionId, Item input) {
         UUID actorId = access.require(establishmentId, Permission.FEES_MANAGE);
         Version draft = lockDraft(establishmentId, versionId);
-        Item item = withId(input, UUID.randomUUID());
-        validate(establishmentId, draft, item);
+        Item item = prepared(establishmentId, draft, input, UUID.randomUUID());
         repository.insertItem(establishmentId, draft.academicYearId(), versionId, item);
         audit.record(
                 establishmentId, actorId, "billing.catalog.item.added", "fee_item", item.id(),
@@ -137,8 +172,7 @@ public class FeeCatalogService {
     public Item updateItem(UUID establishmentId, UUID versionId, UUID itemId, Item input) {
         UUID actorId = access.require(establishmentId, Permission.FEES_MANAGE);
         Version draft = lockDraft(establishmentId, versionId);
-        Item item = withId(input, itemId);
-        validate(establishmentId, draft, item);
+        Item item = prepared(establishmentId, draft, input, itemId);
         if (repository.updateItem(establishmentId, versionId, item) == 0) {
             throw ApiException.notFound("FEE_ITEM_NOT_FOUND", "Ligne de tarif introuvable.");
         }
@@ -169,6 +203,7 @@ public class FeeCatalogService {
             throw ApiException.invalid("CATALOG_EMPTY", "Un catalogue vide ne se publie pas.");
         }
         requireActiveReferences(establishmentId, items);
+        requireOneCodePerCharge(items);
 
         Instant now = clock.instant();
         Optional<Version> current = repository.publishedVersion(establishmentId, draft.academicYearId());
@@ -212,25 +247,44 @@ public class FeeCatalogService {
         Map<UUID, Long> enrollments = academics.activeEnrollmentsByUnit(establishmentId, version.academicYearId());
         Map<UUID, UnitSummary> units = unitsById(establishmentId);
 
-        Set<String> codes = new TreeSet<>();
-        items.forEach(item -> codes.add(item.feeCode()));
-        previousItems.forEach(item -> codes.add(item.feeCode()));
+        Set<UUID> definitions = new LinkedHashSet<>();
+        items.forEach(item -> definitions.add(item.feeDefinitionId()));
+        previousItems.forEach(item -> definitions.add(item.feeDefinitionId()));
         List<FeeImpact> fees = new ArrayList<>();
-        for (String code : codes) {
-            List<Item> now = withCode(items, code);
-            List<Item> before = withCode(previousItems, code);
-            FeeChange change = before.isEmpty()
-                    ? FeeChange.NEW
-                    : now.isEmpty() ? FeeChange.REMOVED : signature(now).equals(signature(before)) ? FeeChange.UNCHANGED : FeeChange.CHANGED;
+        for (UUID definition : definitions) {
+            List<Item> now = ofDefinition(items, definition);
+            List<Item> before = ofDefinition(previousItems, definition);
             List<Item> reference = now.isEmpty() ? before : now;
-            fees.add(new FeeImpact(code, change, reference.getFirst().application(), eligible(reference, enrollments, units)));
+            String code = reference.getFirst().feeCode();
+            String previousCode = before.isEmpty() ? null : before.getFirst().feeCode();
+            fees.add(new FeeImpact(
+                    definition,
+                    code,
+                    Objects.equals(previousCode, code) ? null : previousCode,
+                    change(now, before),
+                    reference.getFirst().application(),
+                    eligible(reference, enrollments, units)));
         }
+        fees.sort(Comparator.comparing(FeeImpact::feeCode));
         long active = enrollments.values().stream().mapToLong(Long::longValue).sum();
         return new Impact(version, previous.map(Version::version).orElse(null), active, fees);
     }
 
-    private static List<Item> withCode(List<Item> items, String code) {
-        return items.stream().filter(item -> item.feeCode().equals(code)).toList();
+    private static FeeChange change(List<Item> now, List<Item> before) {
+        if (before.isEmpty()) {
+            return FeeChange.NEW;
+        }
+        if (now.isEmpty()) {
+            return FeeChange.REMOVED;
+        }
+        if (!signature(now).equals(signature(before))) {
+            return FeeChange.CHANGED;
+        }
+        return now.getFirst().feeCode().equals(before.getFirst().feeCode()) ? FeeChange.UNCHANGED : FeeChange.RENAMED;
+    }
+
+    private static List<Item> ofDefinition(List<Item> items, UUID definition) {
+        return items.stream().filter(item -> item.feeDefinitionId().equals(definition)).toList();
     }
 
     private static long eligible(List<Item> itemsOfCode, Map<UUID, Long> enrollments, Map<UUID, UnitSummary> units) {
@@ -244,16 +298,21 @@ public class FeeCatalogService {
         Set<List<Object>> signature = new HashSet<>();
         for (Item item : items) {
             signature.add(java.util.Arrays.asList(
-                    item.academicUnitId(), item.amountMinor(), item.billingPeriodId(), item.label(), item.category(),
+                    item.academicUnitId(), item.amountMinor(), item.label(), item.category(),
                     item.application(), item.installments()));
         }
         return signature;
     }
 
-    private void validate(UUID establishmentId, Version draft, Item item) {
-        Period period = repository.findPeriod(establishmentId, item.billingPeriodId())
+    /** Valide la ligne et reprend sa période de la charge, seule à la porter. */
+    private Item prepared(UUID establishmentId, Version draft, Item input, UUID id) {
+        Definition definition = repository.findDefinition(establishmentId, input.feeDefinitionId())
                 .filter(found -> found.academicYearId().equals(draft.academicYearId()))
-                .orElseThrow(() -> ApiException.notFound("BILLING_PERIOD_NOT_FOUND", "Période de facturation introuvable pour cette année."));
+                .orElseThrow(() -> ApiException.notFound("FEE_DEFINITION_NOT_FOUND", "Charge introuvable pour cette année."));
+        Item item = new Item(
+                id, definition.id(), input.feeCode(), input.label().trim(), input.category(), input.application(),
+                input.amountMinor(), definition.billingPeriodId(), input.academicUnitId(), input.installments());
+        Period period = repository.findPeriod(establishmentId, definition.billingPeriodId()).orElseThrow();
         if (!period.active()) {
             throw ApiException.conflict("BILLING_PERIOD_ARCHIVED", "Cette période de facturation est archivée.");
         }
@@ -265,12 +324,11 @@ public class FeeCatalogService {
             }
         }
         validateInstallments(item);
-        if (repository.feeCodeBoundToAnotherPeriod(
-                establishmentId, draft.academicYearId(), draft.id(), item.id(), item.feeCode(), item.billingPeriodId())) {
-            throw ApiException.conflict(
-                    "FEE_CODE_BOUND_TO_PERIOD",
-                    "Ce code de frais est déjà attaché à une autre période. Utilisez un code distinct par période.");
+        if (repository.feeCodeUsedByAnotherDefinition(
+                establishmentId, draft.academicYearId(), draft.id(), item.id(), item.feeCode(), definition.id())) {
+            throw ApiException.conflict("FEE_CODE_CONFLICT", "Ce code de frais désigne déjà une autre charge de cette année.");
         }
+        return item;
     }
 
     private static void validateInstallments(Item item) {
@@ -303,6 +361,19 @@ public class FeeCatalogService {
         }
     }
 
+    /**
+     * Vérifié à la publication et non à la saisie : renommer une charge présente sur plusieurs unités
+     * passe forcément par un brouillon où ses lignes portent un temps deux codes.
+     */
+    private static void requireOneCodePerCharge(List<Item> items) {
+        Map<UUID, Set<String>> codes = items.stream().collect(Collectors.groupingBy(
+                Item::feeDefinitionId, Collectors.mapping(Item::feeCode, Collectors.toSet())));
+        if (codes.values().stream().anyMatch(ofCharge -> ofCharge.size() > 1)) {
+            throw ApiException.conflict(
+                    "FEE_DEFINITION_CODE_CONFLICT", "Une charge porte plusieurs codes : alignez toutes ses lignes avant de publier.");
+        }
+    }
+
     private void requireOpenYear(UUID establishmentId, UUID academicYearId) {
         AcademicCatalog.YearSummary year = academics.findYear(establishmentId, academicYearId)
                 .orElseThrow(() -> ApiException.notFound("ACADEMIC_YEAR_NOT_FOUND", "Année académique introuvable."));
@@ -327,11 +398,5 @@ public class FeeCatalogService {
 
     private Map<UUID, UnitSummary> unitsById(UUID establishmentId) {
         return academics.units(establishmentId).stream().collect(Collectors.toMap(UnitSummary::id, Function.identity()));
-    }
-
-    private static Item withId(Item input, UUID id) {
-        return new Item(
-                Objects.requireNonNull(id), input.feeCode(), input.label().trim(), input.category(), input.application(),
-                input.amountMinor(), input.billingPeriodId(), input.academicUnitId(), input.installments());
     }
 }

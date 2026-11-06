@@ -41,8 +41,12 @@ public class FeeCatalogRepository {
 
     public record Installment(LocalDate dueOn, long amountMinor) {}
 
+    /** L'identité stable d'une charge, voir la décision 0020. */
+    public record Definition(UUID id, UUID academicYearId, UUID billingPeriodId, String name, Instant createdAt) {}
+
     public record Item(
             UUID id,
+            UUID feeDefinitionId,
             String feeCode,
             String label,
             String category,
@@ -113,6 +117,47 @@ public class FeeCatalogRepository {
                 .param("status", status)
                 .param("now", Columns.timestamp(now))
                 .update();
+    }
+
+    // Identités des charges
+
+    public void insertDefinition(UUID establishmentId, Definition definition, UUID createdBy) {
+        jdbc.sql("""
+                INSERT INTO fee_definitions (id, establishment_id, academic_year_id, billing_period_id, name, created_at, created_by)
+                VALUES (:id, :establishmentId, :yearId, :periodId, :name, :createdAt, :createdBy)
+                """)
+                .param("id", definition.id())
+                .param("establishmentId", establishmentId)
+                .param("yearId", definition.academicYearId())
+                .param("periodId", definition.billingPeriodId())
+                .param("name", definition.name())
+                .param("createdAt", Columns.timestamp(definition.createdAt()))
+                .param("createdBy", createdBy)
+                .update();
+    }
+
+    public Optional<Definition> findDefinition(UUID establishmentId, UUID id) {
+        return jdbc.sql("""
+                SELECT id, academic_year_id, billing_period_id, name, created_at
+                FROM fee_definitions WHERE establishment_id = :establishmentId AND id = :id
+                """)
+                .param("establishmentId", establishmentId)
+                .param("id", id)
+                .query(FeeCatalogRepository::definition)
+                .optional();
+    }
+
+    public List<Definition> listDefinitions(UUID establishmentId, UUID academicYearId) {
+        return jdbc.sql("""
+                SELECT id, academic_year_id, billing_period_id, name, created_at
+                FROM fee_definitions
+                WHERE establishment_id = :establishmentId AND academic_year_id = :yearId
+                ORDER BY created_at, id
+                """)
+                .param("establishmentId", establishmentId)
+                .param("yearId", academicYearId)
+                .query(FeeCatalogRepository::definition)
+                .list();
     }
 
     // Versions
@@ -237,21 +282,21 @@ public class FeeCatalogRepository {
     public void insertItem(UUID establishmentId, UUID academicYearId, UUID versionId, Item item) {
         jdbc.sql("""
                 INSERT INTO fee_items
-                  (id, establishment_id, academic_year_id, catalog_version_id, fee_code, label, category, application,
-                   amount_minor, billing_period_id, academic_unit_id)
-                VALUES (:id, :establishmentId, :yearId, :versionId, :feeCode, :label, :category, :application,
-                        :amountMinor, :periodId, :unitId)
+                  (id, establishment_id, academic_year_id, catalog_version_id, fee_definition_id, fee_code, label, category, application,
+                   amount_minor, academic_unit_id)
+                VALUES (:id, :establishmentId, :yearId, :versionId, :definitionId, :feeCode, :label, :category, :application,
+                        :amountMinor, :unitId)
                 """)
                 .param("id", item.id())
                 .param("establishmentId", establishmentId)
                 .param("yearId", academicYearId)
                 .param("versionId", versionId)
+                .param("definitionId", item.feeDefinitionId())
                 .param("feeCode", item.feeCode())
                 .param("label", item.label())
                 .param("category", item.category())
                 .param("application", item.application())
                 .param("amountMinor", item.amountMinor())
-                .param("periodId", item.billingPeriodId())
                 .param("unitId", item.academicUnitId())
                 .update();
         insertInstallments(establishmentId, versionId, item);
@@ -259,19 +304,19 @@ public class FeeCatalogRepository {
 
     public int updateItem(UUID establishmentId, UUID versionId, Item item) {
         int updated = jdbc.sql("""
-                UPDATE fee_items SET fee_code = :feeCode, label = :label, category = :category, application = :application,
-                  amount_minor = :amountMinor, billing_period_id = :periodId, academic_unit_id = :unitId
+                UPDATE fee_items SET fee_definition_id = :definitionId, fee_code = :feeCode, label = :label, category = :category,
+                  application = :application, amount_minor = :amountMinor, academic_unit_id = :unitId
                 WHERE establishment_id = :establishmentId AND catalog_version_id = :versionId AND id = :id
                 """)
                 .param("id", item.id())
                 .param("establishmentId", establishmentId)
                 .param("versionId", versionId)
+                .param("definitionId", item.feeDefinitionId())
                 .param("feeCode", item.feeCode())
                 .param("label", item.label())
                 .param("category", item.category())
                 .param("application", item.application())
                 .param("amountMinor", item.amountMinor())
-                .param("periodId", item.billingPeriodId())
                 .param("unitId", item.academicUnitId())
                 .update();
         if (updated > 0) {
@@ -324,15 +369,18 @@ public class FeeCatalogRepository {
                             .add(new Installment(rs.getObject("due_on", LocalDate.class), rs.getLong("amount_minor")));
                 });
         return jdbc.sql("""
-                SELECT id, fee_code, label, category, application, amount_minor, billing_period_id, academic_unit_id
-                FROM fee_items
-                WHERE establishment_id = :establishmentId AND catalog_version_id = :versionId
-                ORDER BY fee_code, academic_unit_id NULLS FIRST
+                SELECT i.id, i.fee_definition_id, i.fee_code, i.label, i.category, i.application, i.amount_minor,
+                       d.billing_period_id, i.academic_unit_id
+                FROM fee_items i
+                JOIN fee_definitions d ON d.establishment_id = i.establishment_id AND d.id = i.fee_definition_id
+                WHERE i.establishment_id = :establishmentId AND i.catalog_version_id = :versionId
+                ORDER BY i.fee_code, i.academic_unit_id NULLS FIRST
                 """)
                 .param("establishmentId", establishmentId)
                 .param("versionId", versionId)
                 .query((rs, rowNum) -> new Item(
                         Columns.uuid(rs, "id"),
+                        Columns.uuid(rs, "fee_definition_id"),
                         rs.getString("fee_code"),
                         rs.getString("label"),
                         rs.getString("category"),
@@ -344,26 +392,35 @@ public class FeeCatalogRepository {
                 .list();
     }
 
-    /** Un code déjà publié, ou présent dans ce brouillon, reste sur sa période : voir la décision 0020. */
-    public boolean feeCodeBoundToAnotherPeriod(
-            UUID establishmentId, UUID academicYearId, UUID versionId, UUID excludedItemId, String feeCode, UUID periodId) {
+    /** Un code déjà publié, ou présent dans ce brouillon, ne peut pas désigner une autre charge. */
+    public boolean feeCodeUsedByAnotherDefinition(
+            UUID establishmentId, UUID academicYearId, UUID versionId, UUID excludedItemId, String feeCode, UUID definitionId) {
         return jdbc.sql("""
                 SELECT EXISTS (
                   SELECT 1 FROM fee_items i
                   JOIN fee_catalog_versions v ON v.id = i.catalog_version_id
                   WHERE i.establishment_id = :establishmentId AND i.academic_year_id = :yearId
-                    AND i.fee_code = :feeCode AND i.billing_period_id <> :periodId
+                    AND i.fee_code = :feeCode AND i.fee_definition_id <> :definitionId
                     AND (v.status IN ('PUBLISHED', 'SUPERSEDED')
                          OR (i.catalog_version_id = :versionId AND i.id IS DISTINCT FROM CAST(:excluded AS uuid))))
                 """)
                 .param("establishmentId", establishmentId)
                 .param("yearId", academicYearId)
                 .param("feeCode", feeCode)
-                .param("periodId", periodId)
+                .param("definitionId", definitionId)
                 .param("versionId", versionId)
                 .param("excluded", excludedItemId)
                 .query(Boolean.class)
                 .single();
+    }
+
+    private static Definition definition(ResultSet rs, int rowNum) throws SQLException {
+        return new Definition(
+                Columns.uuid(rs, "id"),
+                Columns.uuid(rs, "academic_year_id"),
+                Columns.uuid(rs, "billing_period_id"),
+                rs.getString("name"),
+                Columns.instant(rs, "created_at"));
     }
 
     private static Period period(ResultSet rs, int rowNum) throws SQLException {

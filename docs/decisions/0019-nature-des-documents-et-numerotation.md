@@ -46,13 +46,19 @@ Source : [Obligations générales de FEN](https://fen.finances.gouv.td/assets/la
 - La [loi de finances 2026](https://tchadinfos.com/2026/01/29/loi-de-finances-2026-la-direction-generale-des-impots-detaille-les-nouvelles-mesures-fiscales/) rendrait la facturation électronique obligatoire pour les entreprises, ONG, projets, professions libérales et organismes publics, et interdirait toute dépense publique sans facture normalisée. Voir aussi [une synthèse professionnelle](https://europe.thomsonreuters.com/compliance/regulatory-updates/chad) et [la circulaire d'exécution du budget](https://www.alwihdainfo.com/tchad-une-circulaire-fixe-les-nouvelles-regles-d-execution-du-budget-general-de-l-etat-2026-a147609/). **Une école associative ou un établissement payé sur fonds publics pourrait donc être concerné par une autre voie.**
 - Une recherche signale que l'article 230 du Code général des impôts, dans sa rédaction de la [loi de finances 2019](https://www.droit-afrique.com/uploads/Tchad-LF-2019.pdf), vise les établissements d'enseignement agréés par le ministère de l'Éducation nationale et pratiquant un prix homologué. **Nous n'avons pas pu lire ce texte**, ni vérifier qu'il est encore en vigueur. Le [CGI à jour](http://www.droit-afrique.com/boutique/tchad-code-general-des-impots/) n'est pas librement accessible, et une exonération de TVA, si elle existe, ne dispense pas forcément de la FEN.
 
+### Article 46 de la loi de finances 2026
+
+Le propriétaire demande de suivre cet article. La loi est identifiée : [n° 008/AN/SÉNAT/2025 du 26 décembre 2025](https://www.lepaystchad.com/tchad-la-loi-de-finances-2026-officiellement-promulguee-par-decret-presidentiel/), promulguée par le décret n° 3151/PR/2025.
+
+**Nous n'avons pas pu en lire le texte.** Aucune des synthèses consultées ne cite cet article, [celle de KPMG](https://kpmg.com/us/en/taxnewsflash/news/2026/02/tnf-chad-direct-and-indirect-tax-changes-in-finance-law-2026.html) comprise, et le site du ministère présente un certificat invalide : la connexion n'a pas été forcée. Rien n'est donc affirmé ici sur son contenu, et **aucun régime n'en est déduit pour un établissement scolaire**.
+
 ### Non trouvé
 
 Aucune source consultée ne traite de l'enseignement dans le cadre de la FEN, d'une API ou d'une procédure d'agrément pour un logiciel tiers, ni du format des numéros. Le [portail FEN](https://fen.finances.gouv.td/) n'expose publiquement qu'une page de connexion.
 
 ## Questions à poser à un conseil fiscal et à la DGI
 
-Le lot 3 n'en dépend pas. **Elles conditionnent l'exploitation réelle, et une partie du lot 4.**
+Le lot 3 n'en dépend pas. **Elles conditionnent l'exploitation réelle.** Le lot 4 n'en dépend pas, car il sépare l'obligation de tout document fiscal.
 
 1. Une école privée ou une université est-elle soumise à la FEN pour ses droits de scolarité ? Selon son statut : privée lucrative, associative, confessionnelle, publique ?
 2. Un établissement agréé à prix homologué est-il dispensé d'émettre, ou seulement exonéré de TVA avec obligation d'émettre ?
@@ -63,6 +69,7 @@ Le lot 3 n'en dépend pas. **Elles conditionnent l'exploitation réelle, et une 
 7. Comment une remise ou un ajustement s'articule-t-il avec une facture de remboursement certifiée ?
 8. Quelle durée de conservation s'applique aux documents financiers ? Le document ne cite dix ans que pour les factures manuscrites.
 9. Le statut de ces règles depuis la loi de finances 2026 et sa circulaire, que nous n'avons pas lues.
+10. **La portée de l'article 46 de la loi de finances 2026**, et son application éventuelle à chaque type d'établissement scolaire.
 
 ## Conséquences
 
