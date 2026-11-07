@@ -35,9 +35,9 @@ class FamilyAccessTest extends IntegrationTest {
         return new Enrolled(studentId, number);
     }
 
-    private String newThirdParty(Tenant tenant, UUID studentId, boolean academic, boolean financial) {
+    private String newThirdParty(Tenant tenant, UUID studentId, boolean academic) {
         String contact = uniqueEmail();
-        Response invited = inviteThirdParty(tenant, studentId, contact, academic, financial);
+        Response invited = inviteThirdParty(tenant, studentId, contact, academic);
         assertThat(invited.status()).as(invited.raw()).isEqualTo(201);
         acceptAsNewAccount(invited.text("token"), "Tiers Test");
         return login(contact, PASSWORD);
@@ -91,29 +91,28 @@ class FamilyAccessTest extends IntegrationTest {
     void unTuteurDUnMineurVoitLesInformationsAcademiques() {
         Tenant tenant = newTenant();
         Enrolled student = enrolledStudent(tenant, MINOR);
-        assertAcademicVisible(student.studentId(), newThirdParty(tenant, student.studentId(), true, false), student);
+        assertAcademicVisible(student.studentId(), newThirdParty(tenant, student.studentId(), true), student);
     }
 
     @Test
     void lAccesAcademiqueDuTuteurCesseDesLaMajorite_maisSaContributionFinanciereDemeure() {
         Tenant tenant = newTenant();
         Enrolled student = enrolledStudent(tenant, MINOR);
-        String tuteur = newThirdParty(tenant, student.studentId(), true, true);
+        String tuteur = newThirdParty(tenant, student.studentId(), true);
         assertAcademicVisible(student.studentId(), tuteur, student);
 
         // Le passage à la majorité prend effet sans action ni traitement différé.
         setBirthDate(student.studentId(), ADULT);
 
         assertAcademicHidden(student.studentId(), tuteur, student);
-        assertThat(get("/api/v2/me/students/" + student.studentId(), tuteur).body().path("financialContributor").asBoolean()).isTrue();
-        assertThat(directory.financialContributorAccounts(tenant.id(), student.studentId())).hasSize(1);
+        assertThat(get("/api/v2/me/students/" + student.studentId(), tuteur).status()).as("Le lien demeure, seul l'accès académique se ferme").isEqualTo(200);
     }
 
     @Test
     void unEtudiantMajeurDecideDeLAccesDUnTiers_etPeutRevenirSurSonChoix() {
         Tenant tenant = newTenant();
         Enrolled student = enrolledStudent(tenant, MINOR);
-        String tuteur = newThirdParty(tenant, student.studentId(), true, false);
+        String tuteur = newThirdParty(tenant, student.studentId(), true);
         setBirthDate(student.studentId(), ADULT);
         String etudiant = newSelf(tenant, student.studentId());
         assertAcademicHidden(student.studentId(), tuteur, student);
@@ -137,43 +136,40 @@ class FamilyAccessTest extends IntegrationTest {
     void sansCompteDeLEtudiantMajeurAucunTiersNeRecupereLAcces() {
         Tenant tenant = newTenant();
         Enrolled student = enrolledStudent(tenant, MINOR);
-        String tuteur = newThirdParty(tenant, student.studentId(), true, true);
+        String tuteur = newThirdParty(tenant, student.studentId(), true);
         setBirthDate(student.studentId(), ADULT);
         assertAcademicHidden(student.studentId(), tuteur, student);
 
         // Le personnel voit lui aussi que l'accès effectif est fermé, sans moyen de le rouvrir.
         Response grants = get(tenant.path("/students/" + student.studentId() + "/access-grants"), tenant.adminToken());
         assertThat(grants.body().get(0).path("academicAccess").asBoolean()).isFalse();
-        assertThat(grants.body().get(0).path("financialContributor").asBoolean()).isTrue();
     }
 
     @Test
     void unContributeurFinancierNAJamaisAccesAuDossier_memePourUnMineur() {
         Tenant tenant = newTenant();
         Enrolled student = enrolledStudent(tenant, MINOR);
-        String contributeur = newThirdParty(tenant, student.studentId(), false, true);
+        String contributeur = newThirdParty(tenant, student.studentId(), false);
 
         assertAcademicHidden(student.studentId(), contributeur, student);
         Response list = get("/api/v2/me/students", contributeur);
         assertThat(list.body().size()).isEqualTo(1);
         assertThat(list.raw()).doesNotContain("Niveau-Confidentiel", student.studentNumber());
-        assertThat(directory.financialContributorAccounts(tenant.id(), student.studentId())).hasSize(1);
     }
 
     @Test
     void unTiersPeutContribuerPourUnEtudiantMajeurSansAccederASonDossier() {
         Tenant tenant = newTenant();
         Enrolled student = enrolledStudent(tenant, ADULT);
-        String contributeur = newThirdParty(tenant, student.studentId(), false, true);
+        String contributeur = newThirdParty(tenant, student.studentId(), false);
         assertAcademicHidden(student.studentId(), contributeur, student);
-        assertThat(directory.financialContributorAccounts(tenant.id(), student.studentId())).hasSize(1);
     }
 
     @Test
     void lEtablissementNePeutPasAccorderLuiMemeLAccesAuDossierDUnMajeur() {
         Tenant tenant = newTenant();
         UUID adulte = newStudent(tenant, ADULT);
-        Response refused = inviteThirdParty(tenant, adulte, uniqueEmail(), true, true);
+        Response refused = inviteThirdParty(tenant, adulte, uniqueEmail(), true);
         assertThat(refused.status()).as(refused.raw()).isEqualTo(409);
         assertThat(refused.code()).isEqualTo("ADULT_CONSENT_REQUIRED");
     }
@@ -182,30 +178,22 @@ class FamilyAccessTest extends IntegrationTest {
     void uneMinoriteNonEtablieNOuvreAucunAccesAcademique() {
         Tenant tenant = newTenant();
         UUID inconnu = newStudent(tenant, null);
-        Response refused = inviteThirdParty(tenant, inconnu, uniqueEmail(), true, false);
+        Response refused = inviteThirdParty(tenant, inconnu, uniqueEmail(), true);
         assertThat(refused.status()).as(refused.raw()).isEqualTo(409);
         assertThat(refused.code()).isEqualTo("MINORITY_NOT_ESTABLISHED");
 
         // Un accès déjà accordé se ferme si la date de naissance devient inconnue.
         Enrolled student = enrolledStudent(tenant, MINOR);
-        String tuteur = newThirdParty(tenant, student.studentId(), true, false);
+        String tuteur = newThirdParty(tenant, student.studentId(), true);
         setBirthDate(student.studentId(), null);
         assertAcademicHidden(student.studentId(), tuteur, student);
-    }
-
-    @Test
-    void unLienSansAucunDroitEstRefuse() {
-        Tenant tenant = newTenant();
-        Response refused = inviteThirdParty(tenant, newStudent(tenant, MINOR), uniqueEmail(), false, false);
-        assertThat(refused.status()).as(refused.raw()).isEqualTo(422);
-        assertThat(refused.code()).isEqualTo("NO_CAPABILITY");
     }
 
     @Test
     void seulLEtudiantLuiMemeDecide() {
         Tenant tenant = newTenant();
         Enrolled student = enrolledStudent(tenant, MINOR);
-        String tuteur = newThirdParty(tenant, student.studentId(), true, false);
+        String tuteur = newThirdParty(tenant, student.studentId(), true);
         setBirthDate(student.studentId(), ADULT);
         String etudiant = newSelf(tenant, student.studentId());
         String grantId = grantIdOf(etudiant, student.studentId());
@@ -226,7 +214,7 @@ class FamilyAccessTest extends IntegrationTest {
         String etudiant = newSelf(tenant, premier);
 
         Enrolled autre = enrolledStudent(tenant, MINOR);
-        newThirdParty(tenant, autre.studentId(), true, false);
+        newThirdParty(tenant, autre.studentId(), true);
         String grantEtranger = get(tenant.path("/students/" + autre.studentId() + "/access-grants"), tenant.adminToken())
                 .body().get(0).path("id").asString();
 

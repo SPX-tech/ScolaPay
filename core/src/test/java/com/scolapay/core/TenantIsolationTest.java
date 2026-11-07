@@ -160,7 +160,7 @@ class TenantIsolationTest extends IntegrationTest {
         Response enrollmentA = post(a.path("/students/" + studentA + "/enrollments"), a.adminToken(), Map.of(
                 "academicYearId", yearA.toString(), "academicUnitId", newLevel(a).toString()));
         String grantHolder = uniqueEmail();
-        acceptAsNewAccount(inviteGuardian(a, studentA, grantHolder, false), "Tuteur");
+        acceptAsNewAccount(inviteGuardian(a, studentA, grantHolder), "Tuteur");
         String grantA = get(a.path("/students/" + studentA + "/access-grants"), a.adminToken()).body().get(0).path("id").asString();
         String token = b.adminToken();
         String levelB = newLevel(b).toString();
@@ -172,7 +172,7 @@ class TenantIsolationTest extends IntegrationTest {
         assertThat(post(b.path("/students/" + studentA + "/enrollments"), token, Map.of(
                 "academicYearId", yearB.toString(), "academicUnitId", levelB)).status()).isEqualTo(404);
         assertThat(post(b.path("/students/" + studentA + "/third-party-invitations"), token, Map.of(
-                "contact", uniqueEmail(), "relationship", "OTHER", "academicAccess", false, "financialContributor", true)).status()).isEqualTo(404);
+                "contact", uniqueEmail(), "relationship", "OTHER", "academicAccess", false)).status()).isEqualTo(404);
 
         // Mélanger un dossier de B avec une année de A.
         assertThat(post(b.path("/students/" + studentB + "/enrollments"), token, Map.of(

@@ -63,25 +63,6 @@ class DatabaseGuardsTest extends IntegrationTest {
     }
 
     @Test
-    void unLienSansAucunDroitEstRefuseParLaBase() {
-        Tenant tenant = newTenant();
-        UUID student = newStudent(tenant);
-        UUID account = get("/api/v2/me", tenant.adminToken()).id("id");
-
-        assertThatThrownBy(() -> jdbc.sql("""
-                INSERT INTO record_access_grants
-                  (id, establishment_id, student_record_id, account_id, kind, relationship, granted_at)
-                VALUES (:id, :establishmentId, :studentId, :accountId, 'THIRD_PARTY', 'OTHER', now())
-                """)
-                .param("id", UUID.randomUUID())
-                .param("establishmentId", tenant.id())
-                .param("studentId", student)
-                .param("accountId", account)
-                .update())
-                .isInstanceOf(DataIntegrityViolationException.class);
-    }
-
-    @Test
     void unEtablissementExigeUnPaysAyantUneRegleJuridique() {
         assertThatThrownBy(() -> jdbc.sql("""
                 INSERT INTO establishments (id, code, name, kind, timezone, currency, country_code, created_at, updated_at)

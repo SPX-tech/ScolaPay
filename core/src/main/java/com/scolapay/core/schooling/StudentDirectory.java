@@ -1,6 +1,5 @@
 package com.scolapay.core.schooling;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,9 +14,12 @@ public interface StudentDirectory {
 
     Optional<StudentSummary> find(UUID establishmentId, UUID studentId);
 
-    /**
-     * Les comptes autorisés à contribuer aux frais de l'élève. Ce droit est distinct de l'accès
-     * aux informations académiques : un contributeur peut n'avoir aucun accès au dossier.
-     */
-    List<UUID> financialContributorAccounts(UUID establishmentId, UUID studentId);
+    /** {@code academicAccess} applique la règle d'accès académique du jour : majorité et consentement compris. */
+    record StudentLink(boolean academicAccess) {}
+
+    /** Le lien actif entre un compte et un dossier. L'absence de lien ferme tout accès académique. */
+    Optional<StudentLink> linkOf(UUID establishmentId, UUID studentId, UUID accountId);
+
+    /** Le compte derrière un lien actif de cet établissement. */
+    Optional<UUID> accountOfLink(UUID establishmentId, UUID grantId);
 }
