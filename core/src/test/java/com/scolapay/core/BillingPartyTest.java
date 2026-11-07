@@ -228,7 +228,9 @@ class BillingPartyTest extends BillingScenarioTest {
 
         try (Connection first = dataSource.getConnection(); ExecutorService executor = Executors.newSingleThreadExecutor()) {
             first.setAutoCommit(false);
-            try (PreparedStatement lock = first.prepareStatement("SELECT 1 FROM obligations WHERE id = ? FOR UPDATE")) {
+            // FOR NO KEY UPDATE bloque le verrou du service, mais pas le contrôle de clé étrangère de l'insertion :
+            // avec FOR UPDATE, ce contrôle attendrait lui aussi, et le test passerait même sans verrou dans le service.
+            try (PreparedStatement lock = first.prepareStatement("SELECT 1 FROM obligations WHERE id = ? FOR NO KEY UPDATE")) {
                 lock.setObject(1, obligation);
                 lock.executeQuery();
             }
