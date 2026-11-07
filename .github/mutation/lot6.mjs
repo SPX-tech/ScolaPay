@@ -28,7 +28,7 @@ const added = {
         }
         return obligations.find(establishmentId, obligationId).orElseThrow();`, `        return obligations.find(establishmentId, obligationId)
                 .orElseThrow(() -> ApiException.notFound("OBLIGATION_NOT_FOUND", "Obligation introuvable."));`]],
-    mustFail: ['BillingPartyTest.laMemeDesignationSimultaneeNeSeCreeQuUneFois'],
+    mustFail: ['BillingPartyTest.uneDesignationAttendLeVerrouDeLObligation'],
   },
 
   // Redevable
@@ -38,7 +38,10 @@ const added = {
   'reconfirm-other-reference': [[S, 'if (designation.commitmentReference().equals(reference)) {', 'if ("__".isEmpty() == false) {']],
   'end-twice': [[S, `if (!designation.active()) {\n            throw ApiException.conflict("DESIGNATION_ENDED", "Cette désignation est déjà terminée.");`, `if ("__".isEmpty()) {\n            throw ApiException.conflict("DESIGNATION_ENDED", "Cette désignation est déjà terminée.");`]],
   'debtor-state-none-includes-settled': [[R, `AND\n            """ + DUE + """\n             > 0\n`, `AND\n            """ + DUE + """\n             >= 0\n`]],
-  'debtor-state-ignores-ended': [[R, `WHERE op.obligation_id = o.id AND op.role = 'CONTRACTUAL_DEBTOR' AND op.ended_at IS NULL))`, `WHERE op.obligation_id = o.id AND op.role = 'CONTRACTUAL_DEBTOR'))`]],
+  'debtor-state-ignores-ended': {
+    steps: [[R, `WHERE op.obligation_id = o.id AND op.role = 'CONTRACTUAL_DEBTOR' AND op.ended_at IS NULL))`, `WHERE op.obligation_id = o.id AND op.role = 'CONTRACTUAL_DEBTOR'))`]],
+    mustFail: ['BillingPartyTest.terminerUneDesignationGardeLHistoriqueEtLaissePlaceAUneAutre'],
+  },
 
   // Contributeur
   'contributor-without-account': never(S, 'party.accountId() == null'),
@@ -72,8 +75,12 @@ const added = {
     ],
     mustFail: ['FamilyBillingViewTest.terminerUneDesignationFermeLaVueAussitot'],
   },
+  // Deux filtres successifs portent cette garantie : retirer l'un seul ne change rien, il faut retirer les deux.
   'view-any-account': {
-    steps: [[R, `WHERE p.account_id = :accountId AND op.ended_at IS NULL\n`, `WHERE (p.account_id = :accountId OR p.account_id IS NOT NULL) AND op.ended_at IS NULL\n`]],
+    steps: [
+      [R, `WHERE p.account_id = :accountId AND op.ended_at IS NULL\n`, `WHERE (p.account_id = :accountId OR p.account_id IS NOT NULL) AND op.ended_at IS NULL\n`],
+      [R, `WHERE p.account_id = :accountId AND op.establishment_id = :establishmentId`, `WHERE (p.account_id = :accountId OR p.account_id IS NOT NULL) AND op.establishment_id = :establishmentId`],
+    ],
     mustFail: ['FamilyBillingViewTest.uneFamilleNeVoitQueSesObligationsDansChaqueEtablissement'],
   },
 
@@ -115,12 +122,14 @@ const added = {
     steps: [[SCH, `return Optional.of(new StudentLink(AcademicAccess.allowed(grant.get(), student.get(), establishment, clock)));`, `return Optional.of(new StudentLink(grant.get().academicAccess()));`]],
     mustFail: ['FamilyBillingViewTest.lePassageALaMajoriteRendLeLibelleNeutreLeJourMeme'],
   },
-  'link-from-other-establishment': [[SCH, `repository.activeGrant(accountId, studentId).filter(found -> found.establishmentId().equals(establishmentId));`, `repository.activeGrant(accountId, studentId);`]],
 
   // Permissions et motifs
   'create-party-by-reader': reader('public Party createParty(UUID establishmentId, String kind, String displayName, String identifier, UUID grantId)', 'BILLING_PARTIES_MANAGE'),
   'designate-by-reader': reader('public Designated designate(UUID establishmentId, UUID obligationId, UUID partyId, String role)', 'BILLING_PARTIES_MANAGE'),
-  'assign-by-reader': reader('public StudentAssignment assignToStudent(UUID establishmentId, UUID studentId, UUID academicYearId, UUID partyId, String role)', 'BILLING_PARTIES_MANAGE'),
+  'assign-by-reader': {
+    steps: reader('public StudentAssignment assignToStudent(UUID establishmentId, UUID studentId, UUID academicYearId, UUID partyId, String role)', 'BILLING_PARTIES_MANAGE'),
+    mustFail: ['BillingPartyTest.lesPermissionsSeparentLaLectureDeLaGestion'],
+  },
   'confirm-by-reader': reader('public Designation confirmDebtor(UUID establishmentId, UUID designationId, String reference)', 'BILLING_PARTIES_MANAGE'),
   'end-by-reader': reader('public Designation endDesignation(UUID establishmentId, UUID designationId, String reason)', 'BILLING_PARTIES_MANAGE'),
   'parties-read-by-anyone': [[S, `access.require(establishmentId, Permission.BILLING_READ);\n        return parties.listParties`, `access.require(establishmentId, Permission.ESTABLISHMENT_READ);\n        return parties.listParties`]],

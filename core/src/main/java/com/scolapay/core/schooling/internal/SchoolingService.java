@@ -447,8 +447,9 @@ public class SchoolingService implements StudentDirectory {
     @Override
     @Transactional(readOnly = true)
     public Optional<StudentLink> linkOf(UUID establishmentId, UUID studentId, UUID accountId) {
-        Optional<Grant> grant = repository.activeGrant(accountId, studentId).filter(found -> found.establishmentId().equals(establishmentId));
+        // Chercher le dossier dans cet établissement suffit : une clé composite lie chaque lien à l'établissement de son dossier.
         Optional<Student> student = repository.findStudent(establishmentId, studentId);
+        Optional<Grant> grant = repository.activeGrant(accountId, studentId);
         if (grant.isEmpty() || student.isEmpty()) {
             return Optional.empty();
         }

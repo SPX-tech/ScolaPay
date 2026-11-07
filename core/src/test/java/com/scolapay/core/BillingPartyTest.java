@@ -3,18 +3,29 @@ package com.scolapay.core;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import tools.jackson.databind.JsonNode;
 
 /** Personnes physiques et morales, rôles explicites, et aucun redevable déduit. */
 class BillingPartyTest extends BillingScenarioTest {
+
+    @Autowired
+    DataSource dataSource;
 
     private static final String DEBTOR = "CONTRACTUAL_DEBTOR";
     private static final String RESPONSIBLE = "FINANCIAL_RESPONSIBLE";
@@ -176,9 +187,11 @@ class BillingPartyTest extends BillingScenarioTest {
         String designation = designate(tenant, tenant.adminToken(), obligation, first, DEBTOR).text("id");
 
         assertThat(post(tenant.path("/billing/obligation-parties/" + designation + "/end"), tenant.adminToken(), Map.of()).status()).as("Sans motif").isEqualTo(400);
+        assertThat(byState(school, "NONE")).isZero();
         Response ended = endDesignation(tenant, tenant.adminToken(), designation, "Engagement rompu");
         assertThat(ended.status()).as(ended.raw()).isEqualTo(200);
         assertThat(ended.text("endReason")).isEqualTo("Engagement rompu");
+        assertThat(byState(school, "NONE")).as("Un redevable terminé ne compte plus").isEqualTo(1);
 
         assertThat(designate(tenant, tenant.adminToken(), obligation, partyId(createParty(tenant, "PERSON", "Second", null, null)), DEBTOR).status()).isEqualTo(201);
         assertThat(designate(tenant, tenant.adminToken(), obligation, first, RESPONSIBLE).status()).isEqualTo(201);
@@ -202,7 +215,31 @@ class BillingPartyTest extends BillingScenarioTest {
         List<Response> responses = concurrently(8, () -> designate(tenant, tenant.adminToken(), obligation, parties.get(turn.getAndIncrement()), DEBTOR));
 
         assertThat(count(responses, 201)).as(responses.toString()).isEqualTo(1);
-        assertThat(count(responses, 409)).as(responses.toString()).isEqualTo(7);
+        assertThat(responses.stream().filter(response -> "ROLE_ALREADY_ASSIGNED".equals(response.code())).count()).as(responses.toString()).isEqualTo(7);
+    }
+
+    /** Le verrou se prouve sans compter sur le hasard : une autre transaction le tient, la désignation attend. */
+    @Test
+    void uneDesignationAttendLeVerrouDeLObligation() throws Exception {
+        School school = school();
+        Tenant tenant = school.tenant();
+        UUID obligation = issuedObligation(school);
+        UUID party = partyId(createParty(tenant, "PERSON", "Personne", null, null));
+
+        try (Connection first = dataSource.getConnection(); ExecutorService executor = Executors.newSingleThreadExecutor()) {
+            first.setAutoCommit(false);
+            try (PreparedStatement lock = first.prepareStatement("SELECT 1 FROM obligations WHERE id = ? FOR UPDATE")) {
+                lock.setObject(1, obligation);
+                lock.executeQuery();
+            }
+            Future<Response> waiting = executor.submit(() -> designate(tenant, tenant.adminToken(), obligation, party, DEBTOR));
+
+            Thread.sleep(500);
+            assertThat(waiting.isDone()).as("La désignation attend que l'obligation soit libérée").isFalse();
+            first.commit();
+
+            assertThat(waiting.get(30, TimeUnit.SECONDS).status()).isEqualTo(201);
+        }
     }
 
     @Test
@@ -300,8 +337,13 @@ class BillingPartyTest extends BillingScenarioTest {
         UUID party = partyId(createParty(tenant, "PERSON", "Personne", null, null));
         String designation = designate(tenant, tenant.adminToken(), obligation, party, DEBTOR).text("id");
 
+        UUID student = jdbc.sql("SELECT student_record_id FROM obligations WHERE id = :id").param("id", obligation).query(UUID.class).single();
+        Map<String, Object> assignment = Map.of("academicYearId", school.year().toString(), "partyId", party.toString(), "role", RESPONSIBLE);
         for (String role : List.of("CASHIER", "AUDITOR", "DIRECTOR", "REGISTRAR")) {
             String token = newStaff(tenant, role);
+            Response assigned = post(tenant.path("/billing/students/" + student + "/parties"), token, assignment);
+            assertThat(assigned.status()).as(role).isEqualTo(403);
+            assertThat(assigned.code()).as(role).isEqualTo("PERMISSION_DENIED");
             assertThat(createParty(tenant, token, "PERSON", "Interdit").status()).as(role).isEqualTo(403);
             assertThat(designate(tenant, token, obligation, party, RESPONSIBLE).status()).as(role).isEqualTo(403);
             assertThat(confirm(tenant, token, designation, "REF").status()).as(role).isEqualTo(403);
