@@ -50,7 +50,7 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Catalogue académique | Vérifié | Programmes et niveaux par établissement, inscription sur un niveau. Sans semestres | `core/`, `AcademicCatalogTest`, [0018](decisions/0018-catalogue-academique.md) |
 | Catalogue de frais | Vérifié | Périodes de facturation, identité stable des charges, frais par unité académique, versions et publication immuables, aperçu d'impact | `core/`, `FeeCatalogTest`, [0020](decisions/0020-catalogue-de-frais-et-periodes.md) |
 | Obligations et dû | Vérifié | Émission par inscription confirmée, par lot après aperçu ou à l'unité, idempotente. Liste nominative de ce qui reste à facturer. Échéancier et journal immuables, dû calculé. **Aucun encaissement, aucune obligation ne peut être réglée** | `core/`, `ObligationTest`, [0021](decisions/0021-obligations-et-journal.md) |
-| Remises, ajustements, réexamen après retrait | Prévu, lot 5 | Le journal les accepte, aucune route ne les écrit | [Cadrage](missions/mission-003-billing-engine.md), [0015](decisions/0015-modele-de-facturation.md) |
+| Remises, corrections, annulations, réexamen | Vérifié | Écritures distinctes et motivées, seconde personne pour les opérations sensibles, écarts de tarif et retraits signalés pour décision. **Aucune n'est un encaissement** | `core/`, `AdjustmentTest`, `ObligationReviewTest`, [0022](decisions/0022-ajustements-et-reexamen.md) | [Cadrage](missions/mission-003-billing-engine.md), [0015](decisions/0015-modele-de-facturation.md) |
 | Outbox durable | Vérifié | Registre Spring Modulith, reprise après arrêt brutal et entre deux instances. **Aucun listener de production ne l'utilise encore** | `core/`, `OutboxReliabilityTest`, [0016](decisions/0016-outbox-durable.md) |
 | Contrôles de mise en service | Vérifié | Portail fermé par défaut, démarrage refusé si une condition manque. **Il ne peut pas être ouvert aujourd'hui** : règle du Tchad non confirmée, aucun canal d'invitation | `core/`, `GoLiveTest`, [0017](decisions/0017-controles-de-mise-en-service.md) |
 | Encaissement réel, comptabilité | Prévu | Rien | [0006](decisions/0006-backend-java-spring-boot.md) |
@@ -149,7 +149,8 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 - **0018**, acceptée : catalogue académique.
 - **0019**, principes acceptés, traitement fiscal à valider : obligations, appels de frais, factures fiscales et reçus sont distincts. Aucun document n'est présenté comme fiscalement conforme.
 - **0020**, acceptée : catalogue de frais, périodes de facturation indépendantes de l'inscription annuelle, identité stable des charges indépendante des codes.
-- **0021**, orientations validées, résultats en revue : une obligation par dossier et par charge, sans la version du catalogue dans la clé, dû et statut déduits du journal, règlement impossible sans le module de paiement.
+- **0022**, proposée, décisions ouvertes : remise, correction et annulation distinctes, seconde personne pour les opérations sensibles, réexamen déduit de la réalité.
+- **0021**, acceptée : une obligation par dossier et par charge, sans la version du catalogue dans la clé, dû et statut déduits du journal, règlement impossible sans le module de paiement.
 
 ## Priorités actuelles
 
@@ -166,6 +167,7 @@ Dans `core/`, les limites connues sont listées dans [0010](decisions/0010-ident
 | Règles juridiques non confirmées | L'âge légal enregistré pour le Tchad est provisoire. L'application refuse d'ouvrir le portail tant qu'il n'est pas confirmé | [0013](decisions/0013-majorite-et-autorisations-familiales.md#limites-et-conditions), [0017](decisions/0017-controles-de-mise-en-service.md) |
 | Dégradation silencieuse d'Android | Plus vérifié à chaque PR : accepté tant qu'il est hors feuille de route | [0014](decisions/0014-android-hors-feuille-de-route.md) |
 | Pas de limitation de débit par adresse | Le verrouillage par compte permet de gêner un compte connu | `core`, `identity` |
+| Seuil et confirmation à arbitrer | Le seuil de 50 % est à confirmer, et un établissement avec une seule personne habilitée ne peut ni annuler ni solder par remise | [0022](decisions/0022-ajustements-et-reexamen.md#décisions-ouvertes-pour-le-propriétaire) |
 | Volume d'émission non mesuré | Le plafond de 5 000 inscriptions par lot est testé, pas la durée d'une telle transaction | [Journal](mission-003-validation.md#limites-restantes) |
 | Traitement fiscal non validé | La FEN du Tchad vise au-delà de la seule TVA et exige un système agréé. Aucune source ne traite de l'enseignement. **Aucun document ScolaPay n'est fiscalement conforme** | [0019](decisions/0019-nature-des-documents-et-numerotation.md) |
 | Archive des événements sans purge | 180 jours à titre provisoire, mais rien ne l'applique encore | [0016](decisions/0016-outbox-durable.md#conservation) |
@@ -200,7 +202,7 @@ Ce serait un nouveau déploiement, avec des secrets neufs :
 
 **Prochain chantier : Mission 003, ScolaPay Billing Engine**
 
-Périmètre, critères d'acceptation et état des lots dans le [cadrage](missions/mission-003-billing-engine.md). L'outbox durable et le contrôle de mise en service sont en place. Le catalogue académique et le catalogue de frais sont en place. Les obligations, les échéanciers, le journal immuable et l'émission idempotente aussi. Le prochain lot porte sur les remises, les ajustements et le réexamen après retrait, après revue du propriétaire.
+Périmètre, critères d'acceptation et état des lots dans le [cadrage](missions/mission-003-billing-engine.md). L'outbox durable et le contrôle de mise en service sont en place. Le catalogue académique et le catalogue de frais sont en place. Les obligations, les échéanciers, le journal immuable, l'émission idempotente, les remises, les corrections et le réexamen aussi. Le prochain lot porte sur les personnes liées à une obligation, après revue du propriétaire.
 
 **Ensuite, sans ordre arrêté**
 
@@ -215,7 +217,7 @@ La CI GitHub (`.github/workflows/ci.yml`) est la source de preuve : `core` avec 
 
 Le poste de développement (8 Go) est réservé aux éditions légères. Les commandes locales figurent dans le [README](../README.md).
 
-Derniers résultats : 236 tests pour `core/`, dont des JVM réellement tuées pour l'outbox, 23 mutations toutes détectées à la [Mission 002](mission-002-validation.md) et 130 sur les lots 1 à 4 de la [Mission 003](mission-003-validation.md) ; 190 tests unitaires et 35 E2E pour le backend NestJS, 47 tests Playwright, compilation et lancement Android ([Mission 001](mission-001-validation.md#résultats-finaux)).
+Derniers résultats : 294 tests pour `core/`, dont des JVM réellement tuées pour l'outbox, 23 mutations toutes détectées à la [Mission 002](mission-002-validation.md) et 186 sur les lots 1 à 5 de la [Mission 003](mission-003-validation.md) ; 190 tests unitaires et 35 E2E pour le backend NestJS, 47 tests Playwright, compilation et lancement Android ([Mission 001](mission-001-validation.md#résultats-finaux)).
 
 ## Carte de la documentation
 

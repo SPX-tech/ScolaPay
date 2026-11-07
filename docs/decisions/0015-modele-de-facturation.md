@@ -27,7 +27,7 @@ Un module `billing`, au-dessus de `schooling`. Il ne lit ni n'écrit les tables 
 | `fee_catalogs`, `fee_items` | Versions de frais d'une année, par [unité académique](0018-catalogue-academique.md) ou pour tous, avec leur plan d'échéances et leur [période de facturation](0020-catalogue-de-frais-et-periodes.md). Chaque frais renvoie à une identité stable d'une version à l'autre | Modifiables en brouillon, figés à la publication |
 | `obligations` | Ce qu'un dossier doit pour une charge, avec une copie figée du code, du libellé et du montant : voir [0021](0021-obligations-et-journal.md). **Ce n'est pas une facture**, voir [0019](0019-nature-des-documents-et-numerotation.md). Porte une référence interne unique, stable et non réutilisable | Immuable après émission |
 | `installments` | Échéances datées d'une obligation. La somme égale le montant émis, l'arrondi va sur la dernière | Immuables, un rééchelonnement crée une nouvelle version |
-| `obligation_entries` | Journal immuable : `ISSUED`, `DISCOUNT`, `ADJUSTMENT`, et `SETTLEMENT` réservé au futur module de paiement | Ajout seul, trigger d'immuabilité |
+| `obligation_entries` | Journal immuable : `ISSUED`, `DISCOUNT`, `CORRECTION`, `CANCELLATION`, `REVERSAL`. `SETTLEMENT` n'existe pas encore : il viendra avec le futur module de paiement | Ajout seul, trigger d'immuabilité |
 | `billing_parties` | Personnes physiques ou morales pouvant être liées à une obligation, avec ou sans compte | Ajout et correction tracée |
 | `obligation_parties` | Personnes liées à une obligation et leur rôle | Ajout et révocation, jamais d'effacement |
 
@@ -50,14 +50,7 @@ La clé ne contient volontairement ni la version du catalogue, ni l'inscription,
 
 ### Remises et ajustements
 
-| Opération | Qui | Exigences |
-| --- | --- | --- |
-| Remise ou ajustement courant | Comptable ou administrateur (`BILLING_ADJUST`) | Motif obligatoire, effet immédiat, audit immuable |
-| Remise totale, correction exceptionnelle | Permission distincte `BILLING_ADJUST_EXCEPTIONAL` | Motif obligatoire, **confirmation par une seconde personne** avant toute écriture au journal |
-
-La seconde personne protège uniquement ces opérations : les petites opérations courantes restent directes. Une demande en attente ne change pas le dû, et son auteur ne peut pas la confirmer lui-même.
-
-Est exceptionnelle toute opération qui annule le dû restant, ou qui corrige une écriture d'une année académique clôturée. Tout seuil chiffré éventuel reste à fixer par le propriétaire.
+Précisé par [0022](0022-ajustements-et-reexamen.md) : la remise commerciale, la correction financière et l'annulation administrative sont des écritures distinctes, et une opération sensible attend la confirmation d'une seconde personne. Aucune n'est un encaissement.
 
 ### Personnes liées à une obligation
 
@@ -98,7 +91,7 @@ Ce booléen de `record_access_grants` devient insuffisant. Il sera remplacé par
 
 ### Événements
 
-`StudentEnrolled` déclenche l'émission via l'[outbox durable](0016-outbox-durable.md), uniquement si le personnel a confirmé les frais : voir [0021](0021-obligations-et-journal.md). **`EnrollmentEnded` ne supprime ni n'annule aucune obligation** : elle passe en réexamen, et toute modification financière passe par un ajustement autorisé, justifié et tracé.
+`StudentEnrolled` déclenche l'émission via l'[outbox durable](0016-outbox-durable.md), uniquement si le personnel a confirmé les frais : voir [0021](0021-obligations-et-journal.md). **`EnrollmentEnded` ne supprime ni n'annule aucune obligation** : le retrait se signale au [réexamen](0022-ajustements-et-reexamen.md#réexamen), et toute modification financière passe par un ajustement autorisé, justifié et tracé.
 
 ### Exclusions
 
