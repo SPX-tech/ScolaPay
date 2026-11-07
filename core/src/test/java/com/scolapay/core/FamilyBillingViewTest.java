@@ -204,6 +204,40 @@ class FamilyBillingViewTest extends BillingScenarioTest {
         assertThat(get("/api/v2/me/billing/obligations/" + billed.obligation(), billed.linked().token()).status()).isEqualTo(404);
     }
 
+    /** Les dates sont relatives : une échéance fixe finirait par passer, et ce test ne prouverait plus rien. */
+    @Test
+    void laProchaineEcheanceEstCelleAVenirEtDisparaitQuandPlusRienNestDu() throws Exception {
+        School base = school();
+        Tenant tenant = base.tenant();
+        LocalDate past = LocalDate.now().minusDays(10);
+        LocalDate future = LocalDate.now().plusDays(30);
+        UUID draft = newDraft(tenant, base.year());
+        String item = get(tenant.path("/billing/fee-catalogs/" + draft), tenant.adminToken()).body().path("items").get(0).path("id").asString();
+        Map<String, Object> fee = new java.util.HashMap<>(fee(base.charge(), "SCOLARITE", null, AMOUNT));
+        fee.put("installments", List.of(
+                Map.of("dueOn", past.toString(), "amountMinor", "50000"),
+                Map.of("dueOn", future.toString(), "amountMinor", "50000")));
+        Response updated = put(tenant.path("/billing/fee-catalogs/" + draft + "/items/" + item), tenant.adminToken(), fee);
+        assertThat(updated.status()).as(updated.raw()).isEqualTo(200);
+        publish(tenant, draft);
+        School school = new School(tenant, base.year(), base.level(), base.annual(), base.charge(), draft);
+        UUID student = newStudent(tenant, MINOR);
+        enrolledAndBilled(school, student);
+        UUID obligation = obligationOf(student);
+        Linked linked = linkedThirdParty(tenant, student, true);
+        UUID party = partyId(createParty(tenant, "PERSON", "Tiers Désigné", null, linked.grant()));
+        assertThat(designate(tenant, tenant.adminToken(), obligation, party, DEBTOR).status()).isEqualTo(201);
+        Billed billed = new Billed(school, student, obligation, linked);
+
+        JsonNode view = mine(billed);
+        assertThat(view.path("nextDueOn").asString()).as("Une échéance passée n'est pas la prochaine").isEqualTo(future.toString());
+        assertThat(view.path("installments").size()).isEqualTo(2);
+
+        approve(tenant, newStaff(tenant, "ACCOUNTANT"), requestIdOf(discount(tenant, tenant.adminToken(), obligation, AMOUNT)));
+
+        assertThat(mine(billed).path("nextDueOn").isNull()).as("Plus rien à régler, plus d'échéance").isTrue();
+    }
+
     // Aucun rôle, aucun accès
 
     @Test

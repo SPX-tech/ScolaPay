@@ -96,7 +96,14 @@ const added = {
   },
   'debtor-loses-discount-reason': [[F, `"DISCOUNT".equals(entry.kind()) ? entry.reason() : null`, `null`]],
   'debtor-status-hidden': [[F, `.map(HeldRole::debtorStatus)\n                .findFirst()\n                .orElseThrow();`, `.map(role -> "CONFIRMED")\n                .findFirst()\n                .orElseThrow();`]],
-  'next-due-while-nothing-due': [[F, `LocalDate nextDueOn = obligation.dueMinor() == 0\n                    ? null\n                    : installments`, `LocalDate nextDueOn = installments`]],
+  'next-due-while-nothing-due': {
+    steps: [[F, `LocalDate nextDueOn = obligation.dueMinor() == 0\n                    ? null\n                    : installments`, `LocalDate nextDueOn = installments`]],
+    mustFail: ['FamilyBillingViewTest.laProchaineEcheanceEstCelleAVenirEtDisparaitQuandPlusRienNestDu'],
+  },
+  'next-due-includes-past': {
+    steps: [[F, '.filter(dueOn -> !dueOn.isBefore(today))', '']],
+    mustFail: ['FamilyBillingViewTest.laProchaineEcheanceEstCelleAVenirEtDisparaitQuandPlusRienNestDu'],
+  },
 
   // Accès académique
   'label-always-real': {
