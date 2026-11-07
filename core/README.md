@@ -60,7 +60,8 @@ Toutes les routes sont sous `/api/v2`. Les erreurs suivent la RFC 9457, avec un 
 | Émettre en lot, après aperçu | `GET .../billing/issuance-preview`, puis `POST .../billing/issuance-runs` | Comptable |
 | Émettre à l'unité, notamment un frais facultatif | `POST .../billing/obligations` | Comptable |
 | Remise, correction, annulation, contrepassée | `POST .../billing/obligations/{id}/discounts`, `.../corrections`, `.../cancellation`, `.../entries/{entryId}/reversal` | Comptable |
-| Confirmer ou refuser une opération sensible | `POST .../billing/adjustment-requests/{id}/approval`, `.../rejection` | Une autre personne, comptable ou administrateur |
+| Confirmer ou refuser une opération sensible | `POST .../billing/adjustment-requests/{id}/approval`, `.../rejection` | Une autre personne : comptable, administrateur ou directeur |
+| Retirer sa propre demande | `POST .../billing/adjustment-requests/{id}/withdrawal` | Son auteur |
 | Voir ce qui demande un réexamen, et trancher | `GET .../billing/reviews`, `POST .../billing/reviews/decisions` | Comptable |
 | Consulter les obligations et le solde | `GET .../billing/obligations`, `GET .../billing/students/{studentId}/balances` | Comptable, caissier, auditeur |
 | Inviter un tiers : accès académique pour un mineur, contribution financière (portail ouvert) | `POST /establishments/{id}/students/{studentId}/third-party-invitations` | Secrétariat |

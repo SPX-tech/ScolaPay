@@ -38,7 +38,7 @@ Prouvés par des tests sur PostgreSQL réel, sans doubles, et par des mutations 
 
 **Indépendance vis-à-vis de l'encaissement**
 - **Aucune route ne peut produire le statut `SETTLED` ni une écriture `SETTLEMENT`.** Le test parcourt toutes les routes réelles, comme la matrice d'isolation.
-- Une remise totale produit `WAIVED`, jamais `SETTLED`.
+- Une remise totale produit `WAIVED`, une combinaison de remises et de corrections `ADJUSTED_TO_ZERO`, jamais `SETTLED`.
 - Le montant restant dû n'a aucune route d'écriture directe.
 
 **Rôles et confidentialité**
