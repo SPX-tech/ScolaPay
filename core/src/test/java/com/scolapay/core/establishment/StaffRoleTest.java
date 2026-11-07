@@ -21,8 +21,39 @@ class StaffRoleTest {
     }
 
     @Test
+    void leDirecteurConfirmeSansGererLesFinances() {
+        assertThat(StaffRole.DIRECTOR.grants(Permission.BILLING_APPROVE)).isTrue();
+        assertThat(StaffRole.DIRECTOR.grants(Permission.BILLING_READ)).isTrue();
+        assertThat(StaffRole.DIRECTOR.grants(Permission.BILLING_REASONS_READ)).isTrue();
+        for (Permission permission : new Permission[] {
+            Permission.BILLING_ADJUST, Permission.BILLING_ISSUE, Permission.FEES_MANAGE, Permission.FEES_PUBLISH,
+            Permission.AUDIT_READ, Permission.MEMBERS_MANAGE, Permission.STUDENTS_MANAGE, Permission.ESTABLISHMENT_MANAGE
+        }) {
+            assertThat(StaffRole.DIRECTOR.grants(permission)).as(permission.name()).isFalse();
+        }
+    }
+
+    @Test
+    void leCaissierNeLitNiNeConfirmeLesMotifs() {
+        assertThat(StaffRole.CASHIER.grants(Permission.BILLING_READ)).isTrue();
+        assertThat(StaffRole.CASHIER.grants(Permission.BILLING_REASONS_READ)).isFalse();
+        assertThat(StaffRole.CASHIER.grants(Permission.BILLING_APPROVE)).isFalse();
+        assertThat(StaffRole.CASHIER.grants(Permission.BILLING_ADJUST)).isFalse();
+    }
+
+    /** Confirmer ou opérer sans lire le motif reviendrait à décider à l'aveugle. */
+    @Test
+    void quiOpereOuConfirmeLitLesMotifs() {
+        for (StaffRole role : StaffRole.values()) {
+            if (role.grants(Permission.BILLING_APPROVE) || role.grants(Permission.BILLING_ADJUST)) {
+                assertThat(role.grants(Permission.BILLING_REASONS_READ)).as(role.name()).isTrue();
+            }
+        }
+    }
+
+    @Test
     void lesRolesDeControleNeModifientRien() {
-        for (StaffRole role : new StaffRole[] {StaffRole.AUDITOR, StaffRole.ACCOUNTANT, StaffRole.CASHIER}) {
+        for (StaffRole role : new StaffRole[] {StaffRole.AUDITOR, StaffRole.ACCOUNTANT, StaffRole.CASHIER, StaffRole.DIRECTOR}) {
             assertThat(role.grants(Permission.STUDENTS_MANAGE)).as(role.name()).isFalse();
             assertThat(role.grants(Permission.ENROLLMENTS_MANAGE)).as(role.name()).isFalse();
             assertThat(role.grants(Permission.GUARDIANS_MANAGE)).as(role.name()).isFalse();

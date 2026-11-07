@@ -34,11 +34,15 @@ public class EstablishmentAccess {
     /** Renvoie le compte autorisé, pour tracer l'auteur de l'opération. */
     public UUID require(UUID establishmentId, Permission permission) {
         UUID accountId = actor.requireAccountId();
-        boolean granted = rolesOf(establishmentId, accountId).stream().anyMatch(role -> role.grants(permission));
-        if (!granted) {
+        if (!allows(establishmentId, permission)) {
             throw ApiException.forbidden("PERMISSION_DENIED", "Votre rôle ne permet pas cette opération.");
         }
         return accountId;
+    }
+
+    /** Pour adapter une réponse au rôle, là où {@link #require} refuserait toute la requête. */
+    public boolean allows(UUID establishmentId, Permission permission) {
+        return rolesOf(establishmentId, actor.requireAccountId()).stream().anyMatch(role -> role.grants(permission));
     }
 
     private Set<StaffRole> rolesOf(UUID establishmentId, UUID accountId) {

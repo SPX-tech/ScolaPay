@@ -26,7 +26,8 @@ Une décision mérite une entrée ici lorsqu'elle est coûteuse à inverser ou q
 | [0018](0018-catalogue-academique.md) | Catalogue académique | Acceptée | En place |
 | [0019](0019-nature-des-documents-et-numerotation.md) | Nature des documents et numérotation, étude de la FEN | Principes acceptés, traitement fiscal à valider | Référence interne seulement |
 | [0020](0020-catalogue-de-frais-et-periodes.md) | Catalogue de frais, périodes de facturation et identité des charges | Acceptée | En place |
-| [0021](0021-obligations-et-journal.md) | Obligations, échéanciers et journal | Orientations validées, résultats en revue | En place, sans aucun encaissement |
+| [0021](0021-obligations-et-journal.md) | Obligations, échéanciers et journal | Acceptée | En place, sans aucun encaissement |
+| [0022](0022-ajustements-et-reexamen.md) | Remises, corrections, annulations et réexamen | Acceptée | En place, sans aucun encaissement |
 
 ## Statuts
 

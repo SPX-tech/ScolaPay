@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Aucune route ne modifie, ne solde ni ne règle une obligation, et aucune n'écrit de montant dû. Les
- * montants circulent en chaîne décimale d'unités minimales, voir la décision 0012.
+ * ajustements sont dans {@link AdjustmentController}. Les montants circulent en chaîne décimale d'unités minimales, voir la décision 0012.
  */
 @RestController
 @RequestMapping("/api/v2/establishments/{establishmentId}/billing")
@@ -101,7 +101,7 @@ class ObligationController {
                     obligation.feeDefinitionId(), obligation.billingPeriodId(), obligation.catalogVersionId(),
                     obligation.reference(), obligation.feeCode(), obligation.label(), obligation.category(), obligation.currency(),
                     String.valueOf(obligation.issuedAmountMinor()), String.valueOf(obligation.dueMinor()),
-                    ObligationService.ObligationStatus.of(obligation.dueMinor()), obligation.source(), obligation.issuedAt());
+                    ObligationService.ObligationStatus.of(obligation), obligation.source(), obligation.issuedAt());
         }
     }
 
@@ -112,15 +112,27 @@ class ObligationController {
         }
     }
 
-    record EntryView(UUID id, String kind, String amountMinor, String reason, Instant recordedAt, UUID recordedBy) {
+    record EntryView(
+            UUID id, String kind, String amountMinor, String reason, Instant recordedAt, UUID recordedBy, UUID reversesEntryId, UUID approvedBy) {
 
         static EntryView of(Entry entry) {
             return new EntryView(
-                    entry.id(), entry.kind(), String.valueOf(entry.amountMinor()), entry.reason(), entry.recordedAt(), entry.recordedBy());
+                    entry.id(), entry.kind(), String.valueOf(entry.amountMinor()), entry.reason(), entry.recordedAt(), entry.recordedBy(),
+                    entry.reversesEntryId(), entry.approvedBy());
         }
     }
 
-    record DetailView(ObligationView obligation, List<InstallmentView> installments, List<EntryView> entries) {}
+    record ReviewDecisionView(String signal, String fingerprint, String decision, String reason, UUID entryId, Instant decidedAt, UUID decidedBy) {
+
+        static ReviewDecisionView of(AdjustmentRepository.ReviewDecision decision) {
+            return new ReviewDecisionView(
+                    decision.signal(), decision.fingerprint(), decision.decision(), decision.reason(), decision.entryId(), decision.decidedAt(), decision.decidedBy());
+        }
+    }
+
+    /** {@code reasonsVisible} distingue un motif masqué pour ce rôle d'une écriture qui n'en a pas. */
+    record DetailView(
+            ObligationView obligation, List<InstallmentView> installments, List<EntryView> entries, List<ReviewDecisionView> reviewDecisions, boolean reasonsVisible) {}
 
     record BalanceView(String currency, String issuedMinor, String dueMinor, LocalDate nextDueOn) {
 
@@ -238,7 +250,9 @@ class ObligationController {
         return new DetailView(
                 ObligationView.of(detail.obligation()),
                 detail.installments().stream().map(InstallmentView::of).toList(),
-                detail.entries().stream().map(EntryView::of).toList());
+                detail.entries().stream().map(EntryView::of).toList(),
+                detail.reviewDecisions().stream().map(ReviewDecisionView::of).toList(),
+                detail.reasonsVisible());
     }
 
     @GetMapping("/students/{studentId}/balances")

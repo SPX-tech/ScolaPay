@@ -1,6 +1,6 @@
 # 0021 : obligations, échéanciers et journal
 
-- **Statut** : Orientations validées par le propriétaire, résultats en revue dans la PR du lot 4 de la Mission 003
+- **Statut** : Acceptée
 - **Date** : 2026-11-06
 - **Implémentation** : en place dans `core/`. **Aucun encaissement n'existe, et aucune obligation ne peut être réglée.**
 - **Précise** : [0015](0015-modele-de-facturation.md)
@@ -30,13 +30,13 @@ L'obligation copie le code, le libellé, le montant et l'échéancier du moment 
 | Élément | Source |
 | --- | --- |
 | Montant dû | Somme de `obligation_entries` |
-| Statut | Déduit du dû : `OPEN` s'il reste quelque chose, `WAIVED` sinon |
+| Statut | Déduit du journal, voir [0022](0022-ajustements-et-reexamen.md#des-écritures-qui-gardent-leur-sens) |
 
 Il n'existe donc **aucune colonne de solde ni de statut à modifier**, et aucune route pour le faire. Les obligations, échéances et écritures sont immuables en base.
 
 **`SETTLEMENT` ne figure volontairement pas dans le `CHECK` du journal, et `SETTLED` n'existe pas dans le code.** Écrire un règlement est aujourd'hui impossible, même en SQL direct. Le module de paiement l'introduira par migration, avec une preuve d'encaissement. Une remise totale donne `WAIVED`, jamais un règlement.
 
-Le schéma accepte déjà `DISCOUNT` et `ADJUSTMENT`, avec un motif obligatoire, mais **aucune route ne les écrit** : c'est le lot 5, avec ses permissions et sa confirmation par une seconde personne. La base refuse un dû négatif, et sérialise les écritures d'une obligation.
+Les remises, corrections et annulations sont décrites dans [0022](0022-ajustements-et-reexamen.md). La base refuse un dû négatif, et sérialise les écritures d'une obligation.
 
 ### Référence interne
 
@@ -101,7 +101,6 @@ Sur le commit `f2b89a3` : 236 tests, **46 défauts injectés sur 46 détectés**
 
 ## Limites
 
-- Le retrait ne déclenche pas encore de réexamen : c'est le lot 5. Il ne supprime déjà rien.
 - Un élève inscrit sans confirmation n'est facturé que si quelqu'un lance un lot. Il est identifiable nominativement, mais **aucun signal actif ne le rappelle** : les interfaces web devront afficher cette liste.
-- **Un écart de tarif n'est pas repris automatiquement.** Un élève réinscrit sur un niveau plus cher garde le montant de son obligation. Corriger cet écart relève d'un ajustement autorisé, au lot 5.
+- **Un écart de tarif n'est pas repris automatiquement.** Un élève réinscrit sur un niveau plus cher garde le montant de son obligation. L'écart se [signale au réexamen](0022-ajustements-et-reexamen.md#réexamen), et l'établissement décide.
 - Le volume n'a pas été mesuré : le plafond de 5 000 inscriptions est testé, pas la durée d'une telle transaction.

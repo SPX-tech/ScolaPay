@@ -34,10 +34,11 @@ Prouvés par des tests sur PostgreSQL réel, sans doubles, et par des mutations 
 - Un tarif modifié ne change aucune obligation déjà émise.
 - Dix ajustements simultanés sur une obligation donnent le bon total.
 - Une remise ne peut pas rendre le dû négatif.
+- Un retrait, une réinscription, un nouveau tarif ou un changement de niveau ne modifient jamais une obligation : ils se signalent au réexamen.
 
 **Indépendance vis-à-vis de l'encaissement**
 - **Aucune route ne peut produire le statut `SETTLED` ni une écriture `SETTLEMENT`.** Le test parcourt toutes les routes réelles, comme la matrice d'isolation.
-- Une remise totale produit `WAIVED`, jamais `SETTLED`.
+- Une remise totale produit `WAIVED`, une combinaison de remises et de corrections `ADJUSTED_TO_ZERO`, jamais `SETTLED`.
 - Le montant restant dû n'a aucune route d'écriture directe.
 
 **Rôles et confidentialité**
@@ -76,8 +77,8 @@ Chaque lot est une PR verte, indépendante, et met à jour `PROJECT_CONTEXT.md`.
 | 1 | Outbox durable et ses tests de sortie, contrôle de mise en service | | **Terminé** |
 | 2 | Catalogue académique structuré dans `schooling`, voir [0018](../decisions/0018-catalogue-academique.md) | | **Terminé** |
 | 3 | Module `billing` : catalogue de frais, identité stable des charges, applicabilité, périodes de facturation, publication et versions, voir [0020](../decisions/0020-catalogue-de-frais-et-periodes.md) | Lot 2 | **Terminé** |
-| 4 | Obligations, échéances et journal, émission sans double facturation, élèves déjà inscrits, distinction des [documents](../decisions/0019-nature-des-documents-et-numerotation.md), voir [0021](../decisions/0021-obligations-et-journal.md) | Lots 1 et 3 | **Terminé, en revue** |
-| 5 | Remises et ajustements, permissions, confirmation par une seconde personne, réexamen après retrait | Lot 4 | À faire |
+| 4 | Obligations, échéances et journal, émission sans double facturation, élèves déjà inscrits, distinction des [documents](../decisions/0019-nature-des-documents-et-numerotation.md), voir [0021](../decisions/0021-obligations-et-journal.md) | Lots 1 et 3 | **Terminé** |
+| 5 | Remises, corrections, annulations, confirmation par une seconde personne, réexamen, voir [0022](../decisions/0022-ajustements-et-reexamen.md) | Lot 4 | **Terminé, en revue** |
 | 6 | Personnes physiques et morales, rôles, vues par rôle, retrait de `financial_contributor` | Lot 4 | À faire |
 | 7 | Campagne de mutations et clôture | Tous | À faire |
 

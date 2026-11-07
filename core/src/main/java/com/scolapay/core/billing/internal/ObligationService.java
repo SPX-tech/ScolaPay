@@ -53,13 +53,30 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ObligationService {
 
-    /** Déduit du journal, jamais saisi. SETTLED n'existe pas : seul le futur module de paiement pourra l'introduire. */
+    /**
+     * Déduit du journal, jamais saisi. Un dû nul n'a pas toujours le même sens : annulée, abandonnée par
+     * remise, ramenée à zéro par correction, ou par une combinaison des deux, qui ne prétend alors à aucune
+     * cause unique. Le détail reste au journal. SETTLED n'existe pas : seul le futur module de paiement
+     * pourra l'introduire, sur preuve d'un règlement confirmé.
+     */
     public enum ObligationStatus {
         OPEN,
-        WAIVED;
+        CANCELLED,
+        WAIVED,
+        CORRECTED,
+        ADJUSTED_TO_ZERO;
 
-        static ObligationStatus of(long dueMinor) {
-            return dueMinor > 0 ? OPEN : WAIVED;
+        static ObligationStatus of(Obligation obligation) {
+            if (obligation.dueMinor() > 0) {
+                return OPEN;
+            }
+            if (obligation.cancelled()) {
+                return CANCELLED;
+            }
+            if (obligation.discounted()) {
+                return obligation.corrected() ? ADJUSTED_TO_ZERO : WAIVED;
+            }
+            return obligation.corrected() ? CORRECTED : ADJUSTED_TO_ZERO;
         }
     }
 
@@ -86,7 +103,13 @@ public class ObligationService {
 
     public record PendingIssuances(Version version, long pendingEnrollments, long totalMinor, List<PendingIssuance> page) {}
 
-    public record Detail(Obligation obligation, ObligationStatus status, List<InstallmentRow> installments, List<Entry> entries) {}
+    public record Detail(
+            Obligation obligation,
+            ObligationStatus status,
+            List<InstallmentRow> installments,
+            List<Entry> entries,
+            List<AdjustmentRepository.ReviewDecision> reviewDecisions,
+            boolean reasonsVisible) {}
 
     public record ManualIssue(boolean created, Obligation obligation) {}
 
@@ -99,6 +122,7 @@ public class ObligationService {
     private static final int REFERENCE_LENGTH = 10;
 
     private final ObligationRepository obligations;
+    private final AdjustmentRepository adjustments;
     private final FeeCatalogRepository catalogs;
     private final AcademicCatalog academics;
     private final StudentDirectory students;
@@ -111,6 +135,7 @@ public class ObligationService {
 
     public ObligationService(
             ObligationRepository obligations,
+            AdjustmentRepository adjustments,
             FeeCatalogRepository catalogs,
             AcademicCatalog academics,
             StudentDirectory students,
@@ -120,6 +145,7 @@ public class ObligationService {
             Clock clock,
             @Value("${scolapay.billing.max-issuance-size}") int maxIssuanceSize) {
         this.obligations = obligations;
+        this.adjustments = adjustments;
         this.catalogs = catalogs;
         this.academics = academics;
         this.students = students;
@@ -320,11 +346,17 @@ public class ObligationService {
         access.require(establishmentId, Permission.BILLING_READ);
         Obligation obligation = obligations.find(establishmentId, obligationId)
                 .orElseThrow(() -> ApiException.notFound("OBLIGATION_NOT_FOUND", "Obligation introuvable."));
+        // Filtré ici, et non par une interface : aucune réponse ne doit porter un motif à qui ne peut pas le lire.
+        boolean reasonsVisible = access.allows(establishmentId, Permission.BILLING_REASONS_READ);
+        List<Entry> entries = obligations.entries(establishmentId, obligationId);
+        List<AdjustmentRepository.ReviewDecision> decisions = adjustments.decisionsOf(establishmentId, obligationId);
         return new Detail(
                 obligation,
-                ObligationStatus.of(obligation.dueMinor()),
+                ObligationStatus.of(obligation),
                 obligations.installments(establishmentId, obligationId),
-                obligations.entries(establishmentId, obligationId));
+                reasonsVisible ? entries : entries.stream().map(Entry::withoutConfidentialText).toList(),
+                reasonsVisible ? decisions : decisions.stream().map(AdjustmentRepository.ReviewDecision::withoutConfidentialText).toList(),
+                reasonsVisible);
     }
 
     @Transactional(readOnly = true)

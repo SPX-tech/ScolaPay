@@ -2,7 +2,7 @@
 
 Nouveau backend de ScolaPay 2.0, en Java et Spring Boot. Il se construit, se teste et s'exécute sans le backend NestJS.
 
-Décisions : [fondation technique](../docs/decisions/0009-fondation-technique-core.md), [identité et accès](../docs/decisions/0010-identite-et-acces.md), [transition](../docs/decisions/0011-transition-depuis-nestjs.md), [convention monétaire](../docs/decisions/0012-convention-monetaire.md), [majorité et autorisations familiales](../docs/decisions/0013-majorite-et-autorisations-familiales.md), [outbox durable](../docs/decisions/0016-outbox-durable.md), [contrôles de mise en service](../docs/decisions/0017-controles-de-mise-en-service.md), [catalogue académique](../docs/decisions/0018-catalogue-academique.md), [catalogue de frais](../docs/decisions/0020-catalogue-de-frais-et-periodes.md), [obligations](../docs/decisions/0021-obligations-et-journal.md).
+Décisions : [fondation technique](../docs/decisions/0009-fondation-technique-core.md), [identité et accès](../docs/decisions/0010-identite-et-acces.md), [transition](../docs/decisions/0011-transition-depuis-nestjs.md), [convention monétaire](../docs/decisions/0012-convention-monetaire.md), [majorité et autorisations familiales](../docs/decisions/0013-majorite-et-autorisations-familiales.md), [outbox durable](../docs/decisions/0016-outbox-durable.md), [contrôles de mise en service](../docs/decisions/0017-controles-de-mise-en-service.md), [catalogue académique](../docs/decisions/0018-catalogue-academique.md), [catalogue de frais](../docs/decisions/0020-catalogue-de-frais-et-periodes.md), [obligations](../docs/decisions/0021-obligations-et-journal.md), [ajustements et réexamen](../docs/decisions/0022-ajustements-et-reexamen.md).
 
 ## Prérequis
 
@@ -59,6 +59,10 @@ Toutes les routes sont sous `/api/v2`. Les erreurs suivent la RFC 9457, avec un 
 | Voir qui reste à facturer, nominativement | `GET .../billing/pending-issuances` | Comptable, caissier, auditeur |
 | Émettre en lot, après aperçu | `GET .../billing/issuance-preview`, puis `POST .../billing/issuance-runs` | Comptable |
 | Émettre à l'unité, notamment un frais facultatif | `POST .../billing/obligations` | Comptable |
+| Remise, correction, annulation, contrepassée | `POST .../billing/obligations/{id}/discounts`, `.../corrections`, `.../cancellation`, `.../entries/{entryId}/reversal` | Comptable |
+| Confirmer ou refuser une opération sensible | `POST .../billing/adjustment-requests/{id}/approval`, `.../rejection` | Une autre personne : comptable, administrateur ou directeur |
+| Retirer sa propre demande | `POST .../billing/adjustment-requests/{id}/withdrawal` | Son auteur |
+| Voir ce qui demande un réexamen, et trancher | `GET .../billing/reviews`, `POST .../billing/reviews/decisions` | Comptable |
 | Consulter les obligations et le solde | `GET .../billing/obligations`, `GET .../billing/students/{studentId}/balances` | Comptable, caissier, auditeur |
 | Inviter un tiers : accès académique pour un mineur, contribution financière (portail ouvert) | `POST /establishments/{id}/students/{studentId}/third-party-invitations` | Secrétariat |
 | Inviter un étudiant majeur (portail ouvert) | `POST /establishments/{id}/students/{studentId}/self-access-invitations` | Secrétariat |
