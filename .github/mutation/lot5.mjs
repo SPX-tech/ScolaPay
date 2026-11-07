@@ -82,7 +82,10 @@ const added = {
   'request-without-due-snapshot': [[A, 'kind, amount, obligation.dueMinor(), journalSize, false,', 'kind, amount, 0L, journalSize, false,']],
   'reject-own-request-open': [[A, `if (request.requestedBy().equals(actorId)) {\n            throw ApiException.forbidden("SELF_DECISION_FORBIDDEN"`, `if ("__".isEmpty()) {\n            throw ApiException.forbidden("SELF_DECISION_FORBIDDEN"`]],
   'withdraw-by-anyone': never(A, '!request.requestedBy().equals(actorId)'),
-  'withdraw-by-reader': [[A, `public void withdraw(UUID establishmentId, UUID requestId, String note) {\n        UUID actorId = access.require(establishmentId, Permission.BILLING_ADJUST);`, `public void withdraw(UUID establishmentId, UUID requestId, String note) {\n        UUID actorId = access.require(establishmentId, Permission.BILLING_READ);`]],
+  'withdraw-by-reader': {
+    steps: [[A, `public void withdraw(UUID establishmentId, UUID requestId, String note) {\n        UUID actorId = access.require(establishmentId, Permission.BILLING_ADJUST);`, `public void withdraw(UUID establishmentId, UUID requestId, String note) {\n        UUID actorId = access.require(establishmentId, Permission.BILLING_READ);`]],
+    mustFail: ['AdjustmentPolicyTest.seulLAuteurRetireEtUnAutreRefuse'],
+  },
 
   // Confidentialité : la règle vit dans l'API
   'reasons-detail-entries-open': {

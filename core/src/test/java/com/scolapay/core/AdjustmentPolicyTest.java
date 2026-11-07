@@ -324,8 +324,11 @@ class AdjustmentPolicyTest extends BillingScenarioTest {
         assertThat(selfRejected.status()).as(selfRejected.raw()).isEqualTo(403);
         assertThat(selfRejected.code()).isEqualTo("SELF_DECISION_FORBIDDEN");
 
+        // Le code d'erreur compte : sans lui, un défaut de permission se cacherait derrière NOT_REQUEST_AUTHOR, aussi en 403.
         for (String role : List.of("CASHIER", "AUDITOR", "REGISTRAR", "DIRECTOR")) {
-            assertThat(withdraw(tenant, newStaff(tenant, role), request, "Interdit").status()).as(role).isEqualTo(403);
+            Response refused = withdraw(tenant, newStaff(tenant, role), request, "Interdit");
+            assertThat(refused.status()).as(role).isEqualTo(403);
+            assertThat(refused.code()).as(role).isEqualTo("PERMISSION_DENIED");
         }
 
         assertThat(reject(tenant, other, request, "Dossier incomplet").status()).isEqualTo(204);
