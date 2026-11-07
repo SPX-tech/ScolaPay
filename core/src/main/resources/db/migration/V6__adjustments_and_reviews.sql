@@ -55,32 +55,42 @@ BEGIN
 END;
 $$;
 
+-- Le directeur confirme les opérations sensibles sans pouvoir les passer lui-même.
+ALTER TABLE membership_roles
+  DROP CONSTRAINT membership_roles_role_check,
+  ADD CONSTRAINT membership_roles_role_check
+    CHECK (role IN ('ESTABLISHMENT_ADMIN', 'REGISTRAR', 'CASHIER', 'ACCOUNTANT', 'AUDITOR', 'DIRECTOR'));
+
 -- Une opération sensible attend ici la décision d'une seconde personne. Tant qu'elle attend, elle
--- n'existe pas dans le journal et ne change donc pas le dû. Une annulation n'a pas de montant fixé :
--- elle porte sur ce qui reste dû au moment de la confirmation.
+-- n'existe pas dans le journal et ne change donc pas le dû. La demande fige ce qui est présenté : son
+-- montant, le dû et la taille du journal. Toute nouvelle écriture la rend périmée, car l'approbateur
+-- ne doit jamais confirmer autre chose que ce qu'on lui a montré.
 CREATE TABLE adjustment_requests (
   id                uuid PRIMARY KEY,
   establishment_id  uuid NOT NULL,
   obligation_id     uuid NOT NULL,
   kind              text NOT NULL CHECK (kind IN ('DISCOUNT', 'CORRECTION', 'CANCELLATION', 'REVERSAL')),
-  amount_minor      bigint CHECK (amount_minor <> 0),
+  amount_minor      bigint NOT NULL CHECK (amount_minor <> 0),
+  due_at_request_minor bigint NOT NULL CHECK (due_at_request_minor >= 0),
+  journal_size_at_request integer NOT NULL CHECK (journal_size_at_request >= 1),
   reverses_entry_id uuid,
   reason            text NOT NULL CHECK (length(reason) BETWEEN 1 AND 500),
   idempotency_key   text NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 200),
-  status            text NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+  status            text NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'WITHDRAWN')),
   requested_at      timestamptz NOT NULL,
   requested_by      uuid NOT NULL REFERENCES accounts (id),
   decided_at        timestamptz,
   decided_by        uuid REFERENCES accounts (id),
   decision_note     text CHECK (length(decision_note) BETWEEN 1 AND 500),
   entry_id          uuid,
-  CHECK ((kind = 'CANCELLATION') = (amount_minor IS NULL)),
+  CONSTRAINT adjustment_requests_cancels_all CHECK (kind <> 'CANCELLATION' OR amount_minor = -due_at_request_minor),
   CHECK ((kind = 'REVERSAL') = (reverses_entry_id IS NOT NULL)),
   CHECK ((status = 'PENDING') = (decided_at IS NULL)),
   CHECK ((status = 'PENDING') = (decided_by IS NULL)),
-  CHECK (status <> 'REJECTED' OR decision_note IS NOT NULL),
+  CONSTRAINT adjustment_requests_note_required CHECK (status NOT IN ('REJECTED', 'WITHDRAWN') OR decision_note IS NOT NULL),
   CHECK ((status = 'APPROVED') = (entry_id IS NOT NULL)),
-  CONSTRAINT adjustment_requests_second_person CHECK (decided_by IS NULL OR decided_by <> requested_by),
+  CONSTRAINT adjustment_requests_second_person CHECK (decided_by IS NULL OR status = 'WITHDRAWN' OR decided_by <> requested_by),
+  CONSTRAINT adjustment_requests_withdrawn_by_author CHECK (status <> 'WITHDRAWN' OR decided_by = requested_by),
   UNIQUE (establishment_id, id),
   UNIQUE (establishment_id, idempotency_key),
   FOREIGN KEY (establishment_id, obligation_id) REFERENCES obligations (establishment_id, id),
@@ -91,15 +101,30 @@ CREATE UNIQUE INDEX adjustment_requests_one_pending ON adjustment_requests (obli
 CREATE INDEX adjustment_requests_status_idx ON adjustment_requests (establishment_id, status, requested_at);
 
 CREATE FUNCTION adjustment_requests_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+  journal_size integer;
 BEGIN
   IF OLD.status <> 'PENDING' THEN
     RAISE EXCEPTION 'Une demande décidée est immuable';
   END IF;
-  IF (NEW.id, NEW.establishment_id, NEW.obligation_id, NEW.kind, NEW.amount_minor, NEW.reverses_entry_id, NEW.reason,
-      NEW.idempotency_key, NEW.requested_at, NEW.requested_by)
-     IS DISTINCT FROM (OLD.id, OLD.establishment_id, OLD.obligation_id, OLD.kind, OLD.amount_minor, OLD.reverses_entry_id, OLD.reason,
-      OLD.idempotency_key, OLD.requested_at, OLD.requested_by) THEN
+  IF (NEW.id, NEW.establishment_id, NEW.obligation_id, NEW.kind, NEW.amount_minor, NEW.due_at_request_minor, NEW.journal_size_at_request,
+      NEW.reverses_entry_id, NEW.reason, NEW.idempotency_key, NEW.requested_at, NEW.requested_by)
+     IS DISTINCT FROM (OLD.id, OLD.establishment_id, OLD.obligation_id, OLD.kind, OLD.amount_minor, OLD.due_at_request_minor, OLD.journal_size_at_request,
+      OLD.reverses_entry_id, OLD.reason, OLD.idempotency_key, OLD.requested_at, OLD.requested_by) THEN
     RAISE EXCEPTION 'Le contenu d''une demande est immuable';
+  END IF;
+  IF NEW.status = 'APPROVED' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM obligation_entries e
+      WHERE e.id = NEW.entry_id AND e.kind = NEW.kind AND e.amount_minor = NEW.amount_minor
+        AND e.reverses_entry_id IS NOT DISTINCT FROM NEW.reverses_entry_id
+        AND e.recorded_by = NEW.requested_by AND e.approved_by = NEW.decided_by) THEN
+      RAISE EXCEPTION 'L''écriture ne correspond pas à la demande confirmée';
+    END IF;
+    SELECT count(*) INTO journal_size FROM obligation_entries WHERE obligation_id = NEW.obligation_id;
+    IF journal_size <> NEW.journal_size_at_request + 1 THEN
+      RAISE EXCEPTION 'Le journal a changé depuis cette demande : une nouvelle confirmation est nécessaire';
+    END IF;
   END IF;
   RETURN NEW;
 END;

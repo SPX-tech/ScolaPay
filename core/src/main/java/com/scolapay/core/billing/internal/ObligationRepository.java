@@ -35,6 +35,7 @@ public class ObligationRepository {
             long dueMinor,
             boolean cancelled,
             boolean discounted,
+            boolean corrected,
             String source,
             Instant issuedAt) {}
 
@@ -60,7 +61,12 @@ public class ObligationRepository {
     public record InstallmentRow(int seq, LocalDate dueOn, long amountMinor) {}
 
     public record Entry(
-            UUID id, String kind, long amountMinor, String reason, Instant recordedAt, UUID recordedBy, UUID reversesEntryId, UUID approvedBy) {}
+            UUID id, String kind, long amountMinor, String reason, Instant recordedAt, UUID recordedBy, UUID reversesEntryId, UUID approvedBy) {
+
+        Entry withoutConfidentialText() {
+            return new Entry(id, kind, amountMinor, null, recordedAt, recordedBy, reversesEntryId, approvedBy);
+        }
+    }
 
     public record Balance(String currency, long issuedMinor, long dueMinor, LocalDate nextDueOn) {}
 
@@ -77,6 +83,9 @@ public class ObligationRepository {
                    EXISTS (
                      SELECT 1 FROM obligation_entries e WHERE e.obligation_id = o.id AND e.kind = 'DISCOUNT'
                        AND NOT EXISTS (SELECT 1 FROM obligation_entries r WHERE r.reverses_entry_id = e.id)) AS discounted,
+                   EXISTS (
+                     SELECT 1 FROM obligation_entries e WHERE e.obligation_id = o.id AND e.kind = 'CORRECTION'
+                       AND NOT EXISTS (SELECT 1 FROM obligation_entries r WHERE r.reverses_entry_id = e.id)) AS corrected,
                    o.source, o.issued_at
             FROM obligations o
             JOIN fee_definitions d ON d.establishment_id = o.establishment_id AND d.id = o.fee_definition_id
@@ -334,6 +343,7 @@ public class ObligationRepository {
                 rs.getLong("due_minor"),
                 rs.getBoolean("cancelled"),
                 rs.getBoolean("discounted"),
+                rs.getBoolean("corrected"),
                 rs.getString("source"),
                 Columns.instant(rs, "issued_at"));
     }

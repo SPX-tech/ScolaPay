@@ -14,8 +14,11 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +48,7 @@ public class AdjustmentService {
     private final AuditTrail audit;
     private final Clock clock;
     private final int sensitivePercent;
+    private final long sensitiveXaf;
 
     public AdjustmentService(
             AdjustmentRepository adjustments,
@@ -53,7 +57,8 @@ public class AdjustmentService {
             EstablishmentAccess access,
             AuditTrail audit,
             Clock clock,
-            @Value("${scolapay.billing.sensitive-adjustment-percent}") int sensitivePercent) {
+            @Value("${scolapay.billing.sensitive-adjustment-percent}") int sensitivePercent,
+            @Value("${scolapay.billing.sensitive-adjustment-xaf}") long sensitiveXaf) {
         this.adjustments = adjustments;
         this.obligations = obligations;
         this.academics = academics;
@@ -61,6 +66,7 @@ public class AdjustmentService {
         this.audit = audit;
         this.clock = clock;
         this.sensitivePercent = sensitivePercent;
+        this.sensitiveXaf = sensitiveXaf;
     }
 
     /** Une remise commerciale : un avantage accordé, qui réduit le dû. */
@@ -107,17 +113,16 @@ public class AdjustmentService {
 
         List<Entry> entries = obligations.entries(establishmentId, obligationId);
         Entry reversed = reversedEntryId == null ? null : reversibleEntry(establishmentId, entries, reversedEntryId);
-        Long amount = reversed == null ? signedAmount : Long.valueOf(-reversed.amountMinor());
         if ("CANCELLATION".equals(kind)) {
             requireDue(obligation);
-        } else {
-            requireWithinDue(obligation, amount);
         }
+        long amount = "CANCELLATION".equals(kind) ? -obligation.dueMinor() : reversed != null ? -reversed.amountMinor() : signedAmount;
+        requireWithinDue(obligation, amount);
 
         boolean sensitive = "CANCELLATION".equals(kind)
                 || sensitive(establishmentId, obligation, entries, amount, reversed);
         if (sensitive) {
-            return requestApproval(establishmentId, obligationId, kind, amount, reversedEntryId, reason, key, actorId);
+            return requestApproval(establishmentId, obligation, entries.size(), kind, amount, reversedEntryId, reason, key, actorId);
         }
         UUID entryId = UUID.randomUUID();
         Instant now = clock.instant();
@@ -129,12 +134,14 @@ public class AdjustmentService {
     }
 
     private Outcome requestApproval(
-            UUID establishmentId, UUID obligationId, String kind, Long amount, UUID reversedEntryId, String reason, String key, UUID actorId) {
+            UUID establishmentId, Obligation obligation, int journalSize, String kind, long amount, UUID reversedEntryId, String reason, String key, UUID actorId) {
+        UUID obligationId = obligation.id();
         if (adjustments.hasPendingRequest(establishmentId, obligationId)) {
             throw ApiException.conflict("PENDING_REQUEST_EXISTS", "Une demande attend déjà une décision pour cette obligation.");
         }
         Request request = new Request(
-                UUID.randomUUID(), obligationId, kind, amount, reversedEntryId, reason, "PENDING", clock.instant(), actorId, null, null, null, null);
+                UUID.randomUUID(), obligationId, kind, amount, obligation.dueMinor(), journalSize, false, reversedEntryId, reason, "PENDING",
+                clock.instant(), actorId, null, null, null, null);
         adjustments.insertRequest(establishmentId, request, key);
         audit.record(
                 establishmentId, actorId, "billing.adjustment.requested", "adjustment_request", request.id(),
@@ -144,7 +151,9 @@ public class AdjustmentService {
 
     /**
      * Sensible : amener le dû à zéro, dépasser le seuil cumulé, ou toucher une année clôturée. Le seuil
-     * porte sur le cumul des écritures de l'obligation, sans quoi il suffirait de découper une remise.
+     * porte sur le cumul brut des écritures actives : un cumul net laisserait une hausse et une baisse se
+     * compenser, et un contrôle par opération laisserait découper. Sans seconde personne, ce cumul ne
+     * peut donc jamais dépasser le seuil.
      */
     private boolean sensitive(UUID establishmentId, Obligation obligation, List<Entry> entries, long amount, Entry reversed) {
         boolean closedYear = academics.findYear(establishmentId, obligation.academicYearId())
@@ -156,8 +165,18 @@ public class AdjustmentService {
         if (reversed != null) {
             return reversed.approvedBy() != null;
         }
-        long net = entries.stream().filter(entry -> !"ISSUED".equals(entry.kind())).mapToLong(Entry::amountMinor).sum();
-        return Math.abs(net + amount) * 100 > sensitivePercent * obligation.issuedAmountMinor();
+        long cumulated = activeAdjustmentsMinor(entries) + Math.abs(amount);
+        return cumulated * 100 > sensitivePercent * obligation.issuedAmountMinor()
+                || ("XAF".equals(obligation.currency()) && cumulated > sensitiveXaf);
+    }
+
+    /** Une écriture contrepassée et sa contrepassée s'annulent : elles ne consomment pas le seuil. */
+    private static long activeAdjustmentsMinor(List<Entry> entries) {
+        Set<UUID> reversed = entries.stream().map(Entry::reversesEntryId).filter(Objects::nonNull).collect(Collectors.toSet());
+        return entries.stream()
+                .filter(entry -> !"ISSUED".equals(entry.kind()) && !"REVERSAL".equals(entry.kind()) && !reversed.contains(entry.id()))
+                .mapToLong(entry -> Math.abs(entry.amountMinor()))
+                .sum();
     }
 
     @Transactional
@@ -167,14 +186,11 @@ public class AdjustmentService {
         if (request.requestedBy().equals(actorId)) {
             throw ApiException.forbidden("SELF_APPROVAL_FORBIDDEN", "Cette opération doit être confirmée par une autre personne.");
         }
-        Obligation obligation = obligations.find(establishmentId, request.obligationId()).orElseThrow();
-        long amount = request.amountMinor() != null ? request.amountMinor() : -obligation.dueMinor();
-        if (amount == 0 || obligation.dueMinor() + amount < 0) {
+        // Toute écriture passée depuis la demande change ce qui a été présenté, même à solde identique.
+        if (obligations.entries(establishmentId, request.obligationId()).size() != request.journalSizeAtRequest()) {
             throw outdated();
         }
-        if (request.reversesEntryId() != null && adjustments.alreadyReversed(establishmentId, request.reversesEntryId())) {
-            throw outdated();
-        }
+        long amount = request.amountMinor();
         UUID entryId = UUID.randomUUID();
         Instant now = clock.instant();
         adjustments.insertEntry(establishmentId, new NewEntry(
@@ -194,15 +210,33 @@ public class AdjustmentService {
     @Transactional
     public void reject(UUID establishmentId, UUID requestId, String note) {
         UUID actorId = access.require(establishmentId, Permission.BILLING_APPROVE);
-        lockedPendingRequest(establishmentId, requestId);
+        Request request = lockedPendingRequest(establishmentId, requestId);
+        if (request.requestedBy().equals(actorId)) {
+            throw ApiException.forbidden("SELF_DECISION_FORBIDDEN", "Votre propre demande se retire : elle ne se refuse pas.");
+        }
         adjustments.markRejected(establishmentId, requestId, actorId, clock.instant(), note);
         audit.record(establishmentId, actorId, "billing.adjustment.rejected", "adjustment_request", requestId, Map.of());
+    }
+
+    /** Son auteur renonce à sa demande : la trace reste, et l'obligation peut recevoir une autre demande. */
+    @Transactional
+    public void withdraw(UUID establishmentId, UUID requestId, String note) {
+        UUID actorId = access.require(establishmentId, Permission.BILLING_ADJUST);
+        Request request = lockedPendingRequest(establishmentId, requestId);
+        if (!request.requestedBy().equals(actorId)) {
+            throw ApiException.forbidden("NOT_REQUEST_AUTHOR", "Seul l'auteur retire sa demande : une autre personne la refuse.");
+        }
+        adjustments.markWithdrawn(establishmentId, requestId, actorId, clock.instant(), note);
+        audit.record(establishmentId, actorId, "billing.adjustment.withdrawn", "adjustment_request", requestId, Map.of());
     }
 
     @Transactional(readOnly = true)
     public List<Request> listRequests(UUID establishmentId, String status, PageQuery page) {
         access.require(establishmentId, Permission.BILLING_READ);
-        return adjustments.listRequests(establishmentId, status, page);
+        List<Request> requests = adjustments.listRequests(establishmentId, status, page);
+        return access.allows(establishmentId, Permission.BILLING_REASONS_READ)
+                ? requests
+                : requests.stream().map(Request::withoutConfidentialText).toList();
     }
 
     private Request lockedPendingRequest(UUID establishmentId, UUID requestId) {
@@ -250,6 +284,6 @@ public class AdjustmentService {
     }
 
     private static ApiException outdated() {
-        return ApiException.conflict("REQUEST_OUTDATED", "Le montant dû a changé depuis cette demande : rejetez-la et formulez-en une nouvelle.");
+        return ApiException.conflict("REQUEST_OUTDATED", "Le journal a changé depuis cette demande : elle doit être refusée ou retirée, puis formulée de nouveau pour une nouvelle confirmation.");
     }
 }

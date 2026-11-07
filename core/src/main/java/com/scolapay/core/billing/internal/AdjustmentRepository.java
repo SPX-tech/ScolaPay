@@ -20,7 +20,10 @@ public class AdjustmentRepository {
             UUID id,
             UUID obligationId,
             String kind,
-            Long amountMinor,
+            long amountMinor,
+            long dueAtRequestMinor,
+            int journalSizeAtRequest,
+            boolean outdated,
             UUID reversesEntryId,
             String reason,
             String status,
@@ -34,6 +37,20 @@ public class AdjustmentRepository {
         boolean pending() {
             return "PENDING".equals(status);
         }
+
+        Request withoutConfidentialText() {
+            return new Request(
+                    id, obligationId, kind, amountMinor, dueAtRequestMinor, journalSizeAtRequest, outdated, reversesEntryId, null, status,
+                    requestedAt, requestedBy, decidedAt, decidedBy, null, entryId);
+        }
+    }
+
+    public record ReviewDecision(
+            String signal, String fingerprint, String decision, String reason, UUID entryId, Instant decidedAt, UUID decidedBy) {
+
+        ReviewDecision withoutConfidentialText() {
+            return new ReviewDecision(signal, fingerprint, decision, null, entryId, decidedAt, decidedBy);
+        }
     }
 
     public record NewEntry(
@@ -41,8 +58,10 @@ public class AdjustmentRepository {
             Instant recordedAt, UUID recordedBy, UUID approvedBy) {}
 
     private static final String REQUEST_COLUMNS = """
-            id, obligation_id, kind, amount_minor, reverses_entry_id, reason, status, requested_at, requested_by,
-            decided_at, decided_by, decision_note, entry_id
+            id, obligation_id, kind, amount_minor, due_at_request_minor, journal_size_at_request, reverses_entry_id, reason, status,
+            requested_at, requested_by, decided_at, decided_by, decision_note, entry_id,
+            status = 'PENDING' AND journal_size_at_request <> (
+              SELECT count(*) FROM obligation_entries e WHERE e.obligation_id = adjustment_requests.obligation_id) AS outdated
             """;
 
     private final JdbcClient jdbc;
@@ -119,14 +138,18 @@ public class AdjustmentRepository {
     public void insertRequest(UUID establishmentId, Request request, String key) {
         jdbc.sql("""
                 INSERT INTO adjustment_requests
-                  (id, establishment_id, obligation_id, kind, amount_minor, reverses_entry_id, reason, idempotency_key, requested_at, requested_by)
-                VALUES (:id, :establishmentId, :obligationId, :kind, :amountMinor, :reverses, :reason, :key, :requestedAt, :requestedBy)
+                  (id, establishment_id, obligation_id, kind, amount_minor, due_at_request_minor, journal_size_at_request,
+                   reverses_entry_id, reason, idempotency_key, requested_at, requested_by)
+                VALUES (:id, :establishmentId, :obligationId, :kind, :amountMinor, :dueAtRequest, :journalSize,
+                   :reverses, :reason, :key, :requestedAt, :requestedBy)
                 """)
                 .param("id", request.id())
                 .param("establishmentId", establishmentId)
                 .param("obligationId", request.obligationId())
                 .param("kind", request.kind())
                 .param("amountMinor", request.amountMinor())
+                .param("dueAtRequest", request.dueAtRequestMinor())
+                .param("journalSize", request.journalSizeAtRequest())
                 .param("reverses", request.reversesEntryId())
                 .param("reason", request.reason())
                 .param("key", key)
@@ -208,7 +231,40 @@ public class AdjustmentRepository {
                 .update();
     }
 
+    public void markWithdrawn(UUID establishmentId, UUID id, UUID author, Instant now, String note) {
+        jdbc.sql("""
+                UPDATE adjustment_requests SET status = 'WITHDRAWN', decided_at = :now, decided_by = :author, decision_note = :note
+                WHERE establishment_id = :establishmentId AND id = :id
+                """)
+                .param("establishmentId", establishmentId)
+                .param("id", id)
+                .param("now", Columns.timestamp(now))
+                .param("author", author)
+                .param("note", note)
+                .update();
+    }
+
     // Décisions de réexamen
+
+    public List<ReviewDecision> decisionsOf(UUID establishmentId, UUID obligationId) {
+        return jdbc.sql("""
+                SELECT signal, fingerprint, decision, reason, entry_id, decided_at, decided_by
+                FROM obligation_review_decisions
+                WHERE establishment_id = :establishmentId AND obligation_id = :obligationId
+                ORDER BY decided_at, id
+                """)
+                .param("establishmentId", establishmentId)
+                .param("obligationId", obligationId)
+                .query((rs, rowNum) -> new ReviewDecision(
+                        rs.getString("signal"),
+                        rs.getString("fingerprint"),
+                        rs.getString("decision"),
+                        rs.getString("reason"),
+                        Columns.uuid(rs, "entry_id"),
+                        Columns.instant(rs, "decided_at"),
+                        Columns.uuid(rs, "decided_by")))
+                .list();
+    }
 
     public void insertDecision(
             UUID establishmentId, UUID obligationId, String signal, String fingerprint, String decision, String reason, UUID entryId, Instant now, UUID decidedBy) {
@@ -246,7 +302,10 @@ public class AdjustmentRepository {
                 Columns.uuid(rs, "id"),
                 Columns.uuid(rs, "obligation_id"),
                 rs.getString("kind"),
-                rs.getObject("amount_minor", Long.class),
+                rs.getLong("amount_minor"),
+                rs.getLong("due_at_request_minor"),
+                rs.getInt("journal_size_at_request"),
+                rs.getBoolean("outdated"),
                 Columns.uuid(rs, "reverses_entry_id"),
                 rs.getString("reason"),
                 rs.getString("status"),

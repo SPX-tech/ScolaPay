@@ -130,12 +130,12 @@ class AdjustmentTest extends BillingScenarioTest {
         Tenant tenant = school.tenant();
         UUID obligation = issuedObligation(school);
 
-        entryId(discount(tenant, tenant.adminToken(), obligation, 30_000));
-        entryId(discount(tenant, tenant.adminToken(), obligation, 20_000));
-        assertDue(tenant, obligation, 50_000, "OPEN");
+        entryId(discount(tenant, tenant.adminToken(), obligation, 15_000));
+        entryId(discount(tenant, tenant.adminToken(), obligation, 10_000));
+        assertDue(tenant, obligation, 75_000, "OPEN");
 
         requestIdOf(discount(tenant, tenant.adminToken(), obligation, 1));
-        assertDue(tenant, obligation, 50_000, "OPEN");
+        assertDue(tenant, obligation, 75_000, "OPEN");
     }
 
     @Test
@@ -143,9 +143,9 @@ class AdjustmentTest extends BillingScenarioTest {
         School school = school();
         Tenant tenant = school.tenant();
 
-        requestIdOf(correction(tenant, tenant.adminToken(), issuedObligation(school), 50_001));
-        requestIdOf(correction(tenant, tenant.adminToken(), issuedObligation(school), -50_001));
-        entryId(correction(tenant, tenant.adminToken(), issuedObligation(school), 50_000));
+        requestIdOf(correction(tenant, tenant.adminToken(), issuedObligation(school), 25_001));
+        requestIdOf(correction(tenant, tenant.adminToken(), issuedObligation(school), -25_001));
+        entryId(correction(tenant, tenant.adminToken(), issuedObligation(school), 25_000));
     }
 
     @Test
@@ -164,16 +164,15 @@ class AdjustmentTest extends BillingScenarioTest {
         Tenant tenant = school.tenant();
         UUID obligation = issuedObligation(school);
         String accountant = newStaff(tenant, "ACCOUNTANT");
+        entryId(discount(tenant, tenant.adminToken(), obligation, 10_000));
 
         String request = requestIdOf(cancellation(tenant, tenant.adminToken(), obligation));
-        assertDue(tenant, obligation, AMOUNT, "OPEN");
-
-        entryId(discount(tenant, tenant.adminToken(), obligation, 10_000));
+        assertDue(tenant, obligation, 90_000, "OPEN");
 
         Response approved = approve(tenant, accountant, request);
         assertThat(approved.status()).as(approved.raw()).isEqualTo(200);
         assertThat(approved.text("kind")).isEqualTo("CANCELLATION");
-        assertThat(approved.text("amountMinor")).as("Ce qui reste dû au moment de la confirmation").isEqualTo("-90000");
+        assertThat(approved.text("amountMinor")).as("Le reste dû présenté dans la demande").isEqualTo("-90000");
         assertDue(tenant, obligation, 0, "CANCELLED");
 
         Response nothingLeft = cancellation(tenant, tenant.adminToken(), obligation);
@@ -249,6 +248,7 @@ class AdjustmentTest extends BillingScenarioTest {
         assertThat(outdated.status()).as(outdated.raw()).isEqualTo(409);
         assertThat(outdated.code()).isEqualTo("REQUEST_OUTDATED");
         assertDue(tenant, obligation, 80_000, "OPEN");
+        assertThat(journalSize(obligation)).isEqualTo(2);
     }
 
     // Corriger sans jamais modifier l'historique
@@ -447,10 +447,10 @@ class AdjustmentTest extends BillingScenarioTest {
 
         List<Response> responses = concurrently(8, () -> discount(tenant, tenant.adminToken(), obligation, 10_000));
 
-        assertThat(responses.stream().filter(response -> response.status() == 201).count()).as(responses.toString()).isEqualTo(5);
+        assertThat(responses.stream().filter(response -> response.status() == 201).count()).as(responses.toString()).isEqualTo(2);
         assertThat(responses.stream().filter(response -> response.status() == 202).count()).as(responses.toString()).isEqualTo(1);
-        assertThat(responses.stream().filter(response -> response.status() == 409).count()).as(responses.toString()).isEqualTo(2);
-        assertDue(tenant, obligation, 50_000, "OPEN");
+        assertThat(responses.stream().filter(response -> response.status() == 409).count()).as(responses.toString()).isEqualTo(5);
+        assertDue(tenant, obligation, 80_000, "OPEN");
     }
 
     @Test
@@ -720,8 +720,9 @@ class AdjustmentTest extends BillingScenarioTest {
         requestIdOf(cancellation(tenant, tenant.adminToken(), obligation));
 
         assertThatThrownBy(() -> jdbc.sql("""
-                INSERT INTO adjustment_requests (id, establishment_id, obligation_id, kind, reason, idempotency_key, requested_at, requested_by)
-                VALUES (gen_random_uuid(), :establishment, :obligation, 'CANCELLATION', 'Doublon', :key, now(), :actor)
+                INSERT INTO adjustment_requests
+                  (id, establishment_id, obligation_id, kind, amount_minor, due_at_request_minor, journal_size_at_request, reason, idempotency_key, requested_at, requested_by)
+                VALUES (gen_random_uuid(), :establishment, :obligation, 'CANCELLATION', -100000, 100000, 1, 'Doublon', :key, now(), :actor)
                 """)
                 .param("establishment", tenant.id())
                 .param("obligation", obligation)

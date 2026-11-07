@@ -240,7 +240,7 @@ class ObligationReviewTest extends BillingScenarioTest {
         UUID student = enrolledAndBilled(school);
         UUID obligation = obligationOf(student);
         UUID otherObligation = issuedObligation(school);
-        reenrollOnLevelPricedAt(school, student, 130_000);
+        reenrollOnLevelPricedAt(school, student, 120_000);
         JsonNode signal = reviews(tenant, school.year()).body().path("signals").get(0);
         UUID issued = UUID.fromString(entries(tenant, obligation).get(0).path("id").asString());
         UUID foreign = UUID.fromString(discount(tenant, tenant.adminToken(), otherObligation, 1_000).text("entryId"));
@@ -250,13 +250,13 @@ class ObligationReviewTest extends BillingScenarioTest {
         assertThat(decide(school, signal, "ADJUSTED", issued, "L'émission n'est pas un ajustement").code()).isEqualTo("ENTRY_NOT_AN_ADJUSTMENT");
         assertThat(decide(school, signal, "ADJUSTED", foreign, "Autre obligation").code()).isEqualTo("ENTRY_NOT_AN_ADJUSTMENT");
 
-        Response correction = correction(tenant, tenant.adminToken(), obligation, 30_000);
+        Response correction = correction(tenant, tenant.adminToken(), obligation, 20_000);
         assertThat(correction.status()).as(correction.raw()).isEqualTo(201);
 
         Response decided = decide(school, signal, "ADJUSTED", UUID.fromString(correction.text("entryId")), "Supplément décidé par la direction");
 
         assertThat(decided.status()).as(decided.raw()).isEqualTo(204);
-        assertThat(obligationView(tenant, obligation).path("dueMinor").asString()).isEqualTo("130000");
+        assertThat(obligationView(tenant, obligation).path("dueMinor").asString()).isEqualTo("120000");
         assertThat(obligationView(tenant, obligation).path("issuedAmountMinor").asString()).isEqualTo(String.valueOf(AMOUNT));
     }
 

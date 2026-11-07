@@ -61,6 +61,9 @@ class AdjustmentController {
             UUID obligationId,
             String kind,
             String amountMinor,
+            String dueAtRequestMinor,
+            String resultingDueMinor,
+            boolean outdated,
             UUID reversesEntryId,
             String reason,
             String status,
@@ -73,8 +76,8 @@ class AdjustmentController {
 
         static RequestView of(Request request) {
             return new RequestView(
-                    request.id(), request.obligationId(), request.kind(),
-                    request.amountMinor() == null ? null : String.valueOf(request.amountMinor()),
+                    request.id(), request.obligationId(), request.kind(), String.valueOf(request.amountMinor()),
+                    String.valueOf(request.dueAtRequestMinor()), String.valueOf(request.dueAtRequestMinor() + request.amountMinor()), request.outdated(),
                     request.reversesEntryId(), request.reason(), request.status(), request.requestedAt(), request.requestedBy(),
                     request.decidedAt(), request.decidedBy(), request.decisionNote(), request.entryId());
         }
@@ -141,7 +144,7 @@ class AdjustmentController {
     @GetMapping("/adjustment-requests")
     List<RequestView> listRequests(
             @PathVariable UUID establishmentId,
-            @RequestParam(defaultValue = "PENDING") @Pattern(regexp = "^(PENDING|APPROVED|REJECTED)$") String status,
+            @RequestParam(defaultValue = "PENDING") @Pattern(regexp = "^(PENDING|APPROVED|REJECTED|WITHDRAWN)$") String status,
             @RequestParam(required = false) Integer limit,
             @RequestParam(required = false) Integer offset) {
         return adjustments.listRequests(establishmentId, status, PageQuery.of(limit, offset)).stream().map(RequestView::of).toList();
@@ -156,6 +159,12 @@ class AdjustmentController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void reject(@PathVariable UUID establishmentId, @PathVariable UUID requestId, @Valid @RequestBody RejectionRequest request) {
         adjustments.reject(establishmentId, requestId, request.note().trim());
+    }
+
+    @PostMapping("/adjustment-requests/{requestId}/withdrawal")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void withdraw(@PathVariable UUID establishmentId, @PathVariable UUID requestId, @Valid @RequestBody RejectionRequest request) {
+        adjustments.withdraw(establishmentId, requestId, request.note().trim());
     }
 
     /** Ce qui demande une décision de l'établissement. Une lecture : rien n'est modifié. */

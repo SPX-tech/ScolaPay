@@ -16,6 +16,10 @@ abstract class BillingScenarioTest extends IntegrationTest {
     record School(Tenant tenant, UUID year, UUID level, UUID annual, UUID charge, UUID catalog) {}
 
     School school() {
+        return school(AMOUNT);
+    }
+
+    School school(long amount) {
         Tenant tenant = newTenant();
         UUID year = openYear(tenant);
         UUID level = newLevel(tenant);
@@ -23,7 +27,7 @@ abstract class BillingScenarioTest extends IntegrationTest {
                 "academicYearId", year.toString(), "code", "ANNEE", "name", "Année", "startsOn", "2026-09-01", "endsOn", "2027-07-15")));
         UUID charge = newCharge(tenant, year, annual, "Scolarité");
         UUID catalog = newDraft(tenant, year);
-        addFee(tenant, catalog, fee(charge, "SCOLARITE", null, AMOUNT));
+        addFee(tenant, catalog, fee(charge, "SCOLARITE", null, amount));
         publish(tenant, catalog);
         return new School(tenant, year, level, annual, charge, catalog);
     }
@@ -151,6 +155,14 @@ abstract class BillingScenarioTest extends IntegrationTest {
 
     Response approve(Tenant tenant, String token, String request) {
         return post(tenant.path("/billing/adjustment-requests/" + request + "/approval"), token, Map.of());
+    }
+
+    Response reject(Tenant tenant, String token, String request, String note) {
+        return post(tenant.path("/billing/adjustment-requests/" + request + "/rejection"), token, Map.of("note", note));
+    }
+
+    Response withdraw(Tenant tenant, String token, String request, String note) {
+        return post(tenant.path("/billing/adjustment-requests/" + request + "/withdrawal"), token, Map.of("note", note));
     }
 
     static String requestIdOf(Response pending) {

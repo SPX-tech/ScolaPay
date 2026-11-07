@@ -62,8 +62,9 @@ scolapay:
   billing:
     max-issuance-size: 5000
     max-review-rows: 50000
-    # Au-delà de ce cumul par rapport au montant émis, une opération exige une seconde personne.
-    sensitive-adjustment-percent: 50
+    # Politique initiale : au-delà du premier de ces seuils, le cumul des écritures actives exige une seconde personne.
+    sensitive-adjustment-percent: 25
+    sensitive-adjustment-xaf: 100000
   bootstrap:
     # Ne crée le premier opérateur que si ces deux valeurs sont fournies.
     operator-contact: ${SCOLAPAY_BOOTSTRAP_OPERATOR_CONTACT:}

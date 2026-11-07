@@ -122,7 +122,17 @@ class ObligationController {
         }
     }
 
-    record DetailView(ObligationView obligation, List<InstallmentView> installments, List<EntryView> entries) {}
+    record ReviewDecisionView(String signal, String fingerprint, String decision, String reason, UUID entryId, Instant decidedAt, UUID decidedBy) {
+
+        static ReviewDecisionView of(AdjustmentRepository.ReviewDecision decision) {
+            return new ReviewDecisionView(
+                    decision.signal(), decision.fingerprint(), decision.decision(), decision.reason(), decision.entryId(), decision.decidedAt(), decision.decidedBy());
+        }
+    }
+
+    /** {@code reasonsVisible} distingue un motif masqué pour ce rôle d'une écriture qui n'en a pas. */
+    record DetailView(
+            ObligationView obligation, List<InstallmentView> installments, List<EntryView> entries, List<ReviewDecisionView> reviewDecisions, boolean reasonsVisible) {}
 
     record BalanceView(String currency, String issuedMinor, String dueMinor, LocalDate nextDueOn) {
 
@@ -240,7 +250,9 @@ class ObligationController {
         return new DetailView(
                 ObligationView.of(detail.obligation()),
                 detail.installments().stream().map(InstallmentView::of).toList(),
-                detail.entries().stream().map(EntryView::of).toList());
+                detail.entries().stream().map(EntryView::of).toList(),
+                detail.reviewDecisions().stream().map(ReviewDecisionView::of).toList(),
+                detail.reasonsVisible());
     }
 
     @GetMapping("/students/{studentId}/balances")
