@@ -54,7 +54,6 @@ class SelfAccessInvitationHandler implements InvitationHandler {
                         "SELF",
                         null,
                         false,
-                        false,
                         null,
                         clock.instant(),
                         null),
