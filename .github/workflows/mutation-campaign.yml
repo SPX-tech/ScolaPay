@@ -38,8 +38,8 @@ jobs:
     timeout-minutes: 25
     strategy:
       fail-fast: false
-      # Par petits groupes : assez pour finir en un temps raisonnable, sans saturer les runners.
-      max-parallel: 6
+      # GitHub en autorise vingt pour toute l'organisation : seize laissent démarrer la CI d'un push sans attendre.
+      max-parallel: 16
       matrix:
         id: ${{ fromJson(needs.plan.outputs.ids) }}
     steps:

@@ -83,11 +83,11 @@ Calculé côté serveur par une seule règle, comme [`AcademicAccess`](0013-majo
 | Échéancier complet, historique | Oui | Oui | Non |
 | Autres personnes liées et leurs versements | Non par défaut | Non par défaut | Non |
 
-**Un rôle financier n'ouvre jamais l'accès académique** ([0013](0013-majorite-et-autorisations-familiales.md)). Un intitulé comme « Frais de Terminale D » révèle pourtant une information académique : pour un étudiant majeur sans consentement, les lignes montrées à un tiers utilisent un libellé neutre.
+**Un rôle financier n'ouvre jamais l'accès académique** ([0013](0013-majorite-et-autorisations-familiales.md)). Un intitulé comme « Frais de Terminale D » révèle pourtant une information académique : pour un étudiant majeur sans consentement, les lignes montrées à un tiers utilisent un libellé neutre. [0023](0023-personnes-liees-et-vues.md#accès-académique) étend ce libellé neutre à tout compte que la règle d'accès académique refuse.
 
 ### Relation avec `financial_contributor`
 
-Ce booléen de `record_access_grants` devient insuffisant. Il sera remplacé par une migration additive : un lien dit « ce compte est lié à ce dossier », `obligation_parties` dit quel rôle il tient sur quelle obligation. `StudentDirectory.financialContributorAccounts` sera retiré à ce moment.
+Retiré au lot 6 : un lien dit seulement « ce compte est lié à ce dossier », et `obligation_parties` dit quel rôle il tient sur quelle obligation. La migration refuse de s'exécuter s'il reste un lien actif portant ce droit, plutôt que de créer des rôles que personne n'a décidés. Voir [0023](0023-personnes-liees-et-vues.md).
 
 ### Événements
 

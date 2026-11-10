@@ -4,5 +4,5 @@
  */
 @org.springframework.modulith.ApplicationModule(
         displayName = "Facturation",
-        allowedDependencies = {"shared", "audit", "establishment", "schooling"})
+        allowedDependencies = {"shared", "audit", "identity", "establishment", "schooling"})
 package com.scolapay.core.billing;

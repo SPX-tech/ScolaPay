@@ -24,7 +24,9 @@ Sur chaque lien entre un tiers et un dossier (`record_access_grants`) :
 | Droit | Permet | Ne permet pas |
 | --- | --- | --- |
 | `academicAccess` | Voir le matricule et les inscriptions d'un élève mineur | Rien pour un élève majeur, voir ci-dessous |
-| `financialContributor` | Être désigné pour contribuer aux frais | Voir le dossier : seuls le nom de l'élève et l'établissement sont visibles |
+| Le lien lui-même | Voir le nom de l'élève et l'établissement | Voir le dossier, ni aucun montant |
+
+Le droit `financialContributor` a été retiré : un rôle financier se désigne désormais sur chaque obligation, voir [0023](0023-personnes-liees-et-vues.md).
 
 ### La règle d'accès académique
 
@@ -52,9 +54,8 @@ Conséquences de cette règle, vérifiées par `FamilyAccessTest` :
 - **À confirmer avec un juriste avant l'ouverture :** l'âge légal au Tchad et ses éventuelles exceptions, la portée exacte de l'autorité parentale sur les données scolaires, la forme valable du consentement, les règles de protection des données applicables.
 - **Représentation légale d'un majeur** (tutelle, par exemple) : non modélisée, et un tuteur légal d'un majeur est aujourd'hui traité comme tout autre tiers.
 - **La modification d'un lien existant** passe par sa révocation puis une nouvelle invitation : l'établissement ne peut pas changer les droits d'un lien.
-- **Le droit financier ne donne encore accès à aucun montant**, puisque la facturation n'existe pas. Ce qu'un contributeur verra est proposé dans [0015](0015-modele-de-facturation.md#ce-que-chacun-voit).
+- Ce que voient le redevable, le responsable et le contributeur est décrit dans [0023](0023-personnes-liees-et-vues.md#ce-que-chacun-voit).
 
 ## Questions ouvertes
 
-- La distinction entre redevable, responsable financier et contributeur volontaire est exigée par le propriétaire. Le modèle est proposé dans [0015](0015-modele-de-facturation.md#personnes-liées-à-une-obligation), qui remplacera `financial_contributor`.
-- Un étudiant majeur peut-il mettre fin lui-même à un lien de contribution financière ? Aujourd'hui, seul l'établissement révoque un lien.
+- Un étudiant majeur peut-il mettre fin lui-même à un lien ? Aujourd'hui, seul l'établissement révoque un lien.

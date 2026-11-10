@@ -14,7 +14,6 @@ class ThirdPartyInvitationHandler implements InvitationHandler {
     static final String PURPOSE = "schooling.third-party";
     static final String RELATIONSHIP_ATTRIBUTE = "relationship";
     static final String ACADEMIC_ATTRIBUTE = "academicAccess";
-    static final String FINANCIAL_ATTRIBUTE = "financialContributor";
 
     private final SchoolingRepository repository;
     private final Establishments establishments;
@@ -57,7 +56,6 @@ class ThirdPartyInvitationHandler implements InvitationHandler {
                         "THIRD_PARTY",
                         invitation.attributes().get(RELATIONSHIP_ATTRIBUTE),
                         Boolean.parseBoolean(invitation.attributes().get(ACADEMIC_ATTRIBUTE)),
-                        Boolean.parseBoolean(invitation.attributes().get(FINANCIAL_ATTRIBUTE)),
                         null,
                         clock.instant(),
                         null),
