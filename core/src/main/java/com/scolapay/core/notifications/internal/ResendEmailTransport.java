@@ -17,6 +17,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Flow;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
@@ -71,7 +73,7 @@ public class ResendEmailTransport implements NotificationTransport {
                 .POST(HttpRequest.BodyPublishers.ofString(body)).build();
         CompletableFuture<HttpResponse<byte[]>> pending = http.sendAsync(request, ignored -> new LimitedBody());
         try {
-            HttpResponse<byte[]> response = pending.orTimeout(timeout.toMillis(), TimeUnit.MILLISECONDS).join();
+            HttpResponse<byte[]> response = pending.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
             int status = response.statusCode();
             if (status == 429) return Result.retry("TRANSPORT_RATE_LIMITED");
             if (status == 408 || status >= 500) return Result.retry("TRANSPORT_UNAVAILABLE");
@@ -85,12 +87,19 @@ public class ResendEmailTransport implements NotificationTransport {
             String id = accepted.path("id").asString();
             UUID.fromString(id);
             return Result.submitted(id);
-        } catch (RuntimeException unavailable) {
+        } catch (InterruptedException interrupted) {
+            pending.cancel(true);
+            Thread.currentThread().interrupt();
+            return Result.retry("TRANSPORT_UNAVAILABLE");
+        } catch (ExecutionException | TimeoutException | RuntimeException unavailable) {
             pending.cancel(true);
             // Ni corps de réponse, ni cause : certains fournisseurs y recopient le corps de la requête.
             return Result.retry("TRANSPORT_PROTOCOL_ERROR");
         }
     }
+
+    @jakarta.annotation.PreDestroy
+    void stop() { http.shutdownNow(); }
 
     private static final class LimitedBody implements HttpResponse.BodySubscriber<byte[]> {
         private final CompletableFuture<byte[]> result = new CompletableFuture<>();

@@ -46,14 +46,14 @@ class ResendEmailTransportTest {
             calls.incrementAndGet();
             received.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
             key.set(exchange.getRequestHeaders().getFirst("Idempotency-Key"));
-            if (blocked.get() != null) {
-                try { blocked.get().await(3, TimeUnit.SECONDS); }
-                catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
-            }
             byte[] bytes = reply.get().getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.getResponseHeaders().add("Location", "/must-not-follow");
             exchange.sendResponseHeaders(status.get(), bytes.length);
+            if (blocked.get() != null) {
+                try { blocked.get().await(3, TimeUnit.SECONDS); }
+                catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+            }
             try (var stream = exchange.getResponseBody()) { stream.write(bytes); }
         });
         server.start();
@@ -65,6 +65,7 @@ class ResendEmailTransportTest {
     @AfterEach
     void stop() {
         if (blocked.get() != null) blocked.get().countDown();
+        transport.stop();
         server.stop(0);
     }
 
