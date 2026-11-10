@@ -28,6 +28,7 @@ Une décision mérite une entrée ici lorsqu'elle est coûteuse à inverser ou q
 | [0020](0020-catalogue-de-frais-et-periodes.md) | Catalogue de frais, périodes de facturation et identité des charges | Acceptée | En place |
 | [0021](0021-obligations-et-journal.md) | Obligations, échéanciers et journal | Acceptée | En place, sans aucun encaissement |
 | [0022](0022-ajustements-et-reexamen.md) | Remises, corrections, annulations et réexamen | Acceptée | En place, sans aucun encaissement |
+| [0023](0023-personnes-liees-et-vues.md) | Personnes liées à une obligation et vues par rôle | Proposée pour revue finale, questions métier explicites | Rôles, lectures cohérentes et corrections tracées en place ; portail fermé, aucun encaissement |
 
 ## Statuts
 

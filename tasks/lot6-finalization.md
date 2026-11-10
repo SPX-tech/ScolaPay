@@ -21,13 +21,13 @@ Aucune base persistante n'est contactée. La révision pré-service de V7 est ex
 ## Tâches
 
 - [x] Préserver le travail publié et les documents locaux.
-- [ ] Régressions observées en échec sur GitHub Actions avant les corrections.
-- [ ] Autorisation avant pagination et instantanés de lecture, sans accès SQL aux tables d'autres modules.
-- [ ] V7 renforcée et corrections des personnes avec journal append-only, contrôle de version et compte immuable.
-- [ ] Régressions et tests de concurrence, de confidentialité, de permissions, de rollback et de garanties SQL verts.
-- [ ] CI Java complète et mutations pertinentes sur le commit corrigé.
-- [ ] ADR 0023, contexte et PR #26 finalisés ; questions métier non validées laissées explicites.
-- [ ] Livraison pour revue finale, aucune fusion ni aucun déploiement, PR #27 et #28 inchangées.
+- [x] Régressions observées en échec sur GitHub Actions avant les corrections : neuf échecs attendus sur `9118469`, [preuve](https://github.com/SPX-tech/ScolaPay/actions/runs/42897808109).
+- [x] Autorisation avant pagination et instantanés de lecture, sans accès SQL aux tables d'autres modules.
+- [x] V7 renforcée et corrections des personnes avec journal append-only, contrôle de version et compte immuable.
+- [x] 19 régressions vertes, dont une matrice de 144 combinaisons SQL : [preuve](https://github.com/SPX-tech/ScolaPay/actions/runs/42900073926).
+- [x] CI complète : 390 tests et JAR verts, [preuve](https://github.com/SPX-tech/ScolaPay/actions/runs/42901332810). Mutations ciblées : 15/15 détectées, un contrôle sain de 390 tests, [preuve](https://github.com/SPX-tech/ScolaPay/actions/runs/42901353861), commit `974e9c4`.
+- [x] ADR 0023 et contexte finalisés ; les questions métier non validées restent explicites. La description de #26 porte le statut de livraison et la validation finale.
+- Livraison pour revue finale dans #26 après les contrôles du commit publié. Aucune fusion ni aucun déploiement, PR #27 et #28 inchangées.
 
 ## Exécution
 

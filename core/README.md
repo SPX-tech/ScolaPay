@@ -64,12 +64,23 @@ Toutes les routes sont sous `/api/v2`. Les erreurs suivent la RFC 9457, avec un 
 | Retirer sa propre demande | `POST .../billing/adjustment-requests/{id}/withdrawal` | Son auteur |
 | Voir ce qui demande un réexamen, et trancher | `GET .../billing/reviews`, `POST .../billing/reviews/decisions` | Comptable |
 | Consulter les obligations et le solde | `GET .../billing/obligations`, `GET .../billing/students/{studentId}/balances` | Comptable, caissier, auditeur |
-| Inviter un tiers : accès académique pour un mineur, contribution financière (portail ouvert) | `POST /establishments/{id}/students/{studentId}/third-party-invitations` | Secrétariat |
+| Créer une personne physique ou morale | `POST .../billing/parties` | Comptable |
+| Corriger son nom ou identifiant, avec motif et révision attendue | `POST .../billing/parties/{partyId}/corrections` | Administrateur, comptable |
+| Relire une personne et sa révision, ou son journal protégé | `GET .../billing/parties/{partyId}`, `GET .../{partyId}/corrections` | `BILLING_READ`, et `BILLING_REASONS_READ` pour le journal |
+| Désigner un redevable, un responsable ou un contributeur | `POST .../billing/obligations/{id}/parties`, ou `POST .../billing/students/{studentId}/parties` pour toute l'année | Comptable |
+| Confirmer un redevable, terminer une désignation | `POST .../billing/obligation-parties/{id}/confirmation`, `.../end` | Comptable |
+| Voir ce qui reste sans redevable ou non confirmé | `GET .../billing/obligations-by-debtor-state` | Comptable, caissier, auditeur |
+| Lier un tiers à un dossier, avec accès académique pour un mineur (portail ouvert) | `POST /establishments/{id}/students/{studentId}/third-party-invitations` | Secrétariat |
 | Inviter un étudiant majeur (portail ouvert) | `POST /establishments/{id}/students/{studentId}/self-access-invitations` | Secrétariat |
 | Voir ses établissements | `GET /me/affiliations` | Personnel |
 | Voir ses enfants ou son dossier (portail ouvert) | `GET /me/students`, `GET /me/students/{studentId}` | Famille |
+| Voir ses obligations selon son rôle (portail ouvert) | `GET /me/billing/obligations`, `GET /me/billing/obligations/{id}` | Redevable, responsable, contributeur |
 | Voir les tiers liés à son dossier (portail ouvert) | `GET /me/students/{studentId}/third-parties` | Étudiant majeur |
 | Accorder ou retirer l'accès d'un tiers (portail ouvert) | `PATCH /me/students/{studentId}/third-parties/{grantId}` | Étudiant majeur |
+
+## Corrections de personnes financières
+
+Les corrections de personnes conservent l'identité et le compte. Une révision périmée donne `409 PARTY_CORRECTION_OUTDATED` ; le client relit la personne avant une nouvelle demande. Le compte, le type et les désignations ne se changent pas par cette route. Les lectures financières composites disposent d'un instantané cohérent et les droits sont filtrés avant pagination. Voir [0023](../docs/decisions/0023-personnes-liees-et-vues.md) et [les preuves de finalisation](../docs/lot6-finalization.md).
 
 ## Ajouter un module
 
