@@ -47,4 +47,4 @@ Le développement du socle a été validé le 2026-11-10. La suite est distincte
 - [ ] Exécuter la validation conjointe complète dans GitHub Actions sur PostgreSQL vierge, avec V7 puis V7_1 et vérification du rejeu des migrations.
 - [ ] Consigner les résultats conjoints avant toute nouvelle décision de fusion.
 
-Le [protocole d'intégration](../docs/integration-notifications-billing.md) précise ces étapes. L'évolution proposée des canaux doit être validée et testée avant une future ouverture limitée à l'e-mail ; elle n'est pas présentée comme implémentée.
+Le [protocole d'intégration](../docs/integration-notifications-billing.md) et le principe d'une politique fondée sur les canaux Families autorisés sont validés par le propriétaire. La mise en œuvre de cette politique est explicitement différée ; elle devra être développée et testée avant toute ouverture, selon le modèle d'accès final, sans affaiblir les identités, les droits familiaux ou les contrôles juridiques. Aucun développement supplémentaire n'est engagé maintenant. #27 reste en brouillon jusqu'à #26, puis à la validation conjointe et à une nouvelle revue.

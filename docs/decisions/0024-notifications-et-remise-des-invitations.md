@@ -1,6 +1,6 @@
 # 0024 : notifications et remise sécurisée des invitations
 
-- **Statut** : Socle accepté par le propriétaire le 2026-11-10 ; intégration différée après #26. L'évolution de la politique des canaux reste une proposition.
+- **Statut** : Socle, protocole d'intégration et principe de politique des canaux acceptés par le propriétaire le 2026-11-10. Intégration après #26 ; mise en œuvre de la politique différée avant toute ouverture de Families.
 - **Date** : 2026-11-10
 - **Décideur** : propriétaire du projet, validation du développement de la PR #27
 - **Remplace** : les clauses de remise provisoire de [0010](0010-identite-et-acces.md) et de détection du canal de [0017](0017-controles-de-mise-en-service.md). Complète [0016](0016-outbox-durable.md), sans changer ses garanties.
@@ -56,7 +56,7 @@ Le client e-mail utilise une URL HTTPS fixe, sans redirection, une réponse limi
 
 Le portail reste fermé par défaut. La condition d'invitation vérifie désormais les capacités e-mail **et** téléphone, puisque l'identité admet les deux. Un bean technique ou un e-mail seul ne satisfait plus le contrôle. Le contrôle juridique reste intact : aucun changement de `legally_confirmed`, aucune option de contournement.
 
-Cette description correspond au code livré. Le propriétaire demande d'éviter qu'elle impose durablement le SMS à une future cohorte Families limitée à l'e-mail. La [proposition de politique des canaux](../integration-notifications-billing.md#proposition-de-politique-des-canaux-families) exige la couverture des seuls canaux explicitement autorisés, avec des contrôles cohérents à la création, à l'acceptation, à l'envoi et sur le périmètre d'accès. Elle n'est pas implémentée par cette mise à jour documentaire ; le portail et les exigences juridiques restent inchangés.
+Cette description correspond au code livré. Le propriétaire a validé le principe d'une [politique des canaux](../integration-notifications-billing.md#politique-des-canaux-families) exigeant la couverture des seuls canaux explicitement autorisés, pour ne pas imposer durablement le SMS à une future cohorte Families limitée à l'e-mail. Sa mise en œuvre est différée avant toute ouverture et devra tenir compte du modèle d'accès final : vérification des identités, autorisations familiales et contrôles juridiques demeurent obligatoires. Aucun développement de cette évolution n'est autorisé maintenant ; le code actuel et la fermeture du portail sont inchangés.
 
 Le suivi d'établissement exige `MEMBERS_MANAGE`, puis vérifie le rattachement de l'invitation à l'établissement. Le suivi de plateforme est limité aux invitations administratives émises par l'opérateur connecté. Il n'ouvre aucune route vers les dossiers.
 

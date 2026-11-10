@@ -2,6 +2,8 @@
 
 Le propriétaire a validé le développement du socle de notifications le 2026-11-10. La [PR #27](https://github.com/SPX-tech/ScolaPay/pull/27) attend l'intégration de la [PR #26](https://github.com/SPX-tech/ScolaPay/pull/26), encore ouverte lors de cette revue. La validation du développement ne vaut autorisation ni de fusion, ni de déploiement, ni de configuration réelle de Resend.
 
+Le protocole d'intégration et le principe de politique des canaux ci-dessous sont également validés par le propriétaire. La mise en œuvre de cette politique est explicitement différée : aucun développement supplémentaire n'est engagé à ce stade.
+
 ## Ordre d'intégration et migrations
 
 `V7__billing_parties.sql` appartient à #26 et `V7_1__notification_delivery.sql` à #27. Les migrations restent inchangées.
@@ -10,7 +12,7 @@ Le propriétaire a validé le développement du socle de notifications le 2026-1
 2. Récupérer `main` et remettre la branche de #27 à jour à partir de cet état intégré. Conserver le travail financier de #26 et résoudre les recouvrements des helpers de tests, notamment `IntegrationTest`, `FoundationJourneyTest` et `GoLiveTest`. Les jetons restent lus dans la boîte de test, jamais dans les réponses HTTP.
 3. Exécuter la suite Java complète et les contrôles usuels dans GitHub Actions, sur PostgreSQL vierge. Vérifier aussi le démarrage du JAR, le portail fermé et les parcours financiers introduits par #26. Aucun fournisseur externe réel n'est utilisé.
 4. Vérifier dans `flyway_schema_history` que les migrations ont réussi dans l'ordre **7, puis 7.1**, avec leurs sommes de contrôle attendues. Un nouveau démarrage ne doit rejouer aucune migration versionnée.
-5. Consigner les SHA de `main` et de #27 ainsi que les résultats conjoints dans la PR. La réautorisation de fusion et tout éventuel déploiement restent des étapes distinctes du travail de validation.
+5. Consigner les SHA de `main` et de #27 ainsi que les résultats conjoints dans la PR, puis soumettre l'intégration à une nouvelle revue. La réautorisation de fusion et tout éventuel déploiement restent des étapes distinctes du travail de validation.
 
 Le contrôle des migrations s'appuie sur la [validation Flyway des noms, types et sommes de contrôle](https://github.com/flyway/flyway/blob/flyway-12.11.0/documentation/Reference/Commands/Validate.md), sans modifier un historique pour le faire passer.
 
@@ -18,11 +20,11 @@ Le contrôle des migrations s'appuie sur la [validation Flyway des noms, types e
 
 Les 369 tests Java déjà verts valident le socle de #27 sur sa base de départ. Ils ne constituent pas une validation conjointe avec #26, qui reste à exécuter après son intégration.
 
-## Proposition de politique des canaux Families
+## Politique des canaux Families
 
-**Proposition à valider, non implémentée.** Le code livré exige encore les capacités e-mail et téléphone simultanément. Cette exigence ne doit pas devenir une obligation permanente d'exploiter les deux canaux si le périmètre Families autorisé n'en utilise qu'un.
+**Principe architectural validé, mise en œuvre différée avant toute ouverture de Families.** Le code livré exige encore les capacités e-mail et téléphone simultanément. Cette exigence ne doit pas devenir une obligation permanente d'exploiter les deux canaux si le périmètre Families autorisé n'en utilise qu'un.
 
-La règle proposée est : **chaque canal explicitement autorisé pour les invitations Families doit disposer d'un adaptateur correctement configuré**.
+La règle retenue est : **chaque canal explicitement autorisé pour les invitations Families doit disposer d'un adaptateur correctement configuré**.
 
 - `A` est l'ensemble des canaux autorisés par la politique Families, distinct des identifiants de connexion globaux et des canaux utilisés par le personnel.
 - `D` est l'ensemble des capacités disponibles déclarées par les adaptateurs configurés. Il ne se déduit pas de la seule présence d'un bean.
@@ -48,7 +50,9 @@ La politique doit être appliquée à tous les points d'entrée avant une évent
 
 Ces contrôles doivent partager une même politique, sans recopier les règles dans les handlers scolaires ou financiers. Les invitations du personnel conservent leur propre contrôle de transport disponible. Ni le SMS global ni la connexion globale par téléphone ne sont supprimés par une politique Families limitée à l'e-mail.
 
-Si cette proposition est retenue, son adaptation de code devra être validée en CI : e-mail seul sans SMS, tous les canaux autorisés requis, canal exclu malgré un adaptateur présent, ancienne invitation exclue non consommée, remise en attente annulée, périmètre des comptes existants et échec d'ouverture tant que le juridique n'est pas confirmé. Aucun test ne doit modifier la confirmation juridique des migrations de production.
+Le choix d'un canal ne vérifie pas une identité et n'accorde aucun droit familial. L'implémentation devra préserver la vérification de possession du contact, le rattachement au bon compte, les autorisations sur les dossiers, les consentements et les contrôles juridiques du modèle d'accès final. Une adresse e-mail déclarée ne suffit pas à rendre un utilisateur éligible.
+
+Cette évolution devra être implémentée et testée avant toute ouverture de Families, dans le cadre de son modèle d'accès final. Sa validation en CI couvrira : e-mail seul sans SMS, tous les canaux autorisés requis, canal exclu malgré un adaptateur présent, ancienne invitation exclue non consommée, remise en attente annulée, périmètre des comptes existants et échec d'ouverture tant que le juridique n'est pas confirmé. Aucun test ne doit modifier la confirmation juridique des migrations de production. La validation du principe n'autorise pas son développement maintenant.
 
 ## Mode désactivé, tests et démonstrations
 

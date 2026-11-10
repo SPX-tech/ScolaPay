@@ -19,7 +19,7 @@ La configuration suffit à assembler l'adaptateur, elle ne prouve ni l'autorisat
 
 Sans configuration, les invitations répondent `409 INVITATION_CHANNEL_UNAVAILABLE`. Aucun SMS n'est simulé : un téléphone produit ce refus même avec Resend actif. La création de l'établissement et de son premier administrateur est atomique avec cette vérification.
 
-Le portail reste fermé. Dans le code actuel, même avec l'e-mail configuré et les règles juridiques confirmées, l'absence de SMS empêche son ouverture. Une [politique fondée sur les seuls canaux Families autorisés](integration-notifications-billing.md#proposition-de-politique-des-canaux-families) est proposée pour permettre ultérieurement un périmètre e-mail sans SMS. Elle n'est pas encore implémentée. Aucun changement juridique ni fiscal n'est apporté.
+Le portail reste fermé. Dans le code actuel, même avec l'e-mail configuré et les règles juridiques confirmées, l'absence de SMS empêche son ouverture. Le principe d'une [politique fondée sur les seuls canaux Families autorisés](integration-notifications-billing.md#politique-des-canaux-families) est validé pour permettre ultérieurement un périmètre e-mail sans SMS. Sa mise en œuvre est différée et devra être testée avant toute ouverture, selon le modèle d'accès final et sans affaiblir la vérification des identités ni les autorisations familiales. Aucun changement juridique ni fiscal n'est apporté.
 
 ## Mode désactivé et amorçage des établissements
 

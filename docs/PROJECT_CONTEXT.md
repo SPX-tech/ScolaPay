@@ -40,7 +40,7 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Identité globale | Vérifié | Compte unique, e-mail ou téléphone, connexion, verrouillage après 5 échecs, jetons révocables | `identity`, `SecurityHardeningTest` |
 | Invitations | Vérifié, transport e-mail optionnel | Usage unique, contact lié, jeton retiré du JSON et remis via une file chiffrée. Sans canal disponible, création refusée | `identity`, `NotificationConfidentialityTest`, `NotificationDeliveryTest` |
 | Notifications | Vérifié en CI, aucun envoi réel | File chiffrée, listener durable, worker hors transaction, baux, reprises bornées et suivi autorisé. Resend désactivé par défaut. Aucun SMS ni preuve de réception en boîte | `notifications`, `NotificationRecoveryTest`, [0024](decisions/0024-notifications-et-remise-des-invitations.md) |
-| Intégration des notifications | Développement validé, intégration en attente | #27 attend #26 : mise à jour depuis `main`, puis validation conjointe sur PostgreSQL vierge, V7 avant V7_1. Aucune configuration réelle de Resend autorisée | [Protocole et proposition de canaux](integration-notifications-billing.md) |
+| Intégration des notifications | Développement et protocole validés, intégration en attente | #27 attend #26 : mise à jour depuis `main`, puis tests conjoints sur PostgreSQL vierge, V7 avant V7_1 et nouvelle revue. Principe des canaux accepté, mise en œuvre différée avant Families. Aucun fournisseur réel autorisé | [Protocole et décision de canaux](integration-notifications-billing.md) |
 | Établissements | Vérifié | Création par un opérateur, type, fuseau, devise, pays, suspension | `establishment` |
 | Personnel et permissions | Vérifié | Adhésion par établissement, rôles multiples, dernier administrateur protégé | `establishment`, `TenantIsolationTest` |
 | Isolation entre établissements | Vérifié | Barrière d'adhésion, 404 aux non-membres, clés composites en base | `TenantIsolationTest`, `DatabaseGuardsTest` |
@@ -154,7 +154,7 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 - **0022**, acceptée : remise, correction et annulation distinctes, seconde personne au-delà de 25 % ou 100 000 XAF en cumul brut, rôle directeur, motifs masqués aux caissiers dans l'API, réexamen déduit de la réalité.
 - **0021**, acceptée : une obligation par dossier et par charge, sans la version du catalogue dans la clé, dû et statut déduits du journal, règlement impossible sans le module de paiement.
 
-- **0024**, socle validé par le propriétaire : file chiffrée, remise des invitations et reprises externes bornées. Intégration après #26. Une politique fondée sur les canaux Families autorisés est proposée, sans modification du code actuel ni ouverture du portail.
+- **0024**, socle et protocole validés par le propriétaire : file chiffrée, remise des invitations et reprises externes bornées. Intégration après #26. Le principe des canaux Families explicitement autorisés est accepté ; sa mise en œuvre et ses tests sont différés avant toute ouverture, selon le modèle d'accès final. Aucun changement du code actuel ni ouverture du portail.
 
 ## Priorités actuelles
 
