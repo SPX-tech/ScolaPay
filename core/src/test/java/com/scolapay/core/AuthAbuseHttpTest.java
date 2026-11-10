@@ -359,4 +359,46 @@ class AuthAbuseHttpTest {
                 .param("contact", contact).update();
         assertThat(HTTP.send(profile, HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(401);
     }
+
+    @Test
+    void uneOrigineDejaBloqueeNeVidePasLeBudgetGlobalDesAutres() throws Exception {
+        var context = start("--scolapay.auth-abuse.proxy.mode=trusted", "--scolapay.auth-abuse.proxy.trusted-cidrs=127.0.0.1/32",
+                "--scolapay.auth-abuse.login.origin.capacity=1", "--scolapay.auth-abuse.login.origin.period=PT1H",
+                "--scolapay.auth-abuse.login.global.capacity=3", "--scolapay.auth-abuse.login.global.period=PT1H");
+        assertThat(post(context, "/api/v2/auth/login", loginBody("un@scolapay.test", "mauvais"), Map.of("X-Forwarded-For", "192.0.2.1")).statusCode()).isEqualTo(401);
+        for (int index=0; index<4; index++) {
+            assertThat(post(context, "/api/v2/auth/login", loginBody("attaque"+index+"@scolapay.test", "mauvais"), Map.of("X-Forwarded-For", "192.0.2.1")).statusCode()).isEqualTo(429);
+        }
+        for (int index=2; index<=3; index++) {
+            assertThat(post(context, "/api/v2/auth/login", loginBody("legitime"+index+"@scolapay.test", "mauvais"), Map.of("X-Forwarded-For", "192.0.2."+index)).statusCode()).isEqualTo(401);
+        }
+    }
+
+    @Test
+    void lesVerrousDuLimiteurSontBornesEtNeLaissentPasPasserEnErreur() throws Exception {
+        var context = start();
+        post(context, "/api/v2/auth/login", loginBody("premier@scolapay.test", "mauvais"), Map.of());
+        var dataSource = context.getBean(javax.sql.DataSource.class);
+        try (var connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try (var query = connection.prepareStatement("SELECT slot FROM auth_abuse_buckets WHERE scope=0 LIMIT 1 FOR UPDATE");
+                    var rows = query.executeQuery()) {
+                assertThat(rows.next()).isTrue();
+                long begin = System.nanoTime();
+                var refused = post(context, "/api/v2/auth/login", loginBody("deuxieme@scolapay.test", "mauvais"), Map.of());
+                assertThat(refused.statusCode()).isEqualTo(503);
+                assertThat(Duration.ofNanos(System.nanoTime()-begin)).isLessThan(Duration.ofSeconds(2));
+            } finally { connection.rollback(); }
+        }
+        assertThat(post(context, "/api/v2/auth/login", loginBody("troisieme@scolapay.test", "mauvais"), Map.of()).statusCode()).isEqualTo(401);
+    }
+
+    @Test
+    void lesVariantesDuNumeroDeTelephonePartagentLeurQuota() throws Exception {
+        var context = start("--scolapay.auth-abuse.login.pair.capacity=2", "--scolapay.auth-abuse.login.pair.period=PT1H");
+        for (String contact : List.of("+23566123456", "+235 66 12 34 56")) {
+            assertThat(post(context, "/api/v2/auth/login", loginBody(contact, "mauvais"), Map.of()).statusCode()).isEqualTo(401);
+        }
+        assertThat(post(context, "/api/v2/auth/login", loginBody("+235(66)-12.34.56", "mauvais"), Map.of()).statusCode()).isEqualTo(429);
+    }
 }

@@ -3,6 +3,7 @@ package com.scolapay.core.identity.internal;
 import java.time.Duration;
 import java.util.List;
 import org.springframework.core.env.Environment;
+import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -29,19 +30,19 @@ public class AuthAbuseSettings {
     final int counterConcurrency;
 
     public AuthAbuseSettings(Environment env) {
-        if (!env.getProperty("server.forward-headers-strategy", "none").equalsIgnoreCase("none")) {
+        if (!value(env, "server.forward-headers-strategy", "none").equalsIgnoreCase("none")) {
             throw new IllegalStateException("AUTH_FORWARDING_CONFIGURATION_CONFLICT");
         }
         for (String property : List.of("remote-ip-header", "protocol-header", "host-header", "port-header",
                 "internal-proxies", "trusted-proxies")) {
-            if (env.containsProperty("server.tomcat.remoteip." + property)) {
+            if (Binder.get(env).bind("server.tomcat.remoteip." + property, String.class).isBound()) {
                 throw new IllegalStateException("AUTH_FORWARDING_CONFIGURATION_CONFLICT");
             }
         }
-        String mode = env.getProperty("scolapay.auth-abuse.proxy.mode", "direct");
+        String mode = value(env, "scolapay.auth-abuse.proxy.mode", "direct");
         if (!mode.equals("direct") && !mode.equals("trusted")) throw invalid();
         trustedProxy = mode.equals("trusted");
-        String configured = env.getProperty("scolapay.auth-abuse.proxy.trusted-cidrs", "");
+        String configured = value(env, "scolapay.auth-abuse.proxy.trusted-cidrs", "");
         try {
             if (configured.isBlank()) proxies = List.of();
             else {
@@ -72,7 +73,7 @@ public class AuthAbuseSettings {
     private Budget budget(Environment env, String prefix, int capacity, String period) {
         int count = number(env, prefix+".capacity", capacity, 1, 100000);
         try {
-            Duration duration = Duration.parse(env.getProperty("scolapay.auth-abuse."+prefix+".period", period));
+            Duration duration = Duration.parse(value(env, "scolapay.auth-abuse."+prefix+".period", period));
             if (duration.compareTo(Duration.ofSeconds(1)) < 0 || duration.compareTo(Duration.ofHours(1)) > 0) throw invalid();
             long micros = duration.toNanos() / 1000;
             return new Budget(count, (micros + count - 1) / count);
@@ -81,11 +82,16 @@ public class AuthAbuseSettings {
 
     private static int number(Environment env, String suffix, int fallback, int min, int max) {
         try {
-            int value = Integer.parseInt(env.getProperty("scolapay.auth-abuse."+suffix, Integer.toString(fallback)));
+            int value = Integer.parseInt(value(env, "scolapay.auth-abuse."+suffix, Integer.toString(fallback)));
             if (value < min || value > max) throw invalid();
             return value;
         } catch (RuntimeException malformed) { throw invalid(); }
     }
 
     private static IllegalStateException invalid() { return new IllegalStateException("AUTH_ABUSE_CONFIGURATION_INVALID"); }
+
+    private static String value(Environment env, String key, String fallback) {
+        try { return Binder.get(env).bind(key, String.class).orElse(fallback); }
+        catch (RuntimeException malformed) { throw invalid(); }
+    }
 }
