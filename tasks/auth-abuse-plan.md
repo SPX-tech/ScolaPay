@@ -17,9 +17,16 @@ Aucun déploiement, VPS, fournisseur, changement financier ou notification.
 
 ## Tâches
 
-- [ ] Tests HTTP de régression observés en échec dans GitHub Actions.
-- [ ] Limiteur PostgreSQL et politique de proxy, tests des bornes et de concurrence.
-- [ ] Intégration avant les endpoints et les calculs coûteux ; confidentialité et mot de passe dépassant 72 octets.
-- [ ] Parcours légitimes derrière NAT, multi-instance, erreurs et pannes vérifiés sur vrai PostgreSQL.
-- [ ] ADR, configuration, modèle de menace, limites et intégration des trois migrations documentés.
-- [ ] CI complète, JAR et PR indépendante ; aucune fusion.
+- [x] Tests HTTP de régression observés en échec dans GitHub Actions.
+- [x] Limiteur PostgreSQL et politique de proxy, tests des bornes et de concurrence.
+- [x] Intégration avant les endpoints et les calculs coûteux ; confidentialité et mot de passe dépassant 72 octets.
+- [x] Parcours légitimes derrière NAT, multi-instance, erreurs et pannes vérifiés sur vrai PostgreSQL.
+- [x] ADR, configuration, modèle de menace, limites et intégration des trois migrations documentés.
+- Validation complète et PR indépendante : résultats et statut de revue dans la description de la PR. Aucun droit de fusion ou de déploiement n'est donné par ce plan.
+
+## Preuves acquises
+
+- Régression d'origine observée : [CI initiale](https://github.com/SPX-tech/ScolaPay/actions/runs/42864193612).
+- Régression de troncature BCrypt observée : [CI](https://github.com/SPX-tech/ScolaPay/actions/runs/42866152616).
+- 30 tests ciblés, sans échec ni test ignoré : [CI](https://github.com/SPX-tech/ScolaPay/actions/runs/42868786498), code `5a02b9b`.
+- Aucun test ni build lourd local. Aucun VPS, fournisseur, fusion ou déploiement.

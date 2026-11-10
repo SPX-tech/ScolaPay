@@ -35,6 +35,12 @@ Sans ces variables, l'application refuse de démarrer. Il n'existe aucun identif
 
 Le portail des familles est fermé par défaut : `/me/students` n'existe pas et les invitations familiales sont refusées avec le code `PORTAL_CLOSED`. `SCOLAPAY_PORTAL_ENABLED=true` ne l'ouvre que si toutes les [conditions de mise en service](../docs/decisions/0017-controles-de-mise-en-service.md) sont remplies, sinon l'application refuse de démarrer. Il n'existe aucune option de contournement.
 
+## Protection des API publiques d'authentification
+
+Connexion et acceptation d'invitations ont des quotas partagés dans PostgreSQL, un corps plafonné à 8 Kio et des bornes locales de calcul. Les refus répondent `429 AUTH_RATE_LIMITED` avec `Retry-After`, ou 503 si la protection ou un créneau local est indisponible. Le verrouillage des comptes et les JWT révocables sont conservés.
+
+Les adresses transférées sont ignorées par défaut. Un reverse proxy exige un mode explicite et ses CIDR de confiance ; le forwarding automatique Spring/Tomcat reste désactivé. Configuration, valeurs de départ pour les IP partagées, essais et limites dans [le guide](../docs/auth-abuse-protection.md), décision [0025](../docs/decisions/0025-protection-authentification-publique.md). La migration V7_2 doit être intégrée avec V7 (#26) et V7_1 (#27) avant toute application persistante. Aucun service ni dépendance supplémentaire n'est requis.
+
 ## Parcours de base
 
 Toutes les routes sont sous `/api/v2`. Les erreurs suivent la RFC 9457, avec un champ `code` stable.

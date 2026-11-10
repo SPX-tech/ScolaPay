@@ -39,6 +39,7 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | --- | --- | --- | --- |
 | Identité globale | Vérifié | Compte unique, e-mail ou téléphone, connexion, verrouillage après 5 échecs, jetons révocables | `identity`, `SecurityHardeningTest` |
 | Invitations | Vérifié, remise non construite | Usage unique, empreinte seule stockée, liées au contact. Le jeton est renvoyé à la personne qui invite | `identity`, `SecurityHardeningTest` |
+| Protection des API publiques d'authentification | Vérifié sur PostgreSQL en CI | Quotas GCRA partagés par origine, couple origine-cible, cible et global ; concurrence locale bornée, corps de 8 Kio, proxy explicite. Aucune nouvelle infrastructure | `AuthAbuseHttpTest`, `AuthAbuseProxyTest`, [0025](decisions/0025-protection-authentification-publique.md) |
 | Établissements | Vérifié | Création par un opérateur, type, fuseau, devise, pays, suspension | `establishment` |
 | Personnel et permissions | Vérifié | Adhésion par établissement, rôles multiples, dernier administrateur protégé | `establishment`, `TenantIsolationTest` |
 | Isolation entre établissements | Vérifié | Barrière d'adhésion, 404 aux non-membres, clés composites en base | `TenantIsolationTest`, `DatabaseGuardsTest` |
@@ -152,6 +153,8 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 - **0022**, acceptée : remise, correction et annulation distinctes, seconde personne au-delà de 25 % ou 100 000 XAF en cumul brut, rôle directeur, motifs masqués aux caissiers dans l'API, réexamen déduit de la réalité.
 - **0021**, acceptée : une obligation par dossier et par charge, sans la version du catalogue dans la clé, dû et statut déduits du journal, règlement impossible sans le module de paiement.
 
+- **0025**, proposée pour revue : protection des routes publiques d'authentification par PostgreSQL, quotas bornés et politique explicite d'origine. Aucun Redis, service supplémentaire, déploiement ou assouplissement des contrôles familiaux.
+
 ## Priorités actuelles
 
 1. **Mission 003, ScolaPay Billing Engine** : priorité absolue, en construction par lots. Elle s'appuie sur `schooling` sans refaire les utilisateurs ni les établissements. Voir le [cadrage](missions/mission-003-billing-engine.md).
@@ -166,7 +169,7 @@ Dans `core/`, les limites connues sont listées dans [0010](decisions/0010-ident
 | Invitations non remises | Le jeton transite par la personne qui invite. Un service de notification est nécessaire avant tout usage réel | `core`, `identity` |
 | Règles juridiques non confirmées | L'âge légal enregistré pour le Tchad est provisoire. L'application refuse d'ouvrir le portail tant qu'il n'est pas confirmé | [0013](decisions/0013-majorite-et-autorisations-familiales.md#limites-et-conditions), [0017](decisions/0017-controles-de-mise-en-service.md) |
 | Dégradation silencieuse d'Android | Plus vérifié à chaque PR : accepté tant qu'il est hors feuille de route | [0014](decisions/0014-android-hors-feuille-de-route.md) |
-| Pas de limitation de débit par adresse | Le verrouillage par compte permet de gêner un compte connu | `core`, `identity` |
+| Verrouillage ciblé et saturation résiduels | La limitation borne le coût mais un attaquant distribué peut encore verrouiller un compte ou gêner le trafic légitime. Quotas approximatifs par compartiments, défenses réseau et récupération à compléter | [Guide anti-abus](auth-abuse-protection.md), [0025](decisions/0025-protection-authentification-publique.md) |
 | Écoles à un seul utilisateur | Une opération sensible exige une seconde personne habilitée, sans auto-approbation. Sujet ouvert pour les pilotes | [0022](decisions/0022-ajustements-et-reexamen.md#questions-ouvertes) |
 | Performance du réexamen non mesurée | À mesurer avant tout lancement auprès d'établissements importants | [0022](decisions/0022-ajustements-et-reexamen.md#limites) |
 | Volume d'émission non mesuré | Le plafond de 5 000 inscriptions par lot est testé, pas la durée d'une telle transaction | [Journal](mission-003-validation.md#limites-restantes) |
