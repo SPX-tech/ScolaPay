@@ -14,9 +14,13 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.boot.test.system.CapturedOutput;
 import tools.jackson.databind.json.JsonMapper;
 
 /** Serveur réel, chaîne Spring Security réelle, PostgreSQL jetable. */
+@ExtendWith(OutputCaptureExtension.class)
 class AuthAbuseHttpTest {
     static final HttpClient HTTP = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
     static final JsonMapper JSON = JsonMapper.builder().build();
@@ -27,6 +31,10 @@ class AuthAbuseHttpTest {
     }
 
     ConfigurableApplicationContext startDatabase(String database, String... extras) {
+        return startSources(database, new Class<?>[] {ScolaPayCoreApplication.class}, extras);
+    }
+
+    ConfigurableApplicationContext startSources(String database, Class<?>[] sources, String... extras) {
         List<String> args = new ArrayList<>(TestDatabases.applicationArguments(database));
         args.add("--server.port=0");
         List<String> settings = new ArrayList<>(List.of(
@@ -42,7 +50,7 @@ class AuthAbuseHttpTest {
             args.removeIf(previous -> previous.startsWith(prefix));
             args.add(argument);
         }
-        var context = new SpringApplicationBuilder(ScolaPayCoreApplication.class).run(args.toArray(String[]::new));
+        var context = new SpringApplicationBuilder(sources).run(args.toArray(String[]::new));
         contexts.add(context);
         return context;
     }
@@ -245,5 +253,104 @@ class AuthAbuseHttpTest {
     void unForwardingAutomatiqueIncompatibleEmpecheLeDemarrage() {
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> start("--server.forward-headers-strategy=framework"))
                 .hasStackTraceContaining("AUTH_FORWARDING_CONFIGURATION_CONFLICT");
+    }
+
+    @Test
+    void laSaturationDesCalculsNeLancePasUnAutreBcryptEtSeRetablit() throws Exception {
+        var context = startSources(TestDatabases.createEmpty(),
+                new Class<?>[] {ScolaPayCoreApplication.class, com.scolapay.authabuseprobe.BlockingPasswords.class},
+                "--scolapay.auth-abuse.login.concurrency=1");
+        var encoder = context.getBean(com.scolapay.authabuseprobe.BlockingPasswords.ControlledEncoder.class);
+        try (var executor = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            var first = executor.submit(() -> post(context, "/api/v2/auth/login", loginBody("occupe@scolapay.test", "retenir-cet-essai"), Map.of()));
+            try {
+                assertThat(encoder.entered.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                var refused = post(context, "/api/v2/auth/login", loginBody("autre@scolapay.test", "mauvais"), Map.of());
+                assertThat(refused.statusCode()).isEqualTo(503);
+                assertThat(refused.body()).contains("AUTH_BUSY");
+                assertThat(refused.headers().firstValue("Retry-After")).contains("1");
+            } finally { encoder.release.countDown(); }
+            assertThat(first.get().statusCode()).isEqualTo(401);
+        }
+        assertThat(post(context, "/api/v2/auth/login", loginBody(IntegrationTest.OPERATOR_CONTACT, IntegrationTest.OPERATOR_PASSWORD), Map.of()).statusCode())
+                .isEqualTo(200);
+    }
+
+    @Test
+    void leBudgetGlobalLimiteDesOriginesEtDesCiblesToutesDifferentes() throws Exception {
+        var context = start("--scolapay.auth-abuse.proxy.mode=trusted", "--scolapay.auth-abuse.proxy.trusted-cidrs=127.0.0.1/32",
+                "--scolapay.auth-abuse.login.global.capacity=3", "--scolapay.auth-abuse.login.global.period=PT1H");
+        for (int index=0; index<3; index++) {
+            assertThat(post(context, "/api/v2/auth/login", loginBody("different"+index+"@scolapay.test", "mauvais"),
+                    Map.of("X-Forwarded-For", "192.0.2."+(index+1))).statusCode()).isEqualTo(401);
+        }
+        assertThat(post(context, "/api/v2/auth/login", loginBody("encore@scolapay.test", "mauvais"),
+                Map.of("X-Forwarded-For", "198.51.100.2")).statusCode()).isEqualTo(429);
+    }
+
+    @Test
+    void uneLimitationDInvitationNeConsommePasLeJeton() throws Exception {
+        var context = start("--scolapay.auth-abuse.invitations.origin.capacity=2", "--scolapay.auth-abuse.invitations.origin.period=PT1H");
+        var jdbc = context.getBean(org.springframework.jdbc.core.simple.JdbcClient.class);
+        var school = java.util.UUID.randomUUID();
+        var invitation = java.util.UUID.randomUUID();
+        String contact = "invite-"+invitation+"@scolapay.test";
+        String token = java.util.UUID.randomUUID().toString()+java.util.UUID.randomUUID();
+        String hash = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                .digest(token.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        jdbc.sql("INSERT INTO establishments(id,code,name,kind,timezone,currency,country_code,created_at,updated_at) VALUES(:id,:code,'Établissement test','SCHOOL','Africa/Ndjamena','XAF','TD',now(),now())")
+                .param("id", school).param("code", "T-"+school.toString().substring(0,8)).update();
+        jdbc.sql("INSERT INTO invitations(id,token_hash,contact_kind,contact_value,purpose,establishment_id,attributes,expires_at,created_at) VALUES(:id,:hash,'EMAIL',:contact,'establishment.staff',:school,'{\"role\":\"CASHIER\"}'::jsonb,now()+interval '1 hour',now())")
+                .param("id", invitation).param("hash", hash).param("contact", contact).param("school", school).update();
+        for (int index=0; index<2; index++) {
+            assertThat(post(context, "/api/v2/invitations/accept", JSON.writeValueAsString(Map.of("token", "invalide-"+index)), Map.of()).statusCode()).isEqualTo(404);
+        }
+        String body = JSON.writeValueAsString(Map.of("token", token, "fullName", "Destinataire Test", "password", IntegrationTest.PASSWORD));
+        var refused = post(context, "/api/v2/invitations/accept", body, Map.of());
+        assertThat(refused.statusCode()).isEqualTo(429);
+        assertThat(refused.body()).doesNotContain(token, contact);
+        assertThat(jdbc.sql("SELECT count(*) FROM invitations WHERE id=:id AND accepted_at IS NULL")
+                .param("id", invitation).query(Long.class).single()).isEqualTo(1);
+        assertThat(jdbc.sql("SELECT count(*) FROM account_identifiers WHERE value=:contact").param("contact", contact).query(Long.class).single()).isZero();
+        jdbc.sql("UPDATE auth_abuse_buckets SET tat=clock_timestamp()-interval '1 hour'").update();
+        assertThat(post(context, "/api/v2/invitations/accept", body, Map.of()).statusCode()).isEqualTo(200);
+        assertThat(post(context, "/api/v2/invitations/accept", body, Map.of()).statusCode()).isEqualTo(409);
+    }
+
+    @Test
+    void lesErreursJsonEtLeStockageNeDivulguentPasLesDonnees(CapturedOutput output) throws Exception {
+        var context = start();
+        String secret = "mot-de-passe-confidentiel-"+java.util.UUID.randomUUID();
+        String contact = "contact-confidentiel-"+java.util.UUID.randomUUID()+"@scolapay.test";
+        var malformed = post(context, "/api/v2/auth/login", "{\"identifier\":\""+contact+"\",\"password\":\""+secret, Map.of());
+        assertThat(malformed.statusCode()).isEqualTo(400);
+        assertThat(malformed.body()).doesNotContain(secret, contact, "Exception");
+        post(context, "/api/v2/auth/login", loginBody(contact, secret), Map.of());
+        assertThat(output.getAll()).doesNotContain(secret, contact);
+        var jdbc = context.getBean(org.springframework.jdbc.core.simple.JdbcClient.class);
+        assertThat(jdbc.sql("SELECT row_to_json(b)::text FROM auth_abuse_buckets b").query(String.class).list())
+                .allSatisfy(row -> assertThat(row).doesNotContain(secret, contact, "127.0.0.1"));
+    }
+
+    @Test
+    void leVerrouillageEtLaRevocationExistantsRestentActifs() throws Exception {
+        var context = start("--scolapay.auth-abuse.login.pair.capacity=20");
+        String contact = account(context, IntegrationTest.PASSWORD);
+        var signedIn = post(context, "/api/v2/auth/login", loginBody(contact, IntegrationTest.PASSWORD), Map.of());
+        String token = JSON.readTree(signedIn.body()).path("accessToken").asString();
+        for (int index=0; index<5; index++) {
+            assertThat(post(context, "/api/v2/auth/login", loginBody(contact, "mauvais"), Map.of()).statusCode()).isEqualTo(401);
+        }
+        assertThat(post(context, "/api/v2/auth/login", loginBody(contact, IntegrationTest.PASSWORD), Map.of()).statusCode()).isEqualTo(401);
+        var jdbc = context.getBean(org.springframework.jdbc.core.simple.JdbcClient.class);
+        jdbc.sql("UPDATE accounts SET locked_until=now()-interval '1 minute' WHERE id=(SELECT account_id FROM account_identifiers WHERE value=:contact)")
+                .param("contact", contact).update();
+        assertThat(post(context, "/api/v2/auth/login", loginBody(contact, IntegrationTest.PASSWORD), Map.of()).statusCode()).isEqualTo(200);
+        int port = context.getEnvironment().getRequiredProperty("local.server.port", Integer.class);
+        var profile = HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+"/api/v2/me")).header("Authorization", "Bearer "+token).GET().build();
+        assertThat(HTTP.send(profile, HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(200);
+        jdbc.sql("UPDATE accounts SET token_version=token_version+1 WHERE id=(SELECT account_id FROM account_identifiers WHERE value=:contact)")
+                .param("contact", contact).update();
+        assertThat(HTTP.send(profile, HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(401);
     }
 }
