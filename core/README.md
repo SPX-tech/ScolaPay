@@ -39,6 +39,8 @@ Le portail des familles est fermé par défaut : `/me/students` n'existe pas et 
 
 Les invitations sont remises au contact par une file chiffrée et ne renvoient plus de jeton dans le JSON. La remise est désactivée par défaut : sans configuration, leur création répond `409 INVITATION_CHANNEL_UNAVAILABLE`. Le transport e-mail Resend est optionnel, sans SMS. Le portail reste fermé et un e-mail seul ne satisfait pas ses conditions d'ouverture. Configuration, états, reprises et limites dans [le guide des notifications](../docs/notifications.md), décision [0024](../docs/decisions/0024-notifications-et-remise-des-invitations.md).
 
+En mode désactivé, l'opérateur peut se connecter mais la création du premier établissement est refusée et entièrement annulée, puisque son administrateur doit être invité dans la même transaction. Les parcours de test et de démonstration sans fournisseur passent par les fixtures de `src/test/` sur base jetable, sans exposition des jetons dans le JSON ou les journaux. Aucun mode de démonstration n'est inclus dans le JAR. L'intégration attend #26 ; la [règle de canaux Families et le protocole de validation](../docs/integration-notifications-billing.md) sont documentés, sans activation ni configuration réelle de Resend.
+
 ## Parcours de base
 
 Toutes les routes sont sous `/api/v2`. Les erreurs suivent la RFC 9457, avec un champ `code` stable.

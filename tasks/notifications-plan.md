@@ -35,3 +35,16 @@ Les seuls recouvrements avec #26 sont les helpers de test et la documentation de
 - Deux fenêtres d'arrêt brutal vérifiées avec de vraies JVM ; corps identique et clé stable au redémarrage.
 - PR indépendante [#27](https://github.com/SPX-tech/ScolaPay/pull/27), aucune fusion, aucun déploiement, aucun fournisseur réel appelé.
 - Configuration, SMS, confirmation juridique, supervision et réception réelle restent des conditions explicites, voir [le guide](../docs/notifications.md).
+
+## Revue du propriétaire et attente d'intégration
+
+Le développement du socle a été validé le 2026-11-10. La suite est distincte du chantier terminé ; aucune autorisation de fusion, de déploiement ou de configuration réelle de Resend n'a été donnée.
+
+- [x] Vérifier que #26 est encore ouverte et différer la mise à jour depuis `main`.
+- [x] Documenter la proposition de canaux Families autorisés, sans changer la fermeture ni les règles juridiques.
+- [x] Documenter le refus transactionnel de création d'établissement en mode désactivé et les fixtures de démonstration.
+- [ ] Après intégration autorisée de #26 dans `main`, remettre #27 à jour et résoudre les recouvrements des helpers de test.
+- [ ] Exécuter la validation conjointe complète dans GitHub Actions sur PostgreSQL vierge, avec V7 puis V7_1 et vérification du rejeu des migrations.
+- [ ] Consigner les résultats conjoints avant toute nouvelle décision de fusion.
+
+Le [protocole d'intégration](../docs/integration-notifications-billing.md) précise ces étapes. L'évolution proposée des canaux doit être validée et testée avant une future ouverture limitée à l'e-mail ; elle n'est pas présentée comme implémentée.

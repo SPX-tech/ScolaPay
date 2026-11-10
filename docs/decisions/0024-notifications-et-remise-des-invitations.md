@@ -1,8 +1,8 @@
 # 0024 : notifications et remise sécurisée des invitations
 
-- **Statut** : Proposée, implémentée dans la PR de notifications pour revue
+- **Statut** : Socle accepté par le propriétaire le 2026-11-10 ; intégration différée après #26. L'évolution de la politique des canaux reste une proposition.
 - **Date** : 2026-11-10
-- **Décideur** : propriétaire du projet, à la revue
+- **Décideur** : propriétaire du projet, validation du développement de la PR #27
 - **Remplace** : les clauses de remise provisoire de [0010](0010-identite-et-acces.md) et de détection du canal de [0017](0017-controles-de-mise-en-service.md). Complète [0016](0016-outbox-durable.md), sans changer ses garanties.
 
 ## Contexte
@@ -56,6 +56,8 @@ Le client e-mail utilise une URL HTTPS fixe, sans redirection, une réponse limi
 
 Le portail reste fermé par défaut. La condition d'invitation vérifie désormais les capacités e-mail **et** téléphone, puisque l'identité admet les deux. Un bean technique ou un e-mail seul ne satisfait plus le contrôle. Le contrôle juridique reste intact : aucun changement de `legally_confirmed`, aucune option de contournement.
 
+Cette description correspond au code livré. Le propriétaire demande d'éviter qu'elle impose durablement le SMS à une future cohorte Families limitée à l'e-mail. La [proposition de politique des canaux](../integration-notifications-billing.md#proposition-de-politique-des-canaux-families) exige la couverture des seuls canaux explicitement autorisés, avec des contrôles cohérents à la création, à l'acceptation, à l'envoi et sur le périmètre d'accès. Elle n'est pas implémentée par cette mise à jour documentaire ; le portail et les exigences juridiques restent inchangés.
+
 Le suivi d'établissement exige `MEMBERS_MANAGE`, puis vérifie le rattachement de l'invitation à l'établissement. Le suivi de plateforme est limité aux invitations administratives émises par l'opérateur connecté. Il n'ouvre aucune route vers les dossiers.
 
 ## Preuves et limites
@@ -67,6 +69,8 @@ Le faux fournisseur est local au runner, sans secret ni envoi réel. La remise e
 Les résultats exacts et le guide de résolution sont dans [le guide des notifications](../notifications.md).
 
 ## Intégration avec les travaux parallèles
+
+**Intégration suspendue jusqu'à #26.** Le [protocole d'intégration](../integration-notifications-billing.md) fixe la mise à jour depuis `main`, la résolution des recouvrements de tests et la validation complète des deux chantiers sur une base vierge. La validation déjà obtenue pour #27 seule ne remplace pas cette étape. Aucune configuration réelle de Resend n'est autorisée à ce stade.
 
 La migration `V7_1` évite `V7__billing_parties.sql` de #26. Aucun déploiement n'a lieu : les deux branches devront être intégrées et validées ensemble sur une base vierge avant toute future migration persistante. Si une base a déjà appliqué 7.1 avant d'intégrer 7, Flyway refusera la migration manquante par défaut : ne pas activer `outOfOrder` pour masquer ce problème, organiser une migration relue.
 

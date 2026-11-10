@@ -2,6 +2,8 @@
 
 Le module `core/notifications` prépare une remise technique réutilisable. Aucun envoi réel, déploiement ou ouverture de Families n'est effectué par ce chantier. Décision : [0024](decisions/0024-notifications-et-remise-des-invitations.md).
 
+Le développement a été validé par le propriétaire. **L'intégration de #27 attend #26**, puis une mise à jour depuis `main` et une validation conjointe sur PostgreSQL vierge : voir [le protocole d'intégration](integration-notifications-billing.md). Aucune configuration réelle de Resend n'est autorisée à ce stade ; la section suivante reste une référence technique.
+
 ## Configurer l'e-mail
 
 | Variable | Valeur attendue |
@@ -17,7 +19,22 @@ La configuration suffit à assembler l'adaptateur, elle ne prouve ni l'autorisat
 
 Sans configuration, les invitations répondent `409 INVITATION_CHANNEL_UNAVAILABLE`. Aucun SMS n'est simulé : un téléphone produit ce refus même avec Resend actif. La création de l'établissement et de son premier administrateur est atomique avec cette vérification.
 
-Le portail reste fermé. Même avec l'e-mail configuré et les règles juridiques confirmées, l'absence de SMS empêche son ouverture. Aucun changement juridique ni fiscal n'est apporté.
+Le portail reste fermé. Dans le code actuel, même avec l'e-mail configuré et les règles juridiques confirmées, l'absence de SMS empêche son ouverture. Une [politique fondée sur les seuls canaux Families autorisés](integration-notifications-billing.md#proposition-de-politique-des-canaux-families) est proposée pour permettre ultérieurement un périmètre e-mail sans SMS. Elle n'est pas encore implémentée. Aucun changement juridique ni fiscal n'est apporté.
+
+## Mode désactivé et amorçage des établissements
+
+Avec `disabled` et sans autre transport disponible, le serveur peut démarrer et l'opérateur d'amorçage peut se connecter. **Cela ne permet pas de créer un premier établissement utilisable** : `POST /api/v2/platform/establishments` crée l'établissement et son invitation d'administrateur dans une seule transaction. Le refus `409 INVITATION_CHANNEL_UNAVAILABLE` annule l'ensemble, y compris l'audit d'établissement. Aucun établissement partiel, aucune invitation et aucune notification ne sont conservés pour cette création. Le code d'établissement n'est pas réservé par la tentative annulée.
+
+Les invitations de personnel et réémissions administratives sont également refusées en l'absence de canal. Sur un établissement déjà existant, le mode désactivé ne supprime ni les comptes ni les adhésions ; les opérations du personnel restent soumises aux droits existants. Families demeure fermé par défaut. Désactiver un transport ne simule pas une livraison des messages déjà en file : ils peuvent être bloqués jusqu'à résolution ou expiration selon leur état.
+
+| Contexte | Parcours maîtrisé sans fournisseur réel |
+| --- | --- |
+| Vérification du mode désactivé | Démarrer sans adaptateur de test et vérifier le refus et l'absence de création partielle |
+| Tests des parcours métier, création d'établissement comprise | Import explicite de `TestInvitationDelivery` sur une base jetable ; le destinataire de test lit la boîte de test pour accepter |
+| Tests du worker, des reprises et du transport HTTP | Transport contrôlé ou serveur HTTP local au runner, sans appel externe |
+| Démonstration à partir du JAR de production, sur base vide et sans fournisseur | Création du premier établissement refusée ; aucun mode de démonstration intégré n'existe |
+
+Les fixtures sont sous `core/src/test/` et ne sont pas assemblées dans le JAR de production. Leur boîte peut conserver un jeton en clair dans la mémoire ou la base jetable des tests ; elle n'est exposée par aucune route HTTP et ne doit jamais être transposée dans une base persistante. Les exemples de démonstration doivent utiliser ces scénarios contrôlés, sans extraire le jeton de `firstAdminInvitation` ou du JSON d'une invitation. Aucun fallback de journal, réponse API enrichie ou configuration réelle de Resend n'est ajouté.
 
 ## Contrat HTTP
 
