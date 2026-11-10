@@ -26,6 +26,11 @@ jobs:
           cache-dependency-path: core/pom.xml
       - name: Vérifier les régressions sur HTTP et PostgreSQL réels
         run: ./mvnw --batch-mode --no-transfer-progress -Dtest='Lot6Finalization*Test,PartyCorrection*Test' test
+      - name: Vérifier que les mutations historiques et ciblées restent applicables
+        working-directory: .
+        run: |
+          node .github/mutation/apply.mjs lot6 --check-all
+          node .github/mutation/apply.mjs lot6-finalization --check-all
       - uses: actions/upload-artifact@v7.0.2
         if: always()
         with:
