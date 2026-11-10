@@ -35,6 +35,10 @@ Sans ces variables, l'application refuse de démarrer. Il n'existe aucun identif
 
 Le portail des familles est fermé par défaut : `/me/students` n'existe pas et les invitations familiales sont refusées avec le code `PORTAL_CLOSED`. `SCOLAPAY_PORTAL_ENABLED=true` ne l'ouvre que si toutes les [conditions de mise en service](../docs/decisions/0017-controles-de-mise-en-service.md) sont remplies, sinon l'application refuse de démarrer. Il n'existe aucune option de contournement.
 
+## Notifications et invitations
+
+Les invitations sont remises au contact par une file chiffrée et ne renvoient plus de jeton dans le JSON. La remise est désactivée par défaut : sans configuration, leur création répond `409 INVITATION_CHANNEL_UNAVAILABLE`. Le transport e-mail Resend est optionnel, sans SMS. Le portail reste fermé et un e-mail seul ne satisfait pas ses conditions d'ouverture. Configuration, états, reprises et limites dans [le guide des notifications](../docs/notifications.md), décision [0024](../docs/decisions/0024-notifications-et-remise-des-invitations.md).
+
 ## Parcours de base
 
 Toutes les routes sont sous `/api/v2`. Les erreurs suivent la RFC 9457, avec un champ `code` stable.

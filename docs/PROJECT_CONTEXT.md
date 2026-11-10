@@ -2,7 +2,7 @@
 
 Référence stratégique et technique du projet, lisible sans l'historique des conversations. En cas de désaccord entre ce document et le code, **le code prime** : corriger le document.
 
-**Dernière mise à jour : 2026-11-06.** Le statut des fonctionnalités décrit le code du dépôt. **Aucune instance de ScolaPay n'est en service** : « implémenté » ne signifie pas « déployé ».
+**Dernière mise à jour : 2026-11-10.** Le statut des fonctionnalités décrit le code du dépôt. **Aucune instance de ScolaPay n'est en service** : « implémenté » ne signifie pas « déployé ».
 
 ## État du projet en bref
 
@@ -38,7 +38,8 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Domaine | Statut | Ce qui existe | Preuve |
 | --- | --- | --- | --- |
 | Identité globale | Vérifié | Compte unique, e-mail ou téléphone, connexion, verrouillage après 5 échecs, jetons révocables | `identity`, `SecurityHardeningTest` |
-| Invitations | Vérifié, remise non construite | Usage unique, empreinte seule stockée, liées au contact. Le jeton est renvoyé à la personne qui invite | `identity`, `SecurityHardeningTest` |
+| Invitations | Vérifié, transport e-mail optionnel | Usage unique, contact lié, jeton retiré du JSON et remis via une file chiffrée. Sans canal disponible, création refusée | `identity`, `NotificationConfidentialityTest`, `NotificationDeliveryTest` |
+| Notifications | Vérifié en CI, aucun envoi réel | File chiffrée, listener durable, worker hors transaction, baux, reprises bornées et suivi autorisé. Resend désactivé par défaut. Aucun SMS ni preuve de réception en boîte | `notifications`, `NotificationRecoveryTest`, [0024](decisions/0024-notifications-et-remise-des-invitations.md) |
 | Établissements | Vérifié | Création par un opérateur, type, fuseau, devise, pays, suspension | `establishment` |
 | Personnel et permissions | Vérifié | Adhésion par établissement, rôles multiples, dernier administrateur protégé | `establishment`, `TenantIsolationTest` |
 | Isolation entre établissements | Vérifié | Barrière d'adhésion, 404 aux non-membres, clés composites en base | `TenantIsolationTest`, `DatabaseGuardsTest` |
@@ -51,8 +52,8 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Catalogue de frais | Vérifié | Périodes de facturation, identité stable des charges, frais par unité académique, versions et publication immuables, aperçu d'impact | `core/`, `FeeCatalogTest`, [0020](decisions/0020-catalogue-de-frais-et-periodes.md) |
 | Obligations et dû | Vérifié | Émission par inscription confirmée, par lot après aperçu ou à l'unité, idempotente. Liste nominative de ce qui reste à facturer. Échéancier et journal immuables, dû calculé. **Aucun encaissement, aucune obligation ne peut être réglée** | `core/`, `ObligationTest`, [0021](decisions/0021-obligations-et-journal.md) |
 | Remises, corrections, annulations, réexamen | Vérifié | Écritures distinctes et motivées, seconde personne pour les opérations sensibles, écarts de tarif et retraits signalés pour décision. **Aucune n'est un encaissement** | `core/`, `AdjustmentTest`, `AdjustmentPolicyTest`, `ReasonConfidentialityTest`, `ObligationReviewTest`, [0022](decisions/0022-ajustements-et-reexamen.md) | [Cadrage](missions/mission-003-billing-engine.md), [0015](decisions/0015-modele-de-facturation.md) |
-| Outbox durable | Vérifié | Registre Spring Modulith, reprise après arrêt brutal et entre deux instances. **Aucun listener de production ne l'utilise encore** | `core/`, `OutboxReliabilityTest`, [0016](decisions/0016-outbox-durable.md) |
-| Contrôles de mise en service | Vérifié | Portail fermé par défaut, démarrage refusé si une condition manque. **Il ne peut pas être ouvert aujourd'hui** : règle du Tchad non confirmée, aucun canal d'invitation | `core/`, `GoLiveTest`, [0017](decisions/0017-controles-de-mise-en-service.md) |
+| Outbox durable | Vérifié | Registre Spring Modulith, reprise après arrêt brutal et entre deux instances. **Utilisé par la facturation et la préparation des notifications** | `core/`, `OutboxReliabilityTest`, [0016](decisions/0016-outbox-durable.md) |
+| Contrôles de mise en service | Vérifié | Portail fermé par défaut, démarrage refusé si une condition manque. **Il ne peut pas être ouvert aujourd'hui** : règle du Tchad non confirmée, aucun canal SMS ; un e-mail seul ne suffit pas | `core/`, `GoLiveTest`, [0017](decisions/0017-controles-de-mise-en-service.md) |
 | Encaissement réel, comptabilité | Prévu | Rien | [0006](decisions/0006-backend-java-spring-boot.md) |
 | Portail web des familles | Prévu | L'API `/api/v2/me/students` existe mais reste fermée par défaut, aucune interface | [0007](decisions/0007-portail-familles-avant-apk.md) |
 | Application Android des familles | Hors feuille de route active | Rien. L'application `android/` sert le personnel | [0014](decisions/0014-android-hors-feuille-de-route.md) |
@@ -152,6 +153,8 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 - **0022**, acceptée : remise, correction et annulation distinctes, seconde personne au-delà de 25 % ou 100 000 XAF en cumul brut, rôle directeur, motifs masqués aux caissiers dans l'API, réexamen déduit de la réalité.
 - **0021**, acceptée : une obligation par dossier et par charge, sans la version du catalogue dans la clé, dû et statut déduits du journal, règlement impossible sans le module de paiement.
 
+- **0024**, proposée pour revue : file de notifications chiffrée, remise des invitations, reprises externes bornées et contrôle des canaux. Aucun envoi réel ni ouverture du portail.
+
 ## Priorités actuelles
 
 1. **Mission 003, ScolaPay Billing Engine** : priorité absolue, en construction par lots. Elle s'appuie sur `schooling` sans refaire les utilisateurs ni les établissements. Voir le [cadrage](missions/mission-003-billing-engine.md).
@@ -163,7 +166,7 @@ Dans `core/`, les limites connues sont listées dans [0010](decisions/0010-ident
 
 | Risque | Conséquence | Où |
 | --- | --- | --- |
-| Invitations non remises | Le jeton transite par la personne qui invite. Un service de notification est nécessaire avant tout usage réel | `core`, `identity` |
+| Remise externe non vérifiée | E-mail optionnel testé sur fournisseur local seulement, aucun SMS. Rebonds et réception en boîte non suivis ; configuration, domaine d'envoi et supervision restent nécessaires | [Guide des notifications](notifications.md), [0024](decisions/0024-notifications-et-remise-des-invitations.md) |
 | Règles juridiques non confirmées | L'âge légal enregistré pour le Tchad est provisoire. L'application refuse d'ouvrir le portail tant qu'il n'est pas confirmé | [0013](decisions/0013-majorite-et-autorisations-familiales.md#limites-et-conditions), [0017](decisions/0017-controles-de-mise-en-service.md) |
 | Dégradation silencieuse d'Android | Plus vérifié à chaque PR : accepté tant qu'il est hors feuille de route | [0014](decisions/0014-android-hors-feuille-de-route.md) |
 | Pas de limitation de débit par adresse | Le verrouillage par compte permet de gêner un compte connu | `core`, `identity` |
@@ -207,7 +210,7 @@ Périmètre, critères d'acceptation et état des lots dans le [cadrage](mission
 
 **Ensuite, sans ordre arrêté**
 
-- Service de notification, pour remettre les invitations par SMS ou e-mail.
+- Notifications : configurer et vérifier l'e-mail réel après revue, choisir un fournisseur SMS, raccorder la supervision et préciser la conservation. Le socle est construit, voir [le guide](notifications.md).
 - Portail web des familles ([0007](decisions/0007-portail-familles-avant-apk.md)), avec réinitialisation de mot de passe et renouvellement de session. Son ouverture réelle exige la confirmation juridique de [0013](decisions/0013-majorite-et-autorisations-familiales.md).
 - Portage de la caisse, des reçus et de la trésorerie vers `core/`.
 - Contrat d'un prestataire réel, puis besoins de services dédiés ([0008](decisions/0008-go-services-paiement.md)).

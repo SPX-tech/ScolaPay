@@ -11,7 +11,7 @@ CREATE TABLE notification_messages (
         CHECK (state IN ('QUEUED', 'READY', 'PROCESSING', 'RETRY', 'BLOCKED', 'SUBMITTED', 'FAILED', 'CANCELLED', 'UNKNOWN')),
     attempts integer NOT NULL DEFAULT 0 CHECK (attempts >= 0),
     first_attempt_at timestamptz,
-    retry_window_seconds integer NOT NULL CHECK (retry_window_seconds BETWEEN 300 AND 82800),
+    retry_window_seconds integer NOT NULL CHECK (retry_window_seconds = 0 OR retry_window_seconds BETWEEN 300 AND 82800),
     next_attempt_at timestamptz NOT NULL,
     lease_token uuid,
     lease_until timestamptz,

@@ -17,6 +17,7 @@ public interface NotificationTransport {
 
     String name();
     boolean supports(Notifications.Channel channel);
+    /** ZERO : aucune déduplication contractuelle, donc aucune reprise automatique d'un résultat ambigu. */
     Duration idempotencyWindow();
     Result send(Message message);
 }

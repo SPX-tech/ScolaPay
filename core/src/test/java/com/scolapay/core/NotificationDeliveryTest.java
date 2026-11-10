@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scolapay.core.identity.Identifier;
 import com.scolapay.core.identity.InvitationDelivery;
+import com.scolapay.core.identity.Invitations;
 import com.scolapay.core.notifications.NotificationTransport;
 import com.scolapay.core.notifications.Notifications;
 import com.scolapay.core.notifications.internal.NotificationWorker;
@@ -56,6 +57,7 @@ class NotificationDeliveryTest {
     @Autowired NotificationWorker worker;
     @Autowired Notifications notifications;
     @Autowired InvitationDelivery delivery;
+    @Autowired Invitations invitations;
     @Autowired ScriptedTransport transport;
     @Autowired PlatformTransactionManager transactions;
     TestApi api;
@@ -236,6 +238,62 @@ class NotificationDeliveryTest {
         });
         assertThat(jdbc.sql("SELECT count(*) FROM notification_messages WHERE id=:id").param("id", id).query(Long.class).single()).isZero();
         assertThat(jdbc.sql("SELECT count(*) FROM event_publication WHERE serialized_event LIKE :id").param("id", "%" + id + "%").query(Long.class).single()).isZero();
+    }
+
+    @Test
+    void invitationAuditChargeEtPublicationSontAnnulesEnsemble() {
+        Issued existing = issue();
+        UUID operator = jdbc.sql("SELECT account_id FROM account_identifiers WHERE kind='EMAIL' AND value=:value")
+                .param("value", IntegrationTest.OPERATOR_CONTACT).query(UUID.class).single();
+        AtomicReference<UUID> id = new AtomicReference<>();
+        new TransactionTemplate(transactions).executeWithoutResult(status -> {
+            id.set(invitations.issue(new Invitations.NewInvitation(Identifier.parse(IntegrationTest.uniqueEmail()),
+                    "establishment.staff", existing.school(), null, Map.of("role", "CASHIER"), operator)).id());
+            status.setRollbackOnly();
+        });
+        for (String table : List.of("invitations", "notification_messages")) {
+            assertThat(jdbc.sql("SELECT count(*) FROM " + table + " WHERE id=:id").param("id", id.get())
+                    .query(Long.class).single()).isZero();
+        }
+        assertThat(jdbc.sql("SELECT count(*) FROM audit_events WHERE target_id=:id").param("id", id.get()).query(Long.class).single()).isZero();
+        assertThat(jdbc.sql("SELECT count(*) FROM event_publication WHERE serialized_event LIKE :id")
+                .param("id", "%" + id.get() + "%").query(Long.class).single()).isZero();
+    }
+
+    @Test
+    void unCanalRetireOuUneCleIllisibleConserveLaChargePourDiagnostic() {
+        Issued invitation = issue();
+        jdbc.sql("UPDATE notification_messages SET transport='absent' WHERE id=:id").param("id", invitation.id()).update();
+        worker.runOnce();
+        assertThat(state(invitation.id())).isEqualTo("BLOCKED");
+        assertThat(payload(invitation.id())).isNotNull();
+        assertThat(transport.sent).isEmpty();
+        jdbc.sql("UPDATE notification_messages SET transport='scripted', next_attempt_at=now()-interval '1 second' WHERE id=:id")
+                .param("id", invitation.id()).update();
+        worker.runOnce();
+        assertThat(state(invitation.id())).isEqualTo("SUBMITTED");
+    }
+
+    @Test
+    void uneChargeAltereeNestJamaisTransmise() {
+        Issued invitation = issue();
+        jdbc.sql("UPDATE notification_messages SET encrypted_payload='v1:AAAA' WHERE id=:id").param("id", invitation.id()).update();
+        worker.runOnce();
+        assertThat(state(invitation.id())).isEqualTo("BLOCKED");
+        assertThat(payload(invitation.id())).isNotNull();
+        assertThat(transport.sent).isEmpty();
+    }
+
+    @Test
+    void sansDeduplicationUnePanneAmbigueNestPasRejouee() {
+        Issued invitation = issue();
+        jdbc.sql("UPDATE notification_messages SET retry_window_seconds=0 WHERE id=:id").param("id", invitation.id()).update();
+        transport.result.set(NotificationTransport.Result.retry("TRANSPORT_UNAVAILABLE"));
+        worker.runOnce();
+        assertThat(state(invitation.id())).isEqualTo("UNKNOWN");
+        assertThat(transport.sent).hasSize(1);
+        worker.runOnce();
+        assertThat(transport.sent).hasSize(1);
     }
 
     @Test

@@ -42,8 +42,6 @@ public class NotificationWorker {
         tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
-    @Scheduled(fixedDelayString = "${scolapay.notifications.poll-interval:PT10S}",
-               initialDelayString = "${scolapay.notifications.initial-delay:PT10S}")
     public void runOnce() {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
             throw new IllegalStateException("NOTIFICATION_WORKER_REQUIRES_NO_TRANSACTION");
@@ -69,8 +67,10 @@ public class NotificationWorker {
             return;
         }
         // 60 secondes de marge : ne jamais commencer un appel à la fin de la fenêtre contractuelle.
-        Instant lastSafeStart = claim.firstAttemptAt().plusSeconds(claim.retryWindowSeconds()).minusSeconds(60);
-        if (claim.attempts() > MAX_ATTEMPTS || !lastSafeStart.isAfter(now)) {
+        long window = Math.min(claim.retryWindowSeconds(), selected.get().idempotencyWindow().toSeconds());
+        Instant lastSafeStart = claim.firstAttemptAt().plusSeconds(window).minusSeconds(60);
+        if (claim.attempts() > MAX_ATTEMPTS || (window == 0 && claim.attempts() > 1)
+                || (window > 0 && !lastSafeStart.isAfter(now))) {
             finish(claim, "UNKNOWN", "RETRY_SAFETY_LIMIT", null, now);
             return;
         }
@@ -99,7 +99,7 @@ public class NotificationWorker {
             }
         } else if (result.outcome() == NotificationTransport.Outcome.FAILED) {
             finish(claim, "FAILED", safeCode(result.failureCode()), null, now);
-        } else if (claim.attempts() >= MAX_ATTEMPTS) {
+        } else if (window == 0 || claim.attempts() >= MAX_ATTEMPTS) {
             finish(claim, "UNKNOWN", "RETRY_SAFETY_LIMIT", null, now);
         } else {
             Duration backoff = Duration.ofMinutes(Math.min(60, 1L << Math.min(claim.attempts() - 1, 6)));

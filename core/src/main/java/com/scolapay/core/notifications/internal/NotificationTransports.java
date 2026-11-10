@@ -17,7 +17,7 @@ class NotificationTransports {
     NotificationTransports(List<NotificationTransport> candidates) {
         for (NotificationTransport transport : candidates) {
             if (!transport.name().matches("[a-z0-9-]{1,32}")
-                    || transport.idempotencyWindow().compareTo(Duration.ofMinutes(5)) < 0
+                    || (!transport.idempotencyWindow().isZero() && transport.idempotencyWindow().compareTo(Duration.ofMinutes(5)) < 0)
                     || transport.idempotencyWindow().compareTo(Duration.ofHours(23)) > 0) {
                 throw new IllegalStateException("NOTIFICATION_TRANSPORT_CONTRACT_INVALID");
             }

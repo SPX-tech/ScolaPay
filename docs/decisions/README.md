@@ -29,6 +29,8 @@ Une décision mérite une entrée ici lorsqu'elle est coûteuse à inverser ou q
 | [0021](0021-obligations-et-journal.md) | Obligations, échéanciers et journal | Acceptée | En place, sans aucun encaissement |
 | [0022](0022-ajustements-et-reexamen.md) | Remises, corrections, annulations et réexamen | Acceptée | En place, sans aucun encaissement |
 
+| [0024](0024-notifications-et-remise-des-invitations.md) | Notifications et remise sécurisée des invitations | Proposée pour revue | Implémentée, e-mail optionnel, aucun SMS ni envoi réel |
+
 ## Statuts
 
 - **Proposée** : en discussion, ne pas s'en servir comme hypothèse.
