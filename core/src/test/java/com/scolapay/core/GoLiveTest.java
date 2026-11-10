@@ -53,7 +53,7 @@ class GoLiveTest {
 
     @Test
     void parDefautLePortailEstFermeAuxFamilles() {
-        TestApi api = start(false);
+        TestApi api = start(true);
         School school = api.newSchool();
         UUID minor = school.newStudent();
         UUID adult = school.newStudent(LocalDate.of(2000, 1, 1));
@@ -77,7 +77,7 @@ class GoLiveTest {
 
     @Test
     void lesAutresEtablissementsNeDecouvrentPasLeDossierParLaFermeture() {
-        TestApi api = start(false);
+        TestApi api = start(true);
         School owner = api.newSchool();
         School other = api.newSchool();
         UUID student = owner.newStudent();

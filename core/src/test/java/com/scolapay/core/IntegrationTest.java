@@ -76,6 +76,7 @@ abstract class IntegrationTest {
     record Response(int status, JsonNode body, String raw) {
 
         String text(String field) {
+            if (field.equals("token") && body.has("id")) return TestInvitationDelivery.token(id("id"));
             return body.path(field).asString();
         }
 
@@ -194,7 +195,7 @@ abstract class IntegrationTest {
         Response created = createEstablishment(contact);
         assertThat(created.status()).as(created.raw()).isEqualTo(201);
         UUID id = UUID.fromString(created.body().path("establishment").path("id").asString());
-        acceptAsNewAccount(created.body().path("firstAdminInvitation").path("token").asString(), "Admin Test");
+        acceptAsNewAccount(TestInvitationDelivery.token(UUID.fromString(created.body().path("firstAdminInvitation").path("id").asString())), "Admin Test");
         return new Tenant(id, login(contact, PASSWORD), contact);
     }
 

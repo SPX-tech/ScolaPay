@@ -1,12 +1,18 @@
 package com.scolapay.core.identity;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
- * Canal de remise d'une invitation à son destinataire. Aucune implémentation n'existe encore : le
- * jeton est rendu au personnel qui l'a émis, ce qui interdit d'ouvrir le portail aux familles.
+ * Remise durable au destinataire. deliver rejoint la transaction d'émission et n'appelle pas le réseau.
  */
 public interface InvitationDelivery {
 
-    void deliver(Identifier contact, String token, Instant expiresAt);
+    record Report(String state, int attempts, Instant updatedAt, String failureCode) {}
+
+    boolean supports(Identifier.Kind kind);
+
+    void deliver(UUID invitationId, Identifier contact, String token, Instant expiresAt);
+
+    Report status(UUID invitationId);
 }

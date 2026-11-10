@@ -12,7 +12,7 @@ Référence stratégique et technique du projet, lisible sans l'historique des c
 | Ancien déploiement | **Retiré** le 2026-11-06. Il ne contenait qu'un établissement de démonstration |
 | Données de l'ancienne instance | **Archivées**, chiffrées, hors du serveur et hors du dépôt, avec restauration et relecture vérifiées. La clé est conservée séparément |
 | Mission 002 (fondation Java) | **Finalisée** : identités, établissements, inscriptions et liens familiaux dans `core/`. Testée en CI, jamais déployée |
-| Facturation, paiements, portail familles | **Facturation Java construite jusqu'au lot 6, en revue.** Aucun encaissement réel ni portail web construit |
+| Facturation, paiements, portail familles | **Facturation Java intégrée jusqu'au lot 6.** Aucun encaissement réel ni portail web construit |
 | Mission 003 (moteur de facturation) | **Cadrage validé, construction en cours lot par lot.** État tenu dans le [cadrage](missions/mission-003-billing-engine.md) |
 | Android | **Hors de la feuille de route active**, code conservé comme référence ([0014](decisions/0014-android-hors-feuille-de-route.md)) |
 | Ordre de construction | Backend Java, puis interfaces web. L'APK viendra une fois les parcours métier et financiers stabilisés |
@@ -38,7 +38,9 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Domaine | Statut | Ce qui existe | Preuve |
 | --- | --- | --- | --- |
 | Identité globale | Vérifié | Compte unique, e-mail ou téléphone, connexion, verrouillage après 5 échecs, jetons révocables | `identity`, `SecurityHardeningTest` |
-| Invitations | Vérifié, remise non construite | Usage unique, empreinte seule stockée, liées au contact. Le jeton est renvoyé à la personne qui invite | `identity`, `SecurityHardeningTest` |
+| Invitations | Vérifié, transport e-mail optionnel | Usage unique, contact lié, jeton retiré du JSON et remis via une file chiffrée. Sans canal disponible, création refusée | `identity`, `NotificationConfidentialityTest`, `NotificationDeliveryTest` |
+| Notifications | Vérifié en CI, aucun envoi réel | File chiffrée, listener durable, worker hors transaction, baux, reprises bornées et suivi autorisé. Resend désactivé par défaut. Aucun SMS ni preuve de réception en boîte | `notifications`, `NotificationRecoveryTest`, [0024](decisions/0024-notifications-et-remise-des-invitations.md) |
+| Intégration des notifications | #27 en brouillon sur `main` après #26 | Tests conjoints sur PostgreSQL vierge, V7 avant V7_1 et contrôle du redémarrage. Principe des canaux accepté, mise en œuvre différée avant Families. Aucun fournisseur réel autorisé | [Protocole et décision de canaux](integration-notifications-billing.md), [résultats de #27](https://github.com/SPX-tech/ScolaPay/pull/27) |
 | Établissements | Vérifié | Création par un opérateur, type, fuseau, devise, pays, suspension | `establishment` |
 | Personnel et permissions | Vérifié | Adhésion par établissement, rôles multiples, dernier administrateur protégé | `establishment`, `TenantIsolationTest` |
 | Isolation entre établissements | Vérifié | Barrière d'adhésion, 404 aux non-membres, clés composites en base | `TenantIsolationTest`, `DatabaseGuardsTest` |
@@ -51,9 +53,9 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Catalogue de frais | Vérifié | Périodes de facturation, identité stable des charges, frais par unité académique, versions et publication immuables, aperçu d'impact | `core/`, `FeeCatalogTest`, [0020](decisions/0020-catalogue-de-frais-et-periodes.md) |
 | Obligations et dû | Vérifié | Émission par inscription confirmée, par lot après aperçu ou à l'unité, idempotente. Liste nominative de ce qui reste à facturer. Échéancier et journal immuables, dû calculé. **Aucun encaissement, aucune obligation ne peut être réglée** | `core/`, `ObligationTest`, [0021](decisions/0021-obligations-et-journal.md) |
 | Remises, corrections, annulations, réexamen | Vérifié | Écritures distinctes et motivées, seconde personne pour les opérations sensibles, écarts de tarif et retraits signalés pour décision. **Aucune n'est un encaissement** | `core/`, `AdjustmentTest`, `AdjustmentPolicyTest`, `ReasonConfidentialityTest`, `ObligationReviewTest`, [0022](decisions/0022-ajustements-et-reexamen.md) | [Cadrage](missions/mission-003-billing-engine.md), [0015](decisions/0015-modele-de-facturation.md) |
-| Outbox durable | Vérifié | Registre Spring Modulith, reprise après arrêt brutal et entre deux instances. **Utilisée par l'émission des obligations** | `core/`, `OutboxReliabilityTest`, [0016](decisions/0016-outbox-durable.md) |
-| Contrôles de mise en service | Vérifié | Portail fermé par défaut, démarrage refusé si une condition manque. **Il ne peut pas être ouvert aujourd'hui** : règle du Tchad non confirmée, aucun canal d'invitation | `core/`, `GoLiveTest`, [0017](decisions/0017-controles-de-mise-en-service.md) |
-| Redevables, responsables, contributeurs | Vérifié, en revue finale, portail fermé | Désignations explicites, vues typées, autorisations avant pagination, instantanés cohérents et confirmations NULL cohérentes. Corrections de nom/identifiant motivées et historisées ; compte et identité immuables | `BillingPartyTest`, `FamilyBillingViewTest`, `Lot6FinalizationRegressionTest`, `PartyCorrectionTest`, [0023](decisions/0023-personnes-liees-et-vues.md) |
+| Outbox durable | Vérifié | Registre Spring Modulith, reprise après arrêt brutal et entre deux instances. **Utilisé par la facturation et la préparation des notifications** | `core/`, `OutboxReliabilityTest`, [0016](decisions/0016-outbox-durable.md) |
+| Contrôles de mise en service | Vérifié | Portail fermé par défaut, démarrage refusé si une condition manque. **Il ne peut pas être ouvert aujourd'hui** : règle du Tchad non confirmée, aucun canal SMS ; un e-mail seul ne suffit pas | `core/`, `GoLiveTest`, [0017](decisions/0017-controles-de-mise-en-service.md) |
+| Redevables, responsables, contributeurs | Vérifié, intégré dans `main`, portail fermé | Désignations explicites, vues typées, autorisations avant pagination, instantanés cohérents et confirmations NULL cohérentes. Corrections de nom/identifiant motivées et historisées ; compte et identité immuables | `BillingPartyTest`, `FamilyBillingViewTest`, `Lot6FinalizationRegressionTest`, `PartyCorrectionTest`, [0023](decisions/0023-personnes-liees-et-vues.md) |
 | Encaissement réel, comptabilité | Prévu | Rien | [0006](decisions/0006-backend-java-spring-boot.md) |
 | Portail web des familles | Prévu | L'API `/api/v2/me/students` existe mais reste fermée par défaut, aucune interface | [0007](decisions/0007-portail-familles-avant-apk.md) |
 | Application Android des familles | Hors feuille de route active | Rien. L'application `android/` sert le personnel | [0014](decisions/0014-android-hors-feuille-de-route.md) |
@@ -150,9 +152,11 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 - **0018**, acceptée : catalogue académique.
 - **0019**, principes acceptés, traitement fiscal à valider : obligations, appels de frais, factures fiscales et reçus sont distincts. Aucun document n'est présenté comme fiscalement conforme.
 - **0020**, acceptée : catalogue de frais, périodes de facturation indépendantes de l'inscription annuelle, identité stable des charges indépendante des codes.
-- **0023**, proposée pour revue finale : rôles financiers explicites, vues typées, droits avant pagination et instantanés cohérents. Correction d'informations sur la même personne, sous révision et journal immuable. Compte, type et identités non réassociables par cette correction ; évolution sensible distincte.
+- **0023**, périmètre du lot 6 validé : rôles financiers explicites, vues typées, droits avant pagination et instantanés cohérents. Correction d'informations sur la même personne, sous révision et journal immuable. Réassociation exclue du lot. Les questions métier de l'ADR restent ouvertes.
 - **0022**, acceptée : remise, correction et annulation distinctes, seconde personne au-delà de 25 % ou 100 000 XAF en cumul brut, rôle directeur, motifs masqués aux caissiers dans l'API, réexamen déduit de la réalité.
 - **0021**, acceptée : une obligation par dossier et par charge, sans la version du catalogue dans la clé, dû et statut déduits du journal, règlement impossible sans le module de paiement.
+
+- **0024**, socle et protocole validés par le propriétaire : file chiffrée, remise des invitations et reprises externes bornées. #27 est actualisée après #26 et reste en brouillon. Le principe des canaux Families explicitement autorisés est accepté ; sa mise en œuvre et ses tests sont différés avant toute ouverture, selon le modèle d'accès final.
 
 ## Priorités actuelles
 
@@ -165,8 +169,8 @@ Dans `core/`, les limites connues sont listées dans [0010](decisions/0010-ident
 
 | Risque | Conséquence | Où |
 | --- | --- | --- |
+| Remise externe non vérifiée | E-mail optionnel testé sur fournisseur local seulement, aucun SMS. Rebonds et réception en boîte non suivis ; configuration, domaine d'envoi et supervision restent nécessaires | [Guide des notifications](notifications.md), [0024](decisions/0024-notifications-et-remise-des-invitations.md) |
 | Réassociation des personnes financières | Le compte et le type sont immuables ; leur changement nécessiterait un parcours sensible distinct, jamais une correction de nom ou un doublon | [0023](decisions/0023-personnes-liees-et-vues.md#compte-associé-et-identité-financière) |
-| Invitations non remises | Le jeton transite par la personne qui invite. Un service de notification est nécessaire avant tout usage réel | `core`, `identity` |
 | Règles juridiques non confirmées | L'âge légal enregistré pour le Tchad est provisoire. L'application refuse d'ouvrir le portail tant qu'il n'est pas confirmé | [0013](decisions/0013-majorite-et-autorisations-familiales.md#limites-et-conditions), [0017](decisions/0017-controles-de-mise-en-service.md) |
 | Dégradation silencieuse d'Android | Plus vérifié à chaque PR : accepté tant qu'il est hors feuille de route | [0014](decisions/0014-android-hors-feuille-de-route.md) |
 | Pas de limitation de débit par adresse | Le verrouillage par compte permet de gêner un compte connu | `core`, `identity` |
@@ -206,11 +210,11 @@ Ce serait un nouveau déploiement, avec des secrets neufs :
 
 **Prochain chantier : Mission 003, ScolaPay Billing Engine**
 
-Périmètre, critères d'acceptation et état des lots dans le [cadrage](missions/mission-003-billing-engine.md). L'outbox durable et le contrôle de mise en service sont en place. Le catalogue académique et le catalogue de frais sont en place. Les obligations, les échéanciers, le journal immuable, l'émission idempotente, les remises, les corrections et le réexamen aussi. Le lot 6, personnes liées et vues financières, est finalisé pour revue du propriétaire, avec les corrections de confidentialité, de cohérence transactionnelle et d'informations des personnes. Les preuves et limites sont dans [le journal de finalisation](lot6-finalization.md). Aucune fusion ni mise en service n'est autorisée par cette validation technique.
+Périmètre, critères d'acceptation et état des lots dans le [cadrage](missions/mission-003-billing-engine.md). L'outbox durable et le contrôle de mise en service sont en place. Le catalogue académique et le catalogue de frais sont en place. Les obligations, les échéanciers, le journal immuable, l'émission idempotente, les remises, les corrections et le réexamen aussi. Le lot 6, personnes liées et vues financières, a été intégré par [#26](https://github.com/SPX-tech/ScolaPay/pull/26) au commit `0164876`. Les preuves et limites figurent dans [le journal de finalisation](lot6-finalization.md). Les décisions ouvertes de [0023](decisions/0023-personnes-liees-et-vues.md#décisions-ouvertes-pour-le-propriétaire) restent à arbitrer.
 
 **Ensuite, sans ordre arrêté**
 
-- Service de notification, pour remettre les invitations par SMS ou e-mail.
+- Notifications : configurer et vérifier l'e-mail réel après revue, choisir un fournisseur SMS, raccorder la supervision et préciser la conservation. Le socle est construit, voir [le guide](notifications.md).
 - Portail web des familles ([0007](decisions/0007-portail-familles-avant-apk.md)), avec réinitialisation de mot de passe et renouvellement de session. Son ouverture réelle exige la confirmation juridique de [0013](decisions/0013-majorite-et-autorisations-familiales.md).
 - Portage de la caisse, des reçus et de la trésorerie vers `core/`.
 - Contrat d'un prestataire réel, puis besoins de services dédiés ([0008](decisions/0008-go-services-paiement.md)).
@@ -221,7 +225,9 @@ La CI GitHub (`.github/workflows/ci.yml`) est la source de preuve : `core` avec 
 
 Le poste de développement (8 Go) est réservé aux éditions légères. Les commandes locales figurent dans le [README](../README.md).
 
-Derniers résultats : 390 tests pour `core/`, dont 19 nouvelles régressions de finalisation et des JVM réellement tuées pour l'outbox. Les 15 mutations ciblées de la [finalisation du lot 6](lot6-finalization.md#validation) sont détectées, avec un contrôle sain de 390 tests. Les preuves historiques restent distinctes : 23 mutations à la [Mission 002](mission-002-validation.md), 224 sur les lots 1 à 5 de la [Mission 003](mission-003-validation.md), puis 176 sur la version initiale du lot 6. Pour le backend NestJS et le web : 190 tests unitaires, 35 E2E et 47 tests Playwright ; la compilation et le lancement Android relèvent de la [Mission 001](mission-001-validation.md#résultats-finaux), sans nouvelle validation Android.
+La CI de `main` après #26 a validé 390 tests Java. Le socle de notifications a été validé séparément avec 369 tests avant intégration. Les résultats conjoints et leur SHA sont consignés dans [#27](https://github.com/SPX-tech/ScolaPay/pull/27). Le scénario de reprise vérifie l'ordre V7 puis V7_1, la validation des sommes de contrôle et l'absence de rejeu au redémarrage.
+
+Les 15 mutations ciblées de la [finalisation du lot 6](lot6-finalization.md#validation) ont été détectées avant fusion, avec un contrôle sain de 390 tests. Les preuves historiques restent distinctes : 23 mutations à la [Mission 002](mission-002-validation.md), 224 sur les lots 1 à 5 de la [Mission 003](mission-003-validation.md), puis 176 sur la version initiale du lot 6. Pour le backend NestJS et le web : 190 tests unitaires, 35 E2E et 47 tests Playwright ; la compilation et le lancement Android relèvent de la [Mission 001](mission-001-validation.md#résultats-finaux).
 
 ## Carte de la documentation
 

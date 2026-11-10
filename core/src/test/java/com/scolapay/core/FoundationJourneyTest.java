@@ -30,7 +30,8 @@ class FoundationJourneyTest extends IntegrationTest {
         String path = "/api/v2/establishments/" + establishmentId;
 
         // L'administrateur active son compte et le configure.
-        acceptAsNewAccount(created.body().path("firstAdminInvitation").path("token").asString(), "Fatimé Oumar");
+        acceptAsNewAccount(com.scolapay.testsupport.TestInvitationDelivery.token(
+                UUID.fromString(created.body().path("firstAdminInvitation").path("id").asString())), "Fatimé Oumar");
         String admin = login(adminContact, PASSWORD);
         Response affiliations = get("/api/v2/me/affiliations", admin);
         assertThat(affiliations.body().get(0).path("establishment").path("id").asString()).isEqualTo(establishmentId.toString());

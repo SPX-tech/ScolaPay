@@ -408,7 +408,7 @@ class OutboxReliabilityTest {
                     .redirectErrorStream(true)
                     .redirectOutput(log.toFile())
                     .start();
-            Instance instance = new Instance(name, process, new TestApi(port), log);
+            Instance instance = new Instance(name, process, new TestApi(port, jdbc), log);
             instances.add(instance);
             await(name + " prête", () -> {
                 if (!process.isAlive()) {
