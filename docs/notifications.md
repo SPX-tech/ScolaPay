@@ -69,4 +69,18 @@ Un transport implémente `NotificationTransport`, avec un nom stable, un canal e
 
 Le workflow `Notifications` couvre les scénarios du chantier sur un PostgreSQL jetable et un faux fournisseur local. La CI générale couvre le reste du backend Java et démarre le JAR. Aucun build ni test lourd ne s'exécute sur le poste ou le VPS.
 
-Résultats finaux : à renseigner après la validation de la tête de branche.
+Code validé : `d7224bd` (les commits suivants de clôture ne changent que la documentation).
+
+| Vérification | Résultat | Preuve |
+| --- | --- | --- |
+| Suite ciblée, PostgreSQL réel et fournisseur local | 50 tests, aucun échec ni test ignoré | [Notifications](https://github.com/SPX-tech/ScolaPay/actions/runs/42850922300) |
+| Suite Java complète et JAR exécutable | 369 tests, dont 39 nouveaux, aucun échec ni test ignoré. JAR démarré et surface publique vérifiée | [CI générale](https://github.com/SPX-tech/ScolaPay/actions/runs/42851059251) |
+| Images et proxy | Contrôle vert | [Containers](https://github.com/SPX-tech/ScolaPay/actions/runs/42851227492) |
+| Confidentialité avant correction | Deux échecs sur le jeton présent dans le JSON | [Régression initiale](https://github.com/SPX-tech/ScolaPay/actions/runs/42844917675) |
+| Annulation HTTP avant correction | Un échec prouve qu'une expiration de future n'annulait pas l'appel | [Régression de ressources](https://github.com/SPX-tech/ScolaPay/actions/runs/42850557595) |
+
+Deux JVM sont réellement tuées : après le commit et avant le listener, puis après l'acceptation par le fournisseur et avant la confirmation en base. Le second cas produit deux appels identiques et un seul effet côté fournisseur de test. Le test a aussi détecté puis fait corriger l'ordre JSON instable entre JVM.
+
+Le délai HTTP porte sur la lecture complète du corps. Au dépassement, la future encore en cours reçoit `cancel(true)`, selon le [contrat du JDK](https://docs.oracle.com/en/java/javase/25/docs/api/java.net.http/java/net/http/HttpClient.html). Ce geste vise à libérer les ressources ; il ne prouve pas que le fournisseur n'a pas reçu la demande. Les réponses excessives sont annulées à 8 Kio.
+
+Livraison pour revue : [PR #27](https://github.com/SPX-tech/ScolaPay/pull/27). Les contrôles du dernier commit documentaire sont visibles dans cette PR. Aucun appel au fournisseur réel, aucun SMS ni contrôle de délivrabilité en boîte n'est présenté comme testé.
