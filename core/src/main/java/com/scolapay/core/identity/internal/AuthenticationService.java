@@ -57,7 +57,8 @@ public class AuthenticationService {
     /**
      * Renvoie vide au lieu de lever une exception : le compteur d'échecs doit être validé.
      * Identifiant inconnu, mot de passe faux, compte verrouillé ou désactivé sont
-     * indiscernables pour l'appelant, y compris en temps de réponse.
+     * traités par la même réponse. Le hash leurre limite les écarts de coût sans
+     * garantir un temps constant ; les mots de passe trop longs sont refusés avant BCrypt.
      */
     @Transactional
     public Optional<IssuedToken> login(String rawIdentifier, String password) {
