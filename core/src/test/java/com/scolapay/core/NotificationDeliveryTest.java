@@ -95,6 +95,9 @@ class NotificationDeliveryTest {
         assertThat(transport.sent.getFirst().text()).contains("ScolaPay", "Jeton : ");
         assertThat(transport.sent.getFirst().idempotencyKey()).isEqualTo("notification/" + invitation.id());
         assertThat(payload(invitation.id())).isNull();
+        String token = transport.sent.getFirst().text().split("Jeton : ")[1].split("\\s")[0];
+        assertThat(api.accept(token).status()).isEqualTo(200);
+        assertThat(api.login(invitation.contact(), IntegrationTest.PASSWORD)).isNotBlank();
     }
 
     @Test
@@ -104,6 +107,8 @@ class NotificationDeliveryTest {
         worker.runOnce();
         assertThat(state(invitation.id())).isEqualTo("RETRY");
         assertThat(payload(invitation.id())).isNotBlank();
+        worker.runOnce();
+        assertThat(transport.sent).hasSize(1);
         transport.result.set(NotificationTransport.Result.submitted(UUID.randomUUID().toString()));
         due(invitation.id());
         worker.runOnce();
@@ -113,7 +118,7 @@ class NotificationDeliveryTest {
     }
 
     @Test
-    void unBailAbandonneEstReprisEtUnAncienProprietaireNePeutPasConfirmer() {
+    void unBailAbandonneEstRepris() {
         Issued invitation = issue();
         jdbc.sql("UPDATE notification_messages SET state='PROCESSING', attempts=1, lease_token=:lease, lease_until=now()-interval '1 minute', first_attempt_at=now()-interval '2 minutes' WHERE id=:id")
                 .param("lease", UUID.randomUUID()).param("id", invitation.id()).update();
@@ -261,7 +266,7 @@ class NotificationDeliveryTest {
     }
 
     @Test
-    void unCanalRetireOuUneCleIllisibleConserveLaChargePourDiagnostic() {
+    void unCanalRetireConserveLaChargeEtReprendApresRestauration() {
         Issued invitation = issue();
         jdbc.sql("UPDATE notification_messages SET transport='absent' WHERE id=:id").param("id", invitation.id()).update();
         worker.runOnce();
@@ -292,6 +297,19 @@ class NotificationDeliveryTest {
         worker.runOnce();
         assertThat(state(invitation.id())).isEqualTo("UNKNOWN");
         assertThat(transport.sent).hasSize(1);
+        worker.runOnce();
+        assertThat(transport.sent).hasSize(1);
+    }
+
+    @Test
+    void huitReservationsEpuisentLesReprisesAutomatiques() {
+        Issued invitation = issue();
+        jdbc.sql("UPDATE notification_messages SET attempts=7, first_attempt_at=now()-interval '1 minute' WHERE id=:id")
+                .param("id", invitation.id()).update();
+        transport.result.set(NotificationTransport.Result.retry("TRANSPORT_UNAVAILABLE"));
+        worker.runOnce();
+        assertThat(state(invitation.id())).isEqualTo("UNKNOWN");
+        assertThat(payload(invitation.id())).isNull();
         worker.runOnce();
         assertThat(transport.sent).hasSize(1);
     }

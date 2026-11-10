@@ -23,6 +23,7 @@ class NotificationTransports {
             }
         }
         transports = candidates.stream().collect(Collectors.toUnmodifiableMap(NotificationTransport::name, Function.identity()));
+        for (Channel channel : Channel.values()) forChannel(channel);
     }
 
     Optional<NotificationTransport> forChannel(Channel channel) {
