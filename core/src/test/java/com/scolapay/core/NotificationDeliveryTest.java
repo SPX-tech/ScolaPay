@@ -35,9 +35,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Import(NotificationDeliveryTest.TransportConfiguration.class)
 class NotificationDeliveryTest {
 
+    private static final String DATABASE_URL = TestDatabases.createEmpty();
+
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", TestDatabases.POSTGRES::getJdbcUrl);
+        registry.add("spring.datasource.url", () -> DATABASE_URL);
         registry.add("spring.datasource.username", TestDatabases.POSTGRES::getUsername);
         registry.add("spring.datasource.password", TestDatabases.POSTGRES::getPassword);
         registry.add("scolapay.security.jwt-secret", () -> IntegrationTest.JWT_SECRET);
@@ -61,8 +63,10 @@ class NotificationDeliveryTest {
     @BeforeEach
     void prepare() {
         api = new TestApi(environment.getRequiredProperty("local.server.port", Integer.class));
+        jdbc.sql("DELETE FROM notification_messages").update();
         transport.result.set(NotificationTransport.Result.submitted(UUID.randomUUID().toString()));
         transport.sent.clear();
+        transport.script.set(null);
     }
 
     record Issued(UUID id, UUID school, String contact) {}
@@ -127,6 +131,36 @@ class NotificationDeliveryTest {
         assertThat(transport.sent).hasSize(1);
         worker.runOnce();
         assertThat(transport.sent).hasSize(1);
+    }
+
+    @Test
+    void unAncienProprietaireNePeutEcraserLeResultatDeLaReprise() throws Exception {
+        Issued invitation = issue();
+        var entered = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        transport.script.set(message -> {
+            if (calls.incrementAndGet() == 1) {
+                entered.countDown();
+                try { assertThat(release.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue(); }
+                catch (InterruptedException interrupted) { throw new IllegalStateException(interrupted); }
+                return NotificationTransport.Result.failed("TRANSPORT_REJECTED");
+            }
+            return NotificationTransport.Result.submitted(UUID.randomUUID().toString());
+        });
+        try (var executor = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            var first = executor.submit(worker::runOnce);
+            try {
+                assertThat(entered.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                jdbc.sql("UPDATE notification_messages SET lease_until=now()-interval '1 second' WHERE id=:id")
+                        .param("id", invitation.id()).update();
+                worker.runOnce();
+                assertThat(state(invitation.id())).isEqualTo("SUBMITTED");
+            } finally { release.countDown(); }
+            first.get(10, java.util.concurrent.TimeUnit.SECONDS);
+        }
+        assertThat(state(invitation.id())).isEqualTo("SUBMITTED");
+        assertThat(transport.sent).hasSize(2);
     }
 
     @Test
@@ -259,13 +293,14 @@ class NotificationDeliveryTest {
     static class ScriptedTransport implements NotificationTransport {
         final List<Message> sent = new CopyOnWriteArrayList<>();
         final AtomicReference<Result> result = new AtomicReference<>();
+        final AtomicReference<java.util.function.Function<Message, Result>> script = new AtomicReference<>();
         @Override public String name() { return "scripted"; }
         @Override public boolean supports(Notifications.Channel channel) { return channel == Notifications.Channel.EMAIL; }
         @Override public Duration idempotencyWindow() { return Duration.ofHours(23); }
         @Override public Result send(Message message) {
             assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
             sent.add(message);
-            return result.get();
+            return script.get() == null ? result.get() : script.get().apply(message);
         }
     }
 }

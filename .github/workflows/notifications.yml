@@ -33,4 +33,6 @@ jobs:
         if: always()
         with:
           name: notification-test-reports
-          path: core/target/surefire-reports/
+          path: |
+            core/target/surefire-reports/
+            core/target/notification-probe/
