@@ -16,6 +16,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.dao.DataAccessException;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import tools.jackson.databind.JsonNode;
@@ -24,6 +26,7 @@ import tools.jackson.databind.JsonNode;
 class Lot6FinalizationRegressionTest extends BillingScenarioTest {
     @MockitoSpyBean ObligationRepository obligations;
     @MockitoSpyBean BillingPartyRepository parties;
+    @Autowired PlatformTransactionManager transactions;
 
     record Billed(School school, UUID student, UUID obligation, Linked linked, UUID party) {}
 
@@ -174,6 +177,49 @@ class Lot6FinalizationRegressionTest extends BillingScenarioTest {
                     """).param("establishment",tenant.id()).param("obligation",billed.obligation()).param("party",billed.party())
                     .param("role",role).param("actor",get("/api/v2/me",tenant.adminToken()).id("id")).update())
                     .as("Un rôle sans statut ne peut porter d'engagement : "+role).isInstanceOf(DataAccessException.class);
+        }
+    }
+
+    @Test
+    void toutesLesCombinaisonsNullDeConfirmationSontControleesEnInsertionEtMiseAJour() throws Exception {
+        School school=school();
+        Tenant tenant=school.tenant();
+        UUID student=enrolledAndBilled(school);
+        Linked linked=linkedThirdParty(tenant,student,false);
+        UUID party=partyId(createParty(tenant,"PERSON","Personne liée",null,linked.grant()));
+        UUID obligation=obligationOf(student);
+        UUID actor=get("/api/v2/me",tenant.adminToken()).id("id");
+        var allowed=java.util.Set.of("CONTRACTUAL_DEBTOR:UNCONFIRMED:0","CONTRACTUAL_DEBTOR:CONFIRMED:7",
+                "FINANCIAL_RESPONSIBLE:null:0","VOLUNTARY_CONTRIBUTOR:null:0");
+        for(String role:List.of("CONTRACTUAL_DEBTOR","FINANCIAL_RESPONSIBLE","VOLUNTARY_CONTRIBUTOR")) {
+            for(String state:new String[]{null,"UNCONFIRMED","CONFIRMED"}) {
+                for(int mask=0;mask<8;mask++) {
+                    for(boolean update:new boolean[]{false,true}) {
+                        int fields=mask;
+                        String caseName=role+":"+state+":"+fields;
+                        Runnable attempt=() -> new TransactionTemplate(transactions).executeWithoutResult(tx -> {
+                            UUID id=UUID.randomUUID();
+                            if(update) jdbc.sql("""
+                                    INSERT INTO obligation_parties(id,establishment_id,obligation_id,party_id,role,debtor_status,designated_at,designated_by)
+                                    VALUES(:id,:establishment,:obligation,:party,:role,:state,now(),:actor)
+                                    """).param("id",id).param("establishment",tenant.id()).param("obligation",obligation).param("party",party)
+                                    .param("role",role).param("state",role.equals("CONTRACTUAL_DEBTOR")?"UNCONFIRMED":null).param("actor",actor).update();
+                            String sql=update
+                                    ? "UPDATE obligation_parties SET debtor_status=:state,commitment_reference=:reference,confirmed_at=:at,confirmed_by=:by WHERE id=:id"
+                                    : "INSERT INTO obligation_parties(id,establishment_id,obligation_id,party_id,role,debtor_status,commitment_reference,confirmed_at,confirmed_by,designated_at,designated_by) VALUES(:id,:establishment,:obligation,:party,:role,:state,:reference,:at,:by,now(),:actor)";
+                            var command=jdbc.sql(sql).param("id",id).param("state",state)
+                                    .param("reference",(fields&1)!=0?"CONTRAT":null)
+                                    .param("at",(fields&2)!=0?java.sql.Timestamp.from(java.time.Instant.now()):null)
+                                    .param("by",(fields&4)!=0?actor:null);
+                            if(!update) command.param("establishment",tenant.id()).param("obligation",obligation).param("party",party).param("role",role).param("actor",actor);
+                            command.update();
+                            tx.setRollbackOnly();
+                        });
+                        if(allowed.contains(caseName)) org.assertj.core.api.Assertions.assertThatCode(attempt::run).as(caseName+" update="+update).doesNotThrowAnyException();
+                        else assertThatThrownBy(attempt::run).as(caseName+" update="+update).isInstanceOf(DataAccessException.class);
+                    }
+                }
+            }
         }
     }
 }
