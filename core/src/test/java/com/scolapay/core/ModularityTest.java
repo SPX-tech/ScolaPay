@@ -19,6 +19,6 @@ class ModularityTest {
     @Test
     void lesModulesAttendusExistent() {
         assertThat(modules.stream().map(ApplicationModule::getIdentifier).map(Object::toString))
-                .containsExactlyInAnyOrder("shared", "audit", "identity", "establishment", "schooling", "billing");
+                .containsExactlyInAnyOrder("shared", "audit", "identity", "establishment", "schooling", "billing", "notifications");
     }
 }

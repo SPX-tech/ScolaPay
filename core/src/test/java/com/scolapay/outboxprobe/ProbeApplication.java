@@ -20,7 +20,8 @@ public final class ProbeApplication {
     private ProbeApplication() {}
 
     public static void main(String[] args) {
-        new SpringApplicationBuilder(ScolaPayCoreApplication.class, ProbeConfiguration.class).run(args);
+        new SpringApplicationBuilder(ScolaPayCoreApplication.class, ProbeConfiguration.class,
+                com.scolapay.testsupport.TestInvitationDelivery.class).run(args);
     }
 
     @Configuration(proxyBeanMethods = false)

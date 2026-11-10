@@ -4,6 +4,9 @@ import com.scolapay.core.audit.AuditTrail;
 import com.scolapay.core.identity.CurrentActor;
 import com.scolapay.core.identity.InvitationHandler;
 import com.scolapay.core.identity.Invitations;
+import com.scolapay.core.identity.InvitationDelivery;
+import com.scolapay.core.identity.InvitationDispatchState;
+import com.scolapay.core.shared.PortalProperties;
 import com.scolapay.core.shared.ApiException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -21,13 +24,14 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 @Service
-public class InvitationService implements Invitations {
+public class InvitationService implements Invitations, InvitationDispatchState {
 
     public record AcceptanceResult(UUID accountId, String purpose, UUID establishmentId) {}
 
@@ -42,6 +46,8 @@ public class InvitationService implements Invitations {
     private final AuditTrail audit;
     private final JsonMapper json;
     private final Clock clock;
+    private final ObjectProvider<InvitationDelivery> delivery;
+    private final PortalProperties portal;
     private final Map<String, InvitationHandler> handlers;
     private final SecureRandom random = new SecureRandom();
 
@@ -54,7 +60,9 @@ public class InvitationService implements Invitations {
             AuditTrail audit,
             JsonMapper json,
             Clock clock,
-            List<InvitationHandler> handlers) {
+            List<InvitationHandler> handlers,
+            ObjectProvider<InvitationDelivery> delivery,
+            PortalProperties portal) {
         this.invitations = invitations;
         this.accounts = accounts;
         this.authentication = authentication;
@@ -63,6 +71,8 @@ public class InvitationService implements Invitations {
         this.audit = audit;
         this.json = json;
         this.clock = clock;
+        this.delivery = delivery;
+        this.portal = portal;
         this.handlers = handlers.stream().collect(Collectors.toMap(InvitationHandler::purpose, Function.identity()));
     }
 
@@ -71,6 +81,10 @@ public class InvitationService implements Invitations {
     public Issued issue(NewInvitation invitation) {
         if (!handlers.containsKey(invitation.purpose())) {
             throw new IllegalArgumentException("Aucun handler pour l'invitation " + invitation.purpose());
+        }
+        InvitationDelivery channel = delivery.getIfAvailable();
+        if (channel == null || !channel.supports(invitation.contact().kind())) {
+            throw ApiException.conflict("INVITATION_CHANNEL_UNAVAILABLE", "Aucun canal de remise n'est disponible pour ce contact.");
         }
         byte[] bytes = new byte[TOKEN_BYTES];
         random.nextBytes(bytes);
@@ -96,7 +110,24 @@ public class InvitationService implements Invitations {
                 "invitation",
                 id,
                 Map.of("purpose", invitation.purpose(), "contactKind", invitation.contact().kind().name()));
-        return new Issued(id, token, expiresAt);
+        channel.deliver(id, invitation.contact(), token, expiresAt);
+        return new Issued(id, expiresAt);
+    }
+
+    @Override
+    public boolean isDeliverable(UUID invitationId) {
+        return invitations.deliverablePurpose(invitationId, clock.instant())
+                .filter(purpose -> !purpose.startsWith("schooling.") || portal.enabled()).isPresent();
+    }
+
+    @Override
+    public InvitationDelivery.Report deliveryStatus(UUID establishmentId, UUID invitationId) {
+        if (!invitations.belongsTo(establishmentId, invitationId)) {
+            throw ApiException.notFound("INVITATION_NOT_FOUND", "Invitation introuvable.");
+        }
+        InvitationDelivery channel = delivery.getIfAvailable();
+        return channel == null ? new InvitationDelivery.Report("UNAVAILABLE", 0, null, "CHANNEL_UNAVAILABLE")
+                : channel.status(invitationId);
     }
 
     @Override
