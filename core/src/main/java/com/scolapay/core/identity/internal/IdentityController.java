@@ -3,6 +3,8 @@ package com.scolapay.core.identity.internal;
 import com.scolapay.core.identity.CurrentActor;
 import com.scolapay.core.identity.Identifier;
 import com.scolapay.core.shared.ApiException;
+import com.scolapay.core.identity.internal.AuthAbuseSettings.Endpoint;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -39,28 +41,34 @@ class IdentityController {
     private final InvitationService invitations;
     private final AccountRepository accounts;
     private final CurrentActor actor;
+    private final PublicAuthGuard guard;
 
     IdentityController(
             AuthenticationService authentication,
             InvitationService invitations,
             AccountRepository accounts,
-            CurrentActor actor) {
+            CurrentActor actor,
+            PublicAuthGuard guard) {
         this.authentication = authentication;
         this.invitations = invitations;
         this.accounts = accounts;
         this.actor = actor;
+        this.guard = guard;
     }
 
     @PostMapping("/auth/login")
-    TokenResponse login(@Valid @RequestBody LoginRequest request) {
-        AuthenticationService.IssuedToken token = authentication.login(request.identifier(), request.password())
-                .orElseThrow(() -> ApiException.unauthorized("INVALID_CREDENTIALS", "Identifiants incorrects."));
-        return new TokenResponse(token.accessToken(), "Bearer", token.expiresInSeconds());
+    TokenResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
+        return guard.execute(http, Endpoint.LOGIN, request.identifier(), () -> {
+            AuthenticationService.IssuedToken token = authentication.login(request.identifier(), request.password())
+                    .orElseThrow(() -> ApiException.unauthorized("INVALID_CREDENTIALS", "Identifiants incorrects."));
+            return new TokenResponse(token.accessToken(), "Bearer", token.expiresInSeconds());
+        });
     }
 
     @PostMapping("/invitations/accept")
-    InvitationService.AcceptanceResult acceptInvitation(@Valid @RequestBody AcceptInvitationRequest request) {
-        return invitations.accept(request.token(), request.fullName(), request.password());
+    InvitationService.AcceptanceResult acceptInvitation(@Valid @RequestBody AcceptInvitationRequest request, HttpServletRequest http) {
+        return guard.execute(http, Endpoint.INVITATIONS, request.token(),
+                () -> invitations.accept(request.token(), request.fullName(), request.password()));
     }
 
     @GetMapping("/me")
