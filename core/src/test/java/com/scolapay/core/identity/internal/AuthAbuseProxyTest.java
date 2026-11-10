@@ -96,4 +96,13 @@ class AuthAbuseProxyTest {
         assertThatThrownBy(() -> new AuthAbuseSettings(new MockEnvironment().withProperty("server.tomcat.remoteip.remote-ip-header", "X-Forwarded-For")))
                 .hasMessage("AUTH_FORWARDING_CONFIGURATION_CONFLICT");
     }
+
+    @Test
+    void lesAliasEnvironnementNeContournentPasLeControleDuForwarding() {
+        var environment = new MockEnvironment();
+        environment.getPropertySources().addFirst(new org.springframework.core.env.SystemEnvironmentPropertySource(
+                "test-environment", java.util.Map.of("SERVER_TOMCAT_REMOTEIP_REMOTEIPHEADER", "X-Forwarded-For")));
+        org.springframework.boot.context.properties.source.ConfigurationPropertySources.attach(environment);
+        assertThatThrownBy(() -> new AuthAbuseSettings(environment)).hasMessage("AUTH_FORWARDING_CONFIGURATION_CONFLICT");
+    }
 }

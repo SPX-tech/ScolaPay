@@ -113,8 +113,14 @@ class AuthAbuseHttpTest {
         var context = start();
         String password = "a".repeat(72);
         String contact = account(context, password);
-        assertThat(post(context, "/api/v2/auth/login", loginBody(contact, password), Map.of()).statusCode()).isEqualTo(200);
+        var authenticated = post(context, "/api/v2/auth/login", loginBody(contact, password), Map.of());
+        assertThat(authenticated.statusCode()).isEqualTo(200);
         assertThat(post(context, "/api/v2/auth/login", loginBody(contact, password+"suffixe"), Map.of()).statusCode()).isEqualTo(401);
+        String token = JSON.readTree(authenticated.body()).path("accessToken").asString();
+        var changed = post(context, "/api/v2/me/password", JSON.writeValueAsString(Map.of(
+                "currentPassword", password+"suffixe", "newPassword", "une-autre-phrase-solide")), Map.of("Authorization", "Bearer "+token));
+        assertThat(changed.statusCode()).isEqualTo(403);
+        assertThat(post(context, "/api/v2/auth/login", loginBody(contact, password), Map.of()).statusCode()).isEqualTo(200);
     }
 
     @Test
@@ -299,7 +305,7 @@ class AuthAbuseHttpTest {
         String hash = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
                 .digest(token.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         jdbc.sql("INSERT INTO establishments(id,code,name,kind,timezone,currency,country_code,created_at,updated_at) VALUES(:id,:code,'Établissement test','SCHOOL','Africa/Ndjamena','XAF','TD',now(),now())")
-                .param("id", school).param("code", "T-"+school.toString().substring(0,8)).update();
+                .param("id", school).param("code", "T-"+school.toString().substring(0,8).toUpperCase(java.util.Locale.ROOT)).update();
         jdbc.sql("INSERT INTO invitations(id,token_hash,contact_kind,contact_value,purpose,establishment_id,attributes,expires_at,created_at) VALUES(:id,:hash,'EMAIL',:contact,'establishment.staff',:school,'{\"role\":\"CASHIER\"}'::jsonb,now()+interval '1 hour',now())")
                 .param("id", invitation).param("hash", hash).param("contact", contact).param("school", school).update();
         for (int index=0; index<2; index++) {

@@ -41,6 +41,7 @@ public final class AuthAbuseRejection extends RuntimeException {
         if (retryAfter > 0) response.setHeader("Retry-After", Integer.toString(retryAfter));
         // Toutes les chaînes sont des constantes internes, jamais des données de la requête.
         response.getWriter().write("{\"type\":\"about:blank\",\"status\":" + status
-                + ",\"code\":\"" + code + "\",\"detail\":\"" + detail + "\"}");
+                + ",\"title\":\"" + org.springframework.http.HttpStatus.valueOf(status).getReasonPhrase()
+                + "\",\"code\":\"" + code + "\",\"detail\":\"" + detail + "\"}");
     }
 }
