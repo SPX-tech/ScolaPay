@@ -28,7 +28,9 @@ Une décision mérite une entrée ici lorsqu'elle est coûteuse à inverser ou q
 | [0020](0020-catalogue-de-frais-et-periodes.md) | Catalogue de frais, périodes de facturation et identité des charges | Acceptée | En place |
 | [0021](0021-obligations-et-journal.md) | Obligations, échéanciers et journal | Acceptée | En place, sans aucun encaissement |
 | [0022](0022-ajustements-et-reexamen.md) | Remises, corrections, annulations et réexamen | Acceptée | En place, sans aucun encaissement |
-| [0025](0025-protection-authentification-publique.md) | Protection des API publiques d'authentification | Acceptée, développement validé | Intégration différée après #26 puis #27 ; contention et collisions à mesurer avant montée en charge |
+| [0023](0023-personnes-liees-et-vues.md) | Personnes liées à une obligation et vues par rôle | Périmètre du lot 6 validé, questions métier ouvertes | Intégré dans `main` par #26, portail fermé, aucun encaissement |
+| [0024](0024-notifications-et-remise-des-invitations.md) | Notifications et remise sécurisée des invitations | Socle, protocole et principe des canaux acceptés | Intégré dans `main` par #27, remise désactivée par défaut et politique à implémenter avant Families |
+| [0025](0025-protection-authentification-publique.md) | Protection des API publiques d'authentification | Acceptée, développement validé | #28 actualisée après #26 et #27, en brouillon. Contention et collisions à mesurer avant montée en charge |
 
 ## Statuts
 

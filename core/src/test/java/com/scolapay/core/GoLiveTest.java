@@ -53,12 +53,13 @@ class GoLiveTest {
 
     @Test
     void parDefautLePortailEstFermeAuxFamilles() {
-        TestApi api = start(false);
+        TestApi api = start(true);
         School school = api.newSchool();
         UUID minor = school.newStudent();
         UUID adult = school.newStudent(LocalDate.of(2000, 1, 1));
 
         assertThat(api.get("/api/v2/me/students", school.adminToken()).status()).isEqualTo(404);
+        assertThat(api.get("/api/v2/me/billing/obligations", school.adminToken()).status()).as("Portail fermé, ces routes n'existent pas").isEqualTo(404);
         assertThat(api.get("/api/v2/me/students/" + minor, school.adminToken()).status()).isEqualTo(404);
 
         Reply thirdParty = inviteThirdParty(school, minor);
@@ -76,7 +77,7 @@ class GoLiveTest {
 
     @Test
     void lesAutresEtablissementsNeDecouvrentPasLeDossierParLaFermeture() {
-        TestApi api = start(false);
+        TestApi api = start(true);
         School owner = api.newSchool();
         School other = api.newSchool();
         UUID student = owner.newStudent();
@@ -84,7 +85,7 @@ class GoLiveTest {
         Reply refused = api.post(
                 owner.path("/students/" + student + "/third-party-invitations"),
                 other.adminToken(),
-                Map.of("contact", IntegrationTest.uniqueEmail(), "relationship", "MOTHER", "academicAccess", true, "financialContributor", false));
+                Map.of("contact", IntegrationTest.uniqueEmail(), "relationship", "MOTHER", "academicAccess", true));
 
         assertThat(refused.status()).as("L'isolation passe avant l'état du portail").isEqualTo(404);
     }
@@ -171,7 +172,7 @@ class GoLiveTest {
         return school.api().post(
                 school.path("/students/" + student + "/third-party-invitations"),
                 school.adminToken(),
-                Map.of("contact", IntegrationTest.uniqueEmail(), "relationship", "MOTHER", "academicAccess", true, "financialContributor", false));
+                Map.of("contact", IntegrationTest.uniqueEmail(), "relationship", "MOTHER", "academicAccess", true));
     }
 
     private static Reply inviteAdult(School school, UUID student) {

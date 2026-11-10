@@ -41,6 +41,14 @@ class StaffRoleTest {
         assertThat(StaffRole.CASHIER.grants(Permission.BILLING_ADJUST)).isFalse();
     }
 
+    @Test
+    void seulsLAdministrateurEtLeComptableGerentLesPersonnesLiees() {
+        for (StaffRole role : StaffRole.values()) {
+            assertThat(role.grants(Permission.BILLING_PARTIES_MANAGE)).as(role.name())
+                    .isEqualTo(role == StaffRole.ESTABLISHMENT_ADMIN || role == StaffRole.ACCOUNTANT);
+        }
+    }
+
     /** Confirmer ou opérer sans lire le motif reviendrait à décider à l'aveugle. */
     @Test
     void quiOpereOuConfirmeLitLesMotifs() {

@@ -43,7 +43,6 @@ public class SchoolingService implements StudentDirectory {
             String kind,
             String relationship,
             boolean academicAccess,
-            boolean financialContributor,
             Instant grantedAt,
             Instant revokedAt) {}
 
@@ -59,12 +58,11 @@ public class SchoolingService implements StudentDirectory {
             String access,
             String relationship,
             boolean academicAccess,
-            boolean financialContributor,
             String studentNumber,
             List<Enrollment> enrollments) {}
 
     public record ThirdPartyView(
-            UUID grantId, String fullName, String relationship, boolean academicAccess, boolean financialContributor) {}
+            UUID grantId, String fullName, String relationship, boolean academicAccess) {}
 
     private static final Map<String, Set<String>> YEAR_TRANSITIONS = Map.of(
             "OPEN", Set.of("PLANNED"),
@@ -268,14 +266,10 @@ public class SchoolingService implements StudentDirectory {
             UUID studentId,
             String contact,
             String relationship,
-            boolean academicAccess,
-            boolean financialContributor) {
+            boolean academicAccess) {
         UUID actorId = access.require(establishmentId, Permission.GUARDIANS_MANAGE);
         portal.requireOpen();
         Student student = requireStudent(establishmentId, studentId);
-        if (!academicAccess && !financialContributor) {
-            throw ApiException.invalid("NO_CAPABILITY", "Le lien doit accorder au moins un droit.");
-        }
         if (academicAccess) {
             requireMinor(student, establishments.find(establishmentId).orElseThrow());
         }
@@ -286,8 +280,7 @@ public class SchoolingService implements StudentDirectory {
                 studentId,
                 Map.of(
                         ThirdPartyInvitationHandler.RELATIONSHIP_ATTRIBUTE, relationship,
-                        ThirdPartyInvitationHandler.ACADEMIC_ATTRIBUTE, String.valueOf(academicAccess),
-                        ThirdPartyInvitationHandler.FINANCIAL_ATTRIBUTE, String.valueOf(financialContributor)),
+                        ThirdPartyInvitationHandler.ACADEMIC_ATTRIBUTE, String.valueOf(academicAccess)),
                 actorId));
     }
 
@@ -333,7 +326,6 @@ public class SchoolingService implements StudentDirectory {
                         grant.kind(),
                         grant.relationship(),
                         grant.revokedAt() == null && AcademicAccess.allowed(grant, student, establishment, clock),
-                        grant.financialContributor(),
                         grant.grantedAt(),
                         grant.revokedAt()))
                 .toList();
@@ -382,7 +374,6 @@ public class SchoolingService implements StudentDirectory {
                                     grant.kind(),
                                     grant.relationship(),
                                     academic,
-                                    grant.financialContributor(),
                                     academic ? student.studentNumber() : null,
                                     academic ? repository.listEnrollments(establishment.id(), student.id()) : List.of());
                         }));
@@ -405,8 +396,7 @@ public class SchoolingService implements StudentDirectory {
                         grant.id(),
                         accounts.get(grant.accountId()).fullName(),
                         grant.relationship(),
-                        AcademicAccess.allowed(grant, student, establishment, clock),
-                        grant.financialContributor()))
+                        AcademicAccess.allowed(grant, student, establishment, clock)))
                 .toList();
     }
 
@@ -456,8 +446,27 @@ public class SchoolingService implements StudentDirectory {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UUID> financialContributorAccounts(UUID establishmentId, UUID studentId) {
-        return repository.financialContributorAccounts(establishmentId, studentId);
+    public Optional<StudentLink> linkOf(UUID establishmentId, UUID studentId, UUID accountId) {
+        // Chercher le dossier dans cet établissement suffit : une clé composite lie chaque lien à l'établissement de son dossier.
+        Optional<Student> student = repository.findStudent(establishmentId, studentId);
+        Optional<Grant> grant = repository.activeGrant(accountId, studentId);
+        if (grant.isEmpty() || student.isEmpty()) {
+            return Optional.empty();
+        }
+        Establishments.Establishment establishment = establishments.find(establishmentId).orElseThrow();
+        return Optional.of(new StudentLink(AcademicAccess.allowed(grant.get(), student.get(), establishment, clock)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<UUID> accountOfLink(UUID establishmentId, UUID grantId) {
+        return repository.accountOfActiveGrant(establishmentId, grantId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> linkedStudentIds(UUID establishmentId, UUID accountId) {
+        return repository.linkedStudentIds(establishmentId, accountId);
     }
 
     private Student requireStudent(UUID establishmentId, UUID studentId) {

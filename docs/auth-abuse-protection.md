@@ -95,14 +95,13 @@ La campagne devra faire varier le nombre d'instances, la taille des cohortes et 
 
 Les résultats permettront de revoir les seuils, le dimensionnement ou l'architecture si un problème est démontré. Ils ne justifient pas par avance l'ajout de Redis. Aucun engagement de capacité ou seuil d'acceptation chiffré n'est inventé avant ces mesures.
 
-## Intégration différée
+## Intégration avec le lot 6 et les notifications
 
-1. Intégrer et valider #26, puis #27, selon leurs revues autorisées.
-2. Remettre #28 à jour depuis ce `main` et résoudre les conflits sans supprimer les assertions métier ou de sécurité.
-3. Exécuter la validation complète des trois chantiers sur PostgreSQL vierge dans GitHub Actions : migrations **V7 → V7_1 → V7_2**, vérification des sommes de contrôle, redémarrage sans rejeu des migrations versionnées, parcours financiers, invitations, protection anti-abus et JAR.
-4. Consigner les SHA et les résultats conjoints, puis effectuer une nouvelle revue avant toute décision de fusion de #28. Un déploiement reste une décision séparée.
+#26 et #27 sont intégrées dans `main`. La branche de #28 reprend par merge commit le SHA `212b6d3f6c3206b527fff5e17d83638a0882e637`. Les conflits du README, du contexte projet et de l'index des ADR ont été résolus en conservant les décisions des trois chantiers. Le code conserve l'ordre de la chaîne Spring Security, les bornes HTTP, les réglages de proxy et la remise désactivée par défaut.
 
-Ne pas activer `outOfOrder`, réparer l'historique ou modifier des migrations existantes pour masquer un problème d'intégration. Les résultats du socle ci-dessous ne sont pas une validation conjointe des trois PR. Le code de #28 reste inchangé pendant cette attente.
+Le scénario `NotificationRecoveryTest` vérifie les neuf migrations sur PostgreSQL vierge et compare l'historique avant et après arrêt brutal, puis appelle `Flyway.validate()`. L'invitation est reprise par le transport local tandis qu'un quota consommé avant l'arrêt reste applicable. Le 429 générique laisse le jeton utilisable et ne crée aucun compte. Après recharge simulée sur la base jetable, le destinataire accepte l'invitation et utilise ses droits d'administrateur sur les personnes financières. La route financière Families reste fermée.
+
+Les tests de proxy, de saturation, de confidentialité, de verrouillage, de révocation, de longueur BCrypt, d'acceptation familiale et d'isolation financière sont conservés. Les migrations suivent **V7 → V7_1 → V7_2**, avec les scripts d'origine et sans `outOfOrder` ni réparation. La PR #28 associe les exécutions ciblées et complètes au SHA d'intégration.
 
 ## Preuves
 
@@ -118,4 +117,4 @@ Résultats du code `5a02b9b`, repris sans changement fonctionnel dans `985ca9b` 
 
 La [PR #28](https://github.com/SPX-tech/ScolaPay/pull/28) contient les résultats et le statut des contrôles de clôture documentaires.
 
-La première exécution a démontré l'absence de limitation d'origine. Les vérifications ultérieures ont détecté l'acceptation d'un suffixe après 72 octets. Elles couvrent également les alias d'environnement du forwarding, avec une source de configuration représentative de celle de Spring Boot. Les liens et résultats définitifs sont consignés dans la PR. La validation des chantiers #26, #27 et de ce chantier réunis reste à effectuer après leur intégration.
+La première exécution a démontré l'absence de limitation d'origine. Les vérifications ultérieures ont détecté l'acceptation d'un suffixe après 72 octets. Elles couvrent également les alias d'environnement du forwarding, avec une source de configuration représentative de celle de Spring Boot. Ces résultats concernent le socle avant intégration. Les preuves conjointes figurent séparément dans la PR #28.

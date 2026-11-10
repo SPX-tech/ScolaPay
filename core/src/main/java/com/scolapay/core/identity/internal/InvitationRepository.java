@@ -105,4 +105,23 @@ public class InvitationRepository {
                 .param("now", Columns.timestamp(now))
                 .update();
     }
+
+    public Optional<String> deliverablePurpose(UUID id, Instant now) {
+        return jdbc.sql("SELECT purpose FROM invitations WHERE id=:id AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > :now")
+                .param("id", id).param("now", Columns.timestamp(now)).query(String.class).optional();
+    }
+
+    public boolean belongsTo(UUID establishmentId, UUID id) {
+        return jdbc.sql("SELECT count(*) FROM invitations WHERE id=:id AND establishment_id=:school")
+                .param("id", id).param("school", establishmentId).query(Long.class).single() == 1;
+    }
+
+    public boolean issuedByPlatformOperator(UUID establishmentId, UUID id, UUID operator) {
+        return jdbc.sql("""
+                SELECT count(*) FROM invitations WHERE id=:id AND establishment_id=:school
+                  AND issued_by=:operator AND purpose='establishment.staff'
+                  AND attributes->>'role'='ESTABLISHMENT_ADMIN'
+                """).param("id", id).param("school", establishmentId).param("operator", operator)
+                .query(Long.class).single() == 1;
+    }
 }

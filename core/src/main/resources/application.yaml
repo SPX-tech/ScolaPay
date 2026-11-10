@@ -61,6 +61,15 @@ scolapay:
     retry-delay: PT1M
     max-retry-delay: PT1H
     overdue-after: PT15M
+  notifications:
+    encryption-key: ${SCOLAPAY_NOTIFICATIONS_ENCRYPTION_KEY:}
+    poll-interval: PT10S
+    initial-delay: PT10S
+    email:
+      provider: ${SCOLAPAY_NOTIFICATIONS_EMAIL_PROVIDER:disabled}
+      api-key: ${SCOLAPAY_NOTIFICATIONS_EMAIL_API_KEY:}
+      from: ${SCOLAPAY_NOTIFICATIONS_EMAIL_FROM:}
+      timeout: PT10S
   billing:
     max-issuance-size: 5000
     max-review-rows: 50000

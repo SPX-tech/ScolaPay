@@ -89,7 +89,7 @@ public class EstablishmentService {
         return new Created(establishment, inviteAdmin(establishment.id(), firstAdmin, operatorId));
     }
 
-    /** Le jeton n'étant visible qu'une fois, l'opérateur doit pouvoir en réémettre un. */
+    /** Une remise non aboutie peut nécessiter une nouvelle invitation, sans exposer son jeton à l'opérateur. */
     @Transactional
     public Invitations.Issued reissueAdminInvitation(UUID establishmentId, String contact) {
         UUID operatorId = actor.requireOperator();

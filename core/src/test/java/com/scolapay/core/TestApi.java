@@ -10,11 +10,15 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.UUID;
+import com.scolapay.testsupport.TestInvitationDelivery;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /** Client HTTP des tests qui démarrent l'application eux-mêmes, hors du contexte partagé d'{@link IntegrationTest}. */
-record TestApi(int port) {
+record TestApi(int port, JdbcClient invitationInbox) {
+
+    TestApi(int port) { this(port, null); }
 
     private static final HttpClient HTTP = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
     private static final JsonMapper JSON = JsonMapper.builder().build();
@@ -22,6 +26,7 @@ record TestApi(int port) {
     record Reply(int status, JsonNode body, String raw) {
 
         String text(String field) {
+            if (field.equals("token") && body.has("id")) return TestInvitationDelivery.token(id("id"));
             return body.path(field).asString();
         }
 
@@ -105,7 +110,11 @@ record TestApi(int port) {
                 "firstAdminContact", contact));
         assertThat(created.status()).as(created.raw()).isEqualTo(201);
         UUID id = UUID.fromString(created.body().path("establishment").path("id").asString());
-        Reply accepted = accept(created.body().path("firstAdminInvitation").path("token").asString());
+        UUID invitationId = UUID.fromString(created.body().path("firstAdminInvitation").path("id").asString());
+        String invitationToken = invitationInbox == null ? TestInvitationDelivery.token(invitationId)
+                : invitationInbox.sql("SELECT token FROM test_invitation_deliveries WHERE id=:id")
+                        .param("id", invitationId).query(String.class).single();
+        Reply accepted = accept(invitationToken);
         assertThat(accepted.status()).as(accepted.raw()).isEqualTo(200);
         String admin = login(contact, IntegrationTest.PASSWORD);
 

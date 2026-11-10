@@ -1272,7 +1272,7 @@ class ObligationTest extends IntegrationTest {
         // Seules ces opérations ajoutent quelque chose à une obligation, et toutes passent par le journal.
         assertThat(billing)
                 .filteredOn(route -> route.contains("/obligations/") && route.contains("POST"))
-                .allSatisfy(route -> assertThat(route).containsAnyOf("/discounts", "/corrections", "/cancellation", "/reversal"));
+                .allSatisfy(route -> assertThat(route).containsAnyOf("/discounts", "/corrections", "/cancellation", "/reversal", "/parties"));
     }
 
     // Permissions

@@ -39,7 +39,13 @@ Le portail des familles est fermé par défaut : `/me/students` n'existe pas et 
 
 Connexion et acceptation d'invitations ont des quotas partagés dans PostgreSQL, un corps plafonné à 8 Kio et des bornes locales de calcul. Les refus répondent `429 AUTH_RATE_LIMITED` avec `Retry-After`, ou 503 si la protection ou un créneau local est indisponible. Le verrouillage des comptes et les JWT révocables sont conservés.
 
-Les adresses transférées sont ignorées par défaut. Un reverse proxy exige un mode explicite et ses CIDR de confiance ; le forwarding automatique Spring/Tomcat reste désactivé. Configuration, valeurs de départ pour les IP partagées, essais et limites dans [le guide](../docs/auth-abuse-protection.md), décision [0025](../docs/decisions/0025-protection-authentification-publique.md). La migration V7_2 doit être intégrée avec V7 (#26) et V7_1 (#27) avant toute application persistante. Aucun service ni dépendance supplémentaire n'est requis.
+Les adresses transférées sont ignorées par défaut. Un reverse proxy exige un mode explicite et ses CIDR de confiance. Le forwarding automatique Spring/Tomcat reste désactivé. Configuration, valeurs de départ pour les IP partagées, essais et limites figurent dans [le guide](../docs/auth-abuse-protection.md) et la décision [0025](../docs/decisions/0025-protection-authentification-publique.md). L'ordre des migrations est V7 → V7_1 → V7_2. Les validations de #28 utilisent PostgreSQL jetable.
+
+## Notifications et invitations
+
+Les invitations sont remises au contact par une file chiffrée et ne renvoient plus de jeton dans le JSON. La remise est désactivée par défaut : sans configuration, leur création répond `409 INVITATION_CHANNEL_UNAVAILABLE`. Le transport e-mail Resend est optionnel, sans SMS. Le portail reste fermé et un e-mail seul ne satisfait pas ses conditions d'ouverture. Configuration, états, reprises et limites dans [le guide des notifications](../docs/notifications.md), décision [0024](../docs/decisions/0024-notifications-et-remise-des-invitations.md).
+
+En mode désactivé, l'opérateur peut se connecter et le refus de remise annule toute création d'établissement, puisque son administrateur doit être invité dans la même transaction. Les parcours de test et de démonstration sans fournisseur passent par les fixtures de `src/test/` sur base jetable, sans exposition des jetons dans le JSON ou les journaux. #27 est intégrée dans `main`. La [politique de canaux Families](../docs/integration-notifications-billing.md#politique-des-canaux-families) est validée, avec mise en œuvre différée avant toute ouverture.
 
 ## Parcours de base
 
@@ -70,12 +76,23 @@ Toutes les routes sont sous `/api/v2`. Les erreurs suivent la RFC 9457, avec un 
 | Retirer sa propre demande | `POST .../billing/adjustment-requests/{id}/withdrawal` | Son auteur |
 | Voir ce qui demande un réexamen, et trancher | `GET .../billing/reviews`, `POST .../billing/reviews/decisions` | Comptable |
 | Consulter les obligations et le solde | `GET .../billing/obligations`, `GET .../billing/students/{studentId}/balances` | Comptable, caissier, auditeur |
-| Inviter un tiers : accès académique pour un mineur, contribution financière (portail ouvert) | `POST /establishments/{id}/students/{studentId}/third-party-invitations` | Secrétariat |
+| Créer une personne physique ou morale | `POST .../billing/parties` | Comptable |
+| Corriger son nom ou identifiant, avec motif et révision attendue | `POST .../billing/parties/{partyId}/corrections` | Administrateur, comptable |
+| Relire une personne et sa révision, ou son journal protégé | `GET .../billing/parties/{partyId}`, `GET .../{partyId}/corrections` | `BILLING_READ`, et `BILLING_REASONS_READ` pour le journal |
+| Désigner un redevable, un responsable ou un contributeur | `POST .../billing/obligations/{id}/parties`, ou `POST .../billing/students/{studentId}/parties` pour toute l'année | Comptable |
+| Confirmer un redevable, terminer une désignation | `POST .../billing/obligation-parties/{id}/confirmation`, `.../end` | Comptable |
+| Voir ce qui reste sans redevable ou non confirmé | `GET .../billing/obligations-by-debtor-state` | Comptable, caissier, auditeur |
+| Lier un tiers à un dossier, avec accès académique pour un mineur (portail ouvert) | `POST /establishments/{id}/students/{studentId}/third-party-invitations` | Secrétariat |
 | Inviter un étudiant majeur (portail ouvert) | `POST /establishments/{id}/students/{studentId}/self-access-invitations` | Secrétariat |
 | Voir ses établissements | `GET /me/affiliations` | Personnel |
 | Voir ses enfants ou son dossier (portail ouvert) | `GET /me/students`, `GET /me/students/{studentId}` | Famille |
+| Voir ses obligations selon son rôle (portail ouvert) | `GET /me/billing/obligations`, `GET /me/billing/obligations/{id}` | Redevable, responsable, contributeur |
 | Voir les tiers liés à son dossier (portail ouvert) | `GET /me/students/{studentId}/third-parties` | Étudiant majeur |
 | Accorder ou retirer l'accès d'un tiers (portail ouvert) | `PATCH /me/students/{studentId}/third-parties/{grantId}` | Étudiant majeur |
+
+## Corrections de personnes financières
+
+Les corrections de personnes conservent l'identité et le compte. Une révision périmée donne `409 PARTY_CORRECTION_OUTDATED` ; le client relit la personne avant une nouvelle demande. Le compte, le type et les désignations ne se changent pas par cette route. Les lectures financières composites disposent d'un instantané cohérent et les droits sont filtrés avant pagination. Voir [0023](../docs/decisions/0023-personnes-liees-et-vues.md) et [les preuves de finalisation](../docs/lot6-finalization.md).
 
 ## Ajouter un module
 

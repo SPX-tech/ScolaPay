@@ -32,13 +32,13 @@ Aucun déploiement, VPS, fournisseur, changement financier ou notification.
 - Validation complète du code identique, `985ca9b` : [360 tests Java et JAR](https://github.com/SPX-tech/ScolaPay/actions/runs/42869629507), [conteneurs](https://github.com/SPX-tech/ScolaPay/actions/runs/42869629777).
 - Aucun test ni build lourd local. Aucun VPS, fournisseur, fusion ou déploiement.
 
-## Acceptation et intégration différée
+## Acceptation et intégration avec #26 et #27
 
 Le propriétaire accepte le développement et l'ADR 0025 le 2026-11-10. PostgreSQL est retenu ; Redis ne sera pas introduit sans intérêt opérationnel démontré. Aucun code ni seuil ne change maintenant.
 
 - [x] Remettre #28 en brouillon, sans fusion automatique.
 - [x] Consigner l'acceptation de l'ADR et le suivi de la contention et des collisions.
-- [ ] Après intégration et validation de #26 puis #27, remettre #28 à jour depuis `main` et résoudre les conflits éventuels.
-- [ ] Valider les trois chantiers ensemble sur PostgreSQL vierge dans GitHub Actions, avec V7 puis V7_1 puis V7_2, sans contournement Flyway.
-- [ ] Consigner les résultats conjoints et les SHA pour une nouvelle revue ; aucune fusion ni aucun déploiement de #28 n'est autorisé maintenant.
+- [x] Reprendre `main` au SHA `212b6d3` après #26 et #27 et résoudre les conflits documentaires.
+- [x] Ajouter au scénario de reprise la vérification de V7 puis V7_1 puis V7_2 et du quota d'acceptation après redémarrage.
+- Les résultats GitHub Actions et le SHA d'intégration sont consignés dans [#28](https://github.com/SPX-tech/ScolaPay/pull/28), en brouillon pour revue.
 - [ ] Avant exploitation à grande échelle, mesurer contention et collisions sur données synthétiques selon le [guide](../docs/auth-abuse-protection.md#mesures-avant-montée-en-charge).

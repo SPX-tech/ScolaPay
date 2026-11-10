@@ -1,6 +1,6 @@
 # 0025 : protection des API publiques d'authentification
 
-- **Statut** : Acceptée par le propriétaire le 2026-11-10 ; développement accepté, intégration différée après validation de #26 puis #27
+- **Statut** : Acceptée par le propriétaire le 2026-11-10. #28 reprend `main` après les fusions de #26 et #27 et reste en brouillon pour revue d'intégration.
 - **Date** : 2026-11-10
 - **Décideur** : propriétaire du projet, validation du développement et de l'ADR dans la revue de la PR #28
 - **Complète** : [0010](0010-identite-et-acces.md), sans remplacer le verrouillage des comptes, les contrôles d'invitation ou les JWT révocables
@@ -69,8 +69,8 @@ Un test a aussi démontré qu'un mot de passe valide de 72 octets suivi d'un suf
 
 Les suites `AuthAbuse*Test` utilisent un vrai serveur HTTP et un vrai PostgreSQL. Deux contextes applicatifs indépendants partagent la même base pour vérifier les quotas inter-instance, y compris en concurrence. Une sonde de calcul retenue par un verrou de test vérifie la saturation et la libération des créneaux. Les anciennes suites métier ont des quotas élevés mais finis sur le seul classpath de test ; les nouvelles suites fixent explicitement leurs petits seuils. Aucun interrupteur de désactivation n'est ajouté au code de production.
 
-`V7_2__auth_abuse_protection.sql` ne touche aucune table financière ou de notifications et évite les versions des PR #26 et #27. **Ne pas appliquer cette branche seule à une base persistante** : l'intégration doit inclure V7, V7_1 et V7_2 dans cet ordre, sur PostgreSQL vierge, avant toute décision de mise en service. Ni `outOfOrder`, ni renumérotation des migrations existantes, ni déploiement ne sont autorisés par cette mission.
+`V7_2__auth_abuse_protection.sql` crée la table technique des quotas. V7, V7_1 et V7_2 sont conservées et appliquées dans cet ordre pour la validation sur PostgreSQL vierge. Le scénario de reprise vérifie l'historique et les sommes de contrôle Flyway au redémarrage. Les essais restent sur bases jetables, avec le transport de test et Families fermé pour ce scénario.
 
-La PR #28 reste en brouillon. Intégrer et valider d'abord #26, puis #27 ; ensuite remettre #28 à jour depuis `main`, résoudre les conflits éventuels et valider les trois chantiers ensemble sur PostgreSQL vierge. Les SHA, l'ordre des migrations et les résultats conjoints doivent être soumis à une nouvelle revue. Les 360 tests du socle accepté ne remplacent pas cette validation d'intégration. Aucune fusion ou aucun déploiement de #28 n'est autorisé à ce stade.
+La PR #28 contient le merge de `main` au commit `212b6d3` et reste en brouillon. Les preuves de validation conjointe et leur SHA figurent dans la [PR #28](https://github.com/SPX-tech/ScolaPay/pull/28). Les 360 tests du socle restent une preuve distincte. L'autorisation de fusion et une éventuelle mise en service relèvent de décisions séparées.
 
 Configuration et limites : [guide d'exploitation](../auth-abuse-protection.md).

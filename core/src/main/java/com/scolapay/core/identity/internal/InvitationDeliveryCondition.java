@@ -1,6 +1,7 @@
 package com.scolapay.core.identity.internal;
 
 import com.scolapay.core.identity.InvitationDelivery;
+import com.scolapay.core.identity.Identifier;
 import com.scolapay.core.shared.GoLiveCondition;
 import java.util.Optional;
 import org.springframework.beans.factory.ObjectProvider;
@@ -22,8 +23,9 @@ class InvitationDeliveryCondition implements GoLiveCondition {
 
     @Override
     public Optional<String> unmet() {
-        return delivery.getIfAvailable() == null
-                ? Optional.of("aucun canal de remise des invitations n'est configuré")
+        InvitationDelivery channel = delivery.getIfAvailable();
+        return channel == null || !channel.supports(Identifier.Kind.EMAIL) || !channel.supports(Identifier.Kind.PHONE)
+                ? Optional.of("les canaux e-mail et téléphone des invitations doivent être configurés")
                 : Optional.empty();
     }
 }

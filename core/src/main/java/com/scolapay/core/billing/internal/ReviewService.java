@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 /**
  * Situations à réexaminer. Elles se déduisent de la réalité à chaque lecture : aucun événement perdu ne
@@ -77,7 +78,7 @@ public class ReviewService {
         this.maxRows = maxRows;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public Page list(UUID establishmentId, UUID academicYearId, PageQuery page) {
         access.require(establishmentId, Permission.BILLING_READ);
         requireYear(establishmentId, academicYearId);
