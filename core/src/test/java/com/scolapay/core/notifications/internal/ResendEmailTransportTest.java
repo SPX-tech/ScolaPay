@@ -8,6 +8,8 @@ import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.UUID;
@@ -120,5 +122,18 @@ class ResendEmailTransportTest {
         long start = System.nanoTime();
         assertThat(transport.send(message).outcome()).isEqualTo(NotificationTransport.Outcome.RETRY);
         assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofSeconds(3));
+    }
+
+    @Test
+    void unDelaiDepasseAnnuleLaRequeteEncoreEnVol() {
+        HttpClient client = org.mockito.Mockito.mock(HttpClient.class);
+        var pending = new java.util.concurrent.CompletableFuture<HttpResponse<byte[]>>();
+        org.mockito.Mockito.doReturn(pending).when(client).sendAsync(
+                org.mockito.ArgumentMatchers.<HttpRequest>any(),
+                org.mockito.ArgumentMatchers.<HttpResponse.BodyHandler<byte[]>>any());
+        var bounded = new ResendEmailTransport(client, URI.create("https://api.resend.com/emails"),
+                "re_isolated_test_only", Duration.ofMillis(20), JsonMapper.builder().build());
+        assertThat(bounded.send(message).outcome()).isEqualTo(NotificationTransport.Outcome.RETRY);
+        assertThat(pending.isCancelled()).as("L'appel encore en vol doit recevoir une annulation").isTrue();
     }
 }
