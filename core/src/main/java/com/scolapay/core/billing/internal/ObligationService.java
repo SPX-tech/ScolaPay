@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 /**
  * Émission des obligations. Trois voies seulement, toutes explicites : l'inscription dont le personnel
@@ -341,7 +342,7 @@ public class ObligationService {
         return obligations.list(establishmentId, academicYearId, studentId, page);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public Detail read(UUID establishmentId, UUID obligationId) {
         access.require(establishmentId, Permission.BILLING_READ);
         Obligation obligation = obligations.find(establishmentId, obligationId)

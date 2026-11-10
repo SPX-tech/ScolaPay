@@ -9,12 +9,16 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.support.SqlArrayValue;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class BillingPartyRepository {
 
-    public record Party(UUID id, String kind, String displayName, String identifier, UUID accountId, Instant createdAt, UUID createdBy) {}
+    public record Party(UUID id, String kind, String displayName, String identifier, UUID accountId, Instant createdAt, UUID createdBy, int revision) {}
+
+    public record Correction(UUID id, UUID partyId, int previousRevision, int revision, String previousName,
+            String previousIdentifier, String newName, String newIdentifier, String reason, Instant correctedAt, UUID correctedBy) {}
 
     public record Designation(
             UUID id,
@@ -49,7 +53,7 @@ public class BillingPartyRepository {
 
     public record HeldRole(String role, String debtorStatus) {}
 
-    private static final String PARTY_COLUMNS = "id, kind, display_name, identifier, account_id, created_at, created_by";
+    private static final String PARTY_COLUMNS = "id, kind, display_name, identifier, account_id, created_at, created_by, revision";
 
     private static final String DESIGNATION = """
             SELECT op.id, op.obligation_id, op.party_id, p.display_name, p.kind, p.account_id, op.role, op.debtor_status, op.commitment_reference,
@@ -86,6 +90,45 @@ public class BillingPartyRepository {
                 .param("id", id)
                 .query(BillingPartyRepository::party)
                 .optional();
+    }
+
+    public Optional<Party> lockParty(UUID establishmentId, UUID id) {
+        return jdbc.sql("SELECT " + PARTY_COLUMNS + " FROM billing_parties WHERE establishment_id=:establishmentId AND id=:id FOR UPDATE")
+                .param("establishmentId", establishmentId).param("id", id).query(BillingPartyRepository::party).optional();
+    }
+
+    public void correctParty(UUID establishmentId, Correction correction) {
+        jdbc.sql("""
+                INSERT INTO billing_party_corrections
+                    (id,establishment_id,party_id,previous_revision,revision,previous_name,previous_identifier,
+                     new_name,new_identifier,reason,corrected_at,corrected_by)
+                VALUES (:id,:establishment,:party,:previous,:revision,:previousName,:previousIdentifier,
+                        :newName,:newIdentifier,:reason,:at,:actor)
+                """).param("id", correction.id()).param("establishment", establishmentId).param("party", correction.partyId())
+                .param("previous", correction.previousRevision()).param("revision", correction.revision())
+                .param("previousName", correction.previousName()).param("previousIdentifier", correction.previousIdentifier())
+                .param("newName", correction.newName()).param("newIdentifier", correction.newIdentifier())
+                .param("reason", correction.reason()).param("at", Columns.timestamp(correction.correctedAt()))
+                .param("actor", correction.correctedBy()).update();
+        jdbc.sql("""
+                UPDATE billing_parties SET display_name=:name,identifier=:identifier,revision=:revision
+                WHERE establishment_id=:establishment AND id=:party
+                """).param("name", correction.newName()).param("identifier", correction.newIdentifier())
+                .param("revision", correction.revision()).param("establishment", establishmentId).param("party", correction.partyId()).update();
+    }
+
+    public List<Correction> correctionsOf(UUID establishmentId, UUID partyId, PageQuery page) {
+        return jdbc.sql("""
+                SELECT id,party_id,previous_revision,revision,previous_name,previous_identifier,new_name,new_identifier,
+                       reason,corrected_at,corrected_by
+                FROM billing_party_corrections WHERE establishment_id=:establishment AND party_id=:party
+                ORDER BY revision DESC LIMIT :limit OFFSET :offset
+                """).param("establishment", establishmentId).param("party", partyId)
+                .param("limit", page.limit()).param("offset", page.offset())
+                .query((rs,row) -> new Correction(Columns.uuid(rs,"id"),Columns.uuid(rs,"party_id"),
+                        rs.getInt("previous_revision"),rs.getInt("revision"),rs.getString("previous_name"),
+                        rs.getString("previous_identifier"),rs.getString("new_name"),rs.getString("new_identifier"),
+                        rs.getString("reason"),Columns.instant(rs,"corrected_at"),Columns.uuid(rs,"corrected_by"))).list();
     }
 
     public boolean accountHasParty(UUID establishmentId, UUID accountId) {
@@ -233,9 +276,24 @@ public class BillingPartyRepository {
               AND (op.role <> 'VOLUNTARY_CONTRIBUTOR' OR
             """ + DUE + " > 0)\n";
 
-    public List<ObligationRef> refsOfAccount(UUID accountId, PageQuery page) {
-        return jdbc.sql(REFS_OF_ACCOUNT + " ORDER BY o.issued_at, o.id LIMIT :limit OFFSET :offset")
+    public List<UUID> establishmentsOfAccount(UUID accountId) {
+        return jdbc.sql("""
+                SELECT DISTINCT bp.establishment_id FROM obligation_parties op
+                JOIN billing_parties bp ON bp.id=op.party_id
+                WHERE bp.account_id = :accountId AND op.ended_at IS NULL
+                ORDER BY bp.establishment_id
+                """).param("accountId", accountId).query(UUID.class).list();
+    }
+
+    public List<ObligationRef> refsOfAccount(UUID accountId, List<UUID> activeEstablishments, List<UUID> linkedStudents, PageQuery page) {
+        return jdbc.sql(REFS_OF_ACCOUNT + """
+                 AND o.establishment_id = ANY(:activeEstablishments)
+                 AND (op.role <> 'VOLUNTARY_CONTRIBUTOR' OR o.student_record_id = ANY(:linkedStudents))
+                 ORDER BY o.issued_at, o.id LIMIT :limit OFFSET :offset
+                """)
                 .param("accountId", accountId)
+                .param("activeEstablishments", new SqlArrayValue("uuid", activeEstablishments.toArray()))
+                .param("linkedStudents", new SqlArrayValue("uuid", linkedStudents.toArray()))
                 .param("limit", page.limit())
                 .param("offset", page.offset())
                 .query((rs, rowNum) -> new ObligationRef(Columns.uuid(rs, "establishment_id"), Columns.uuid(rs, "id")))
@@ -272,7 +330,8 @@ public class BillingPartyRepository {
                 rs.getString("identifier"),
                 Columns.uuid(rs, "account_id"),
                 Columns.instant(rs, "created_at"),
-                Columns.uuid(rs, "created_by"));
+                Columns.uuid(rs, "created_by"),
+                rs.getInt("revision"));
     }
 
     private static Designation designation(ResultSet rs, int rowNum) throws SQLException {

@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 /**
  * Qui tient quel rôle sur quelle obligation. <strong>Rien n'est jamais déduit</strong> d'un âge ou d'un
@@ -81,7 +82,7 @@ public class BillingPartyService {
                 throw ApiException.conflict("PARTY_ALREADY_EXISTS", "Ce compte correspond déjà à une personne de cet établissement.");
             }
         }
-        Party party = new Party(UUID.randomUUID(), kind, displayName, identifier, accountId, clock.instant(), actorId);
+        Party party = new Party(UUID.randomUUID(), kind, displayName, identifier, accountId, clock.instant(), actorId, 0);
         parties.insertParty(establishmentId, party);
         audit.record(establishmentId, actorId, "billing.party.created", "billing_party", party.id(), Map.of("kind", kind));
         return party;
@@ -187,7 +188,7 @@ public class BillingPartyService {
     }
 
     /** Ce qu'il reste à régulariser : les obligations encore dues, sans redevable ou avec un redevable non confirmé. */
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public ByDebtorState byDebtorState(UUID establishmentId, UUID academicYearId, String state, PageQuery page) {
         access.require(establishmentId, Permission.BILLING_READ);
         requireYear(establishmentId, academicYearId);

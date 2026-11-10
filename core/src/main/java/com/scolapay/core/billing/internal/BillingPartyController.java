@@ -43,10 +43,10 @@ class BillingPartyController {
 
     record EndRequest(@NotBlank @Size(min = 3, max = 500) String reason) {}
 
-    record PartyView(UUID id, String kind, String displayName, String identifier, boolean hasAccount, Instant createdAt) {
+    record PartyView(UUID id, String kind, String displayName, String identifier, boolean hasAccount, Instant createdAt, int revision) {
 
         static PartyView of(Party party) {
-            return new PartyView(party.id(), party.kind(), party.displayName(), party.identifier(), party.accountId() != null, party.createdAt());
+            return new PartyView(party.id(), party.kind(), party.displayName(), party.identifier(), party.accountId() != null, party.createdAt(), party.revision());
         }
     }
 

@@ -1,6 +1,7 @@
 package com.scolapay.core.schooling;
 
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -22,4 +23,7 @@ public interface StudentDirectory {
 
     /** Le compte derrière un lien actif de cet établissement. */
     Optional<UUID> accountOfLink(UUID establishmentId, UUID grantId);
+
+    /** Identifiants des dossiers liés activement à ce compte dans l'établissement, sans donnée académique. */
+    List<UUID> linkedStudentIds(UUID establishmentId, UUID accountId);
 }

@@ -80,6 +80,7 @@ const added = {
     steps: [
       [R, `WHERE p.account_id = :accountId AND op.ended_at IS NULL\n`, `WHERE (p.account_id = :accountId OR p.account_id IS NOT NULL) AND op.ended_at IS NULL\n`],
       [R, `WHERE p.account_id = :accountId AND op.establishment_id = :establishmentId`, `WHERE (p.account_id = :accountId OR p.account_id IS NOT NULL) AND op.establishment_id = :establishmentId`],
+      [R, `WHERE bp.account_id = :accountId AND op.ended_at IS NULL`, `WHERE (bp.account_id = :accountId OR bp.account_id IS NOT NULL) AND op.ended_at IS NULL`],
     ],
     mustFail: ['FamilyBillingViewTest.uneFamilleNeVoitQueSesObligationsDansChaqueEtablissement'],
   },
@@ -142,8 +143,8 @@ const added = {
   'db-many-responsibles': [[M, `CREATE UNIQUE INDEX obligation_parties_one_responsible ON obligation_parties (obligation_id)\n  WHERE role = 'FINANCIAL_RESPONSIBLE' AND ended_at IS NULL;\n`, '']],
   'db-contributor-without-account': [[M, `IF NEW.role = 'VOLUNTARY_CONTRIBUTOR'\n     AND NOT EXISTS`, `IF FALSE\n     AND NOT EXISTS`]],
   'db-debtor-without-status': [[M, `  CONSTRAINT obligation_parties_debtor_status CHECK ((role = 'CONTRACTUAL_DEBTOR') = (debtor_status IS NOT NULL)),\n`, '']],
-  'db-confirmed-without-reference': [[M, `  CONSTRAINT obligation_parties_commitment CHECK (\n    (debtor_status = 'CONFIRMED' AND commitment_reference IS NOT NULL)\n    OR (debtor_status IS DISTINCT FROM 'CONFIRMED' AND commitment_reference IS NULL)),\n  CHECK ((confirmed_at IS NULL) = (confirmed_by IS NULL)),\n  CHECK ((commitment_reference IS NULL) = (confirmed_at IS NULL)),\n`, '']],
-  'db-party-mutable': [[M, `CREATE TRIGGER billing_parties_immutable BEFORE UPDATE OR DELETE ON billing_parties\n  FOR EACH ROW EXECUTE FUNCTION forbid_mutation();\n`, '']],
+  'db-confirmed-without-reference': [[M, `  CONSTRAINT obligation_parties_commitment CHECK (\n    (debtor_status IS NOT DISTINCT FROM 'CONFIRMED' AND commitment_reference IS NOT NULL\n      AND confirmed_at IS NOT NULL AND confirmed_by IS NOT NULL)\n    OR (debtor_status IS DISTINCT FROM 'CONFIRMED' AND commitment_reference IS NULL\n      AND confirmed_at IS NULL AND confirmed_by IS NULL)),\n  CHECK ((confirmed_at IS NULL) = (confirmed_by IS NULL)),\n  CHECK ((commitment_reference IS NULL) = (confirmed_at IS NULL)),\n`, '']],
+  'db-party-mutable': [[M, `CREATE TRIGGER billing_parties_update_guard BEFORE UPDATE ON billing_parties\n  FOR EACH ROW EXECUTE FUNCTION billing_parties_update_guard();\n`, '']],
   'db-designation-deletable': [[M, `CREATE TRIGGER obligation_parties_no_delete BEFORE DELETE ON obligation_parties\n  FOR EACH ROW EXECUTE FUNCTION forbid_mutation();\n`, '']],
   'db-ended-mutable': [[M, 'IF OLD.ended_at IS NOT NULL THEN', 'IF FALSE THEN']],
   'db-identity-mutable': [[M, `IF (NEW.id, NEW.establishment_id, NEW.obligation_id, NEW.party_id, NEW.role, NEW.designated_at, NEW.designated_by)`, `IF FALSE AND (NEW.id, NEW.establishment_id, NEW.obligation_id, NEW.party_id, NEW.role, NEW.designated_at, NEW.designated_by)`]],

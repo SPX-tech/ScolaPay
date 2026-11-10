@@ -10,13 +10,89 @@ CREATE TABLE billing_parties (
   account_id       uuid REFERENCES accounts (id),
   created_at       timestamptz NOT NULL,
   created_by       uuid NOT NULL REFERENCES accounts (id),
+  revision         integer NOT NULL DEFAULT 0 CHECK (revision >= 0),
   UNIQUE (establishment_id, id)
 );
 CREATE UNIQUE INDEX billing_parties_one_per_account ON billing_parties (establishment_id, account_id) WHERE account_id IS NOT NULL;
 CREATE INDEX billing_parties_account_idx ON billing_parties (account_id) WHERE account_id IS NOT NULL;
-CREATE TRIGGER billing_parties_immutable BEFORE UPDATE OR DELETE ON billing_parties
+CREATE TRIGGER billing_parties_immutable BEFORE DELETE ON billing_parties
   FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
 CREATE TRIGGER billing_parties_no_truncate BEFORE TRUNCATE ON billing_parties
+  FOR EACH STATEMENT EXECUTE FUNCTION forbid_mutation();
+
+-- Le compte et le type restent immuables : corriger un texte ne transfère aucun droit financier.
+CREATE TABLE billing_party_corrections (
+  id                  uuid PRIMARY KEY,
+  establishment_id    uuid NOT NULL,
+  party_id            uuid NOT NULL,
+  previous_revision   integer NOT NULL CHECK (previous_revision >= 0),
+  revision            integer NOT NULL CHECK (revision = previous_revision + 1),
+  previous_name       text NOT NULL CHECK (length(previous_name) BETWEEN 2 AND 200),
+  previous_identifier text CHECK (length(previous_identifier) BETWEEN 1 AND 100),
+  new_name            text NOT NULL CHECK (length(btrim(new_name)) BETWEEN 2 AND 200),
+  new_identifier      text CHECK (length(btrim(new_identifier)) BETWEEN 1 AND 100),
+  reason              text NOT NULL CHECK (length(btrim(reason)) BETWEEN 3 AND 500),
+  corrected_at        timestamptz NOT NULL,
+  corrected_by        uuid NOT NULL REFERENCES accounts(id),
+  UNIQUE (establishment_id, id),
+  UNIQUE (establishment_id, party_id, revision),
+  FOREIGN KEY (establishment_id, party_id) REFERENCES billing_parties(establishment_id, id),
+  CHECK ((previous_name, previous_identifier) IS DISTINCT FROM (new_name, new_identifier))
+);
+
+CREATE FUNCTION billing_party_correction_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE person billing_parties%ROWTYPE;
+BEGIN
+  SELECT * INTO person FROM billing_parties
+    WHERE establishment_id=NEW.establishment_id AND id=NEW.party_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Personne introuvable dans cet etablissement';
+  END IF;
+  IF NEW.previous_revision <> person.revision OR NEW.revision <> person.revision + 1
+     OR (NEW.previous_name, NEW.previous_identifier) IS DISTINCT FROM (person.display_name, person.identifier) THEN
+    RAISE EXCEPTION 'La correction doit correspondre a la version courante';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER billing_party_correction_guard BEFORE INSERT ON billing_party_corrections
+  FOR EACH ROW EXECUTE FUNCTION billing_party_correction_guard();
+
+CREATE FUNCTION billing_parties_update_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF (NEW.id, NEW.establishment_id, NEW.kind, NEW.account_id, NEW.created_at, NEW.created_by)
+     IS DISTINCT FROM (OLD.id, OLD.establishment_id, OLD.kind, OLD.account_id, OLD.created_at, OLD.created_by) THEN
+    RAISE EXCEPTION 'L''identite et le compte d''une personne sont immuables';
+  END IF;
+  IF NEW.revision <> OLD.revision + 1 OR
+     NOT EXISTS (SELECT 1 FROM billing_party_corrections c
+       WHERE c.establishment_id=OLD.establishment_id AND c.party_id=OLD.id
+         AND c.previous_revision=OLD.revision AND c.revision=NEW.revision
+         AND (c.previous_name,c.previous_identifier) IS NOT DISTINCT FROM (OLD.display_name,OLD.identifier)
+         AND (c.new_name,c.new_identifier) IS NOT DISTINCT FROM (NEW.display_name,NEW.identifier)) THEN
+    RAISE EXCEPTION 'Une personne est immuable hors correction tracee';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER billing_parties_update_guard BEFORE UPDATE ON billing_parties
+  FOR EACH ROW EXECUTE FUNCTION billing_parties_update_guard();
+
+-- Une trace insérée seule ne doit pas prétendre qu'une correction a eu lieu.
+CREATE FUNCTION billing_party_correction_applied() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM billing_parties
+      WHERE establishment_id=NEW.establishment_id AND id=NEW.party_id AND revision>=NEW.revision) THEN
+    RAISE EXCEPTION 'La correction doit etre appliquee dans la meme transaction';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE CONSTRAINT TRIGGER billing_party_correction_applied AFTER INSERT ON billing_party_corrections
+  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION billing_party_correction_applied();
+CREATE TRIGGER billing_party_corrections_immutable BEFORE UPDATE OR DELETE ON billing_party_corrections
+  FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+CREATE TRIGGER billing_party_corrections_no_truncate BEFORE TRUNCATE ON billing_party_corrections
   FOR EACH STATEMENT EXECUTE FUNCTION forbid_mutation();
 
 CREATE TABLE obligation_parties (
@@ -26,7 +102,7 @@ CREATE TABLE obligation_parties (
   party_id             uuid NOT NULL,
   role                 text NOT NULL CHECK (role IN ('CONTRACTUAL_DEBTOR', 'FINANCIAL_RESPONSIBLE', 'VOLUNTARY_CONTRIBUTOR')),
   debtor_status        text CHECK (debtor_status IN ('UNCONFIRMED', 'CONFIRMED')),
-  commitment_reference text CHECK (length(commitment_reference) BETWEEN 1 AND 200),
+  commitment_reference text CHECK (length(btrim(commitment_reference)) BETWEEN 1 AND 200),
   designated_at        timestamptz NOT NULL,
   designated_by        uuid NOT NULL REFERENCES accounts (id),
   confirmed_at         timestamptz,
@@ -36,8 +112,10 @@ CREATE TABLE obligation_parties (
   end_reason           text CHECK (length(end_reason) BETWEEN 1 AND 500),
   CONSTRAINT obligation_parties_debtor_status CHECK ((role = 'CONTRACTUAL_DEBTOR') = (debtor_status IS NOT NULL)),
   CONSTRAINT obligation_parties_commitment CHECK (
-    (debtor_status = 'CONFIRMED' AND commitment_reference IS NOT NULL)
-    OR (debtor_status IS DISTINCT FROM 'CONFIRMED' AND commitment_reference IS NULL)),
+    (debtor_status IS NOT DISTINCT FROM 'CONFIRMED' AND commitment_reference IS NOT NULL
+      AND confirmed_at IS NOT NULL AND confirmed_by IS NOT NULL)
+    OR (debtor_status IS DISTINCT FROM 'CONFIRMED' AND commitment_reference IS NULL
+      AND confirmed_at IS NULL AND confirmed_by IS NULL)),
   CHECK ((confirmed_at IS NULL) = (confirmed_by IS NULL)),
   CHECK ((commitment_reference IS NULL) = (confirmed_at IS NULL)),
   CHECK ((ended_at IS NULL) = (ended_by IS NULL)),

@@ -463,6 +463,12 @@ public class SchoolingService implements StudentDirectory {
         return repository.accountOfActiveGrant(establishmentId, grantId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> linkedStudentIds(UUID establishmentId, UUID accountId) {
+        return repository.linkedStudentIds(establishmentId, accountId);
+    }
+
     private Student requireStudent(UUID establishmentId, UUID studentId) {
         return repository.findStudent(establishmentId, studentId)
                 .orElseThrow(() -> ApiException.notFound("STUDENT_NOT_FOUND", "Dossier introuvable."));

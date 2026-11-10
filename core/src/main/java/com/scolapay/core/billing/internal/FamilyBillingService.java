@@ -15,10 +15,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 /**
  * Ce qu'une personne liée voit de ses obligations. Chaque vue est un type distinct, qui ne contient que
@@ -105,17 +107,24 @@ public class FamilyBillingService {
         this.clock = clock;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public List<ObligationSummary> myObligations(PageQuery page) {
         UUID accountId = actor.requireAccountId();
-        return parties.refsOfAccount(accountId, page).stream()
+        List<UUID> activeEstablishments = parties.establishmentsOfAccount(accountId).stream()
+                .filter(id -> establishments.find(id).filter(Establishments.Establishment::active).isPresent())
+                .toList();
+        if (activeEstablishments.isEmpty()) return List.of();
+        List<UUID> linkedStudents = new ArrayList<>();
+        for (UUID establishmentId : activeEstablishments) linkedStudents.addAll(students.linkedStudentIds(establishmentId, accountId));
+        // Les droits filtrent le jeu SQL avant LIMIT/OFFSET ; les API de modules partagent le même instantané.
+        return parties.refsOfAccount(accountId, activeEstablishments, linkedStudents, page).stream()
                 .map(ref -> viewOf(accountId, ref))
                 .flatMap(Optional::stream)
                 .toList();
     }
 
     /** Un 404 identique à une obligation inexistante : rien ne révèle qu'une charge existe pour un autre. */
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public ObligationSummary myObligation(UUID obligationId) {
         UUID accountId = actor.requireAccountId();
         return parties.refOfAccount(accountId, obligationId)

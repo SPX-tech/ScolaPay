@@ -438,6 +438,14 @@ public class SchoolingRepository {
                 .optional();
     }
 
+    public List<UUID> linkedStudentIds(UUID establishmentId, UUID accountId) {
+        return jdbc.sql("""
+                SELECT student_record_id FROM record_access_grants
+                WHERE establishment_id=:establishmentId AND account_id=:accountId AND revoked_at IS NULL
+                ORDER BY student_record_id
+                """).param("establishmentId", establishmentId).param("accountId", accountId).query(UUID.class).list();
+    }
+
     private static String escapeLike(String value) {
         return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
