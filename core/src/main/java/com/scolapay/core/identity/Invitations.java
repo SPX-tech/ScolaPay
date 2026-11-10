@@ -22,4 +22,6 @@ public interface Invitations {
     void revoke(UUID establishmentId, UUID invitationId, UUID actorAccountId);
 
     InvitationDelivery.Report deliveryStatus(UUID establishmentId, UUID invitationId);
+
+    InvitationDelivery.Report platformDeliveryStatus(UUID establishmentId, UUID invitationId);
 }

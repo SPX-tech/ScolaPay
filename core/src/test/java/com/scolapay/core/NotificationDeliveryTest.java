@@ -274,7 +274,7 @@ class NotificationDeliveryTest {
     }
 
     String payload(UUID id) {
-        return jdbc.sql("SELECT encrypted_payload FROM notification_messages WHERE id=:id").param("id", id).query((rs, row) -> rs.getString(1)).single();
+        return jdbc.sql("SELECT encrypted_payload FROM notification_messages WHERE id=:id").param("id", id).query((rs, row) -> rs.getString(1)).list().getFirst();
     }
 
     void awaitReady(UUID id) {

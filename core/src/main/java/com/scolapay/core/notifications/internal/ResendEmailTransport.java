@@ -11,6 +11,7 @@ import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -53,8 +54,13 @@ public class ResendEmailTransport implements NotificationTransport {
 
     @Override
     public Result send(Message message) {
-        String body = json.writeValueAsString(Map.of("from", message.from(), "to", List.of(message.recipient()),
-                "subject", message.subject(), "text", message.text()));
+        // Map.of ne garantit pas le même ordre entre deux JVM. Le fournisseur compare l'intention rejouée.
+        Map<String, Object> fields = new LinkedHashMap<>();
+        fields.put("from", message.from());
+        fields.put("to", List.of(message.recipient()));
+        fields.put("subject", message.subject());
+        fields.put("text", message.text());
+        String body = json.writeValueAsString(fields);
         if (body.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 49152) {
             return Result.failed("TRANSPORT_REJECTED");
         }

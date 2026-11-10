@@ -131,6 +131,15 @@ public class InvitationService implements Invitations, InvitationDispatchState {
     }
 
     @Override
+    public InvitationDelivery.Report platformDeliveryStatus(UUID establishmentId, UUID invitationId) {
+        UUID operator = actor.requireOperator();
+        if (!invitations.issuedByPlatformOperator(establishmentId, invitationId, operator)) {
+            throw ApiException.notFound("INVITATION_NOT_FOUND", "Invitation introuvable.");
+        }
+        return deliveryStatus(establishmentId, invitationId);
+    }
+
+    @Override
     @Transactional
     public void revoke(UUID establishmentId, UUID invitationId, UUID actorAccountId) {
         if (invitations.revoke(establishmentId, invitationId, clock.instant()) == 0) {

@@ -115,4 +115,13 @@ public class InvitationRepository {
         return jdbc.sql("SELECT count(*) FROM invitations WHERE id=:id AND establishment_id=:school")
                 .param("id", id).param("school", establishmentId).query(Long.class).single() == 1;
     }
+
+    public boolean issuedByPlatformOperator(UUID establishmentId, UUID id, UUID operator) {
+        return jdbc.sql("""
+                SELECT count(*) FROM invitations WHERE id=:id AND establishment_id=:school
+                  AND issued_by=:operator AND purpose='establishment.staff'
+                  AND attributes->>'role'='ESTABLISHMENT_ADMIN'
+                """).param("id", id).param("school", establishmentId).param("operator", operator)
+                .query(Long.class).single() == 1;
+    }
 }
