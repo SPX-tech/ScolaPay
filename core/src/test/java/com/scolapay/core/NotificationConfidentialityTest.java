@@ -19,7 +19,7 @@ class NotificationConfidentialityTest extends IntegrationTest {
     void leJetonDuPersonnelNeRevientPasALInvitant() {
         Tenant school = newTenant();
         Response invited = post(school.path("/invitations"), school.adminToken(),
-                Map.of("contact", uniqueEmail(), "role", "SECRETARY"));
+                Map.of("contact", uniqueEmail(), "role", "REGISTRAR"));
         assertThat(invited.status()).as(invited.raw()).isEqualTo(201);
         assertThat(invited.body().has("token")).isFalse();
     }
