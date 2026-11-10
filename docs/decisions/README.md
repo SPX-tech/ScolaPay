@@ -28,7 +28,8 @@ Une décision mérite une entrée ici lorsqu'elle est coûteuse à inverser ou q
 | [0020](0020-catalogue-de-frais-et-periodes.md) | Catalogue de frais, périodes de facturation et identité des charges | Acceptée | En place |
 | [0021](0021-obligations-et-journal.md) | Obligations, échéanciers et journal | Acceptée | En place, sans aucun encaissement |
 | [0022](0022-ajustements-et-reexamen.md) | Remises, corrections, annulations et réexamen | Acceptée | En place, sans aucun encaissement |
-| [0024](0024-notifications-et-remise-des-invitations.md) | Notifications et remise sécurisée des invitations | Socle, protocole et principe des canaux acceptés | Socle terminé, intégration après #26 ; politique à implémenter avant Families, aucun SMS ni envoi réel |
+| [0023](0023-personnes-liees-et-vues.md) | Personnes liées à une obligation et vues par rôle | Périmètre du lot 6 validé, questions métier ouvertes | Intégré dans `main` par #26, portail fermé, aucun encaissement |
+| [0024](0024-notifications-et-remise-des-invitations.md) | Notifications et remise sécurisée des invitations | Socle, protocole et principe des canaux acceptés | #27 actualisée après #26, en brouillon ; politique à implémenter avant Families, aucun SMS ni envoi réel |
 
 ## Statuts
 

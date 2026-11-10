@@ -17,6 +17,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,13 +62,29 @@ class NotificationRecoveryTest {
 
     @Test
     void unArretEntreCommitEtListenerReprendLeVraiEvenementSansPerte() throws Exception {
+        assertThat(jdbc.sql("SELECT to_regclass('public.flyway_schema_history') IS NULL")
+                .query(Boolean.class).single()).isTrue();
         Instance first = start("avant-listener", "--probe.drop-dispatch=true");
+        List<Map<String, Object>> installed = migrationHistory();
+        assertThat(installed).extracting(row -> row.get("version"))
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "7.1");
+        assertThat(installed.get(6)).containsEntry("script", "V7__billing_parties.sql");
+        assertThat(installed.get(7)).containsEntry("script", "V7_1__notification_delivery.sql");
+        assertThat(installed).allSatisfy(row -> {
+            assertThat(row).containsEntry("success", true);
+            assertThat(row.get("checksum")).isInstanceOf(Integer.class);
+        });
         UUID invitation = issue(first.api());
         assertThat(state(invitation)).isEqualTo("QUEUED");
         assertThat(jdbc.sql("SELECT count(*) FROM event_publication").query(Long.class).single()).isEqualTo(1);
         first.kill();
         start("reprise-listener");
         await(() -> state(invitation).equals("SUBMITTED"));
+        assertThat(migrationHistory()).isEqualTo(installed);
+        Flyway.configure()
+                .dataSource(url, TestDatabases.POSTGRES.getUsername(), TestDatabases.POSTGRES.getPassword())
+                .locations("classpath:db/migration")
+                .load().validate();
         assertThat(receipts).hasSize(1);
         assertThat(calls.get()).isEqualTo(1);
     }
@@ -100,6 +117,14 @@ class NotificationRecoveryTest {
 
     String state(UUID id) {
         return jdbc.sql("SELECT state FROM notification_messages WHERE id=:id").param("id", id).query(String.class).single();
+    }
+
+    List<Map<String, Object>> migrationHistory() {
+        return jdbc.sql("""
+                SELECT installed_rank, version, script, checksum, installed_on, success
+                FROM flyway_schema_history
+                ORDER BY installed_rank
+                """).query().listOfRows();
     }
 
     void await(BooleanSupplier condition) {

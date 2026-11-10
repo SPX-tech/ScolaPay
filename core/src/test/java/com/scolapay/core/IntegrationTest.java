@@ -258,17 +258,16 @@ abstract class IntegrationTest {
         return created.id("id");
     }
 
-    Response inviteThirdParty(Tenant tenant, UUID studentId, String contact, boolean academic, boolean financial) {
+    Response inviteThirdParty(Tenant tenant, UUID studentId, String contact, boolean academic) {
         return post(tenant.path("/students/" + studentId + "/third-party-invitations"), tenant.adminToken(), Map.of(
                 "contact", contact,
                 "relationship", "MOTHER",
-                "academicAccess", academic,
-                "financialContributor", financial));
+                "academicAccess", academic));
     }
 
     /** Invite un tuteur avec accès académique sur le dossier d'un mineur et renvoie le jeton d'invitation. */
-    String inviteGuardian(Tenant tenant, UUID studentId, String contact, boolean financialContributor) {
-        Response invited = inviteThirdParty(tenant, studentId, contact, true, financialContributor);
+    String inviteGuardian(Tenant tenant, UUID studentId, String contact) {
+        Response invited = inviteThirdParty(tenant, studentId, contact, true);
         assertThat(invited.status()).as(invited.raw()).isEqualTo(201);
         return invited.text("token");
     }
@@ -276,7 +275,7 @@ abstract class IntegrationTest {
     /** Crée un tuteur rattaché au dossier et renvoie son jeton. */
     String newGuardian(Tenant tenant, UUID studentId) {
         String contact = uniqueEmail();
-        acceptAsNewAccount(inviteGuardian(tenant, studentId, contact, false), "Tuteur Test");
+        acceptAsNewAccount(inviteGuardian(tenant, studentId, contact), "Tuteur Test");
         return login(contact, PASSWORD);
     }
 

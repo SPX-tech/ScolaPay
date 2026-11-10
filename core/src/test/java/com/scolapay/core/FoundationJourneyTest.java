@@ -65,7 +65,7 @@ class FoundationJourneyTest extends IntegrationTest {
 
         // Le parent reçoit une invitation et ouvre son compte avec son téléphone.
         String parentPhone = uniquePhone();
-        acceptAsNewAccount(inviteGuardian(new Tenant(establishmentId, admin, adminContact), studentId, parentPhone, true), "Mahamat Abakar");
+        acceptAsNewAccount(inviteGuardian(new Tenant(establishmentId, admin, adminContact), studentId, parentPhone), "Mahamat Abakar");
         String parent = login(parentPhone, PASSWORD);
 
         // Il voit le dossier de son enfant, sans être membre de l'établissement.
@@ -82,8 +82,8 @@ class FoundationJourneyTest extends IntegrationTest {
         assertThat(get("/api/v2/me/affiliations", parent).body().size()).isZero();
         assertThat(get(path + "/students/" + studentId, parent).status()).isEqualTo(404);
 
-        // La frontière publiée à la facturation désigne les contributeurs financiers.
-        assertThat(directory.financialContributorAccounts(establishmentId, studentId)).hasSize(1);
+        // La frontière publiée à la facturation dit si un compte est lié au dossier, sans ouvrir celui-ci.
+        assertThat(directory.linkOf(establishmentId, studentId, UUID.randomUUID())).isEmpty();
         assertThat(directory.find(establishmentId, studentId)).isPresent();
         assertThat(directory.find(UUID.randomUUID(), studentId)).isEmpty();
 
@@ -124,11 +124,11 @@ class FoundationJourneyTest extends IntegrationTest {
         UUID enfantUniversite = newStudent(universite);
         String contact = uniqueEmail();
 
-        acceptAsNewAccount(inviteGuardian(lycee, enfantLycee, contact, false), "Parent Unique");
+        acceptAsNewAccount(inviteGuardian(lycee, enfantLycee, contact), "Parent Unique");
         String parent = login(contact, PASSWORD);
 
         // Le compte existe déjà : le jeton seul ne suffit pas, il faut être connecté à ce compte.
-        String secondInvitation = inviteGuardian(universite, enfantUniversite, contact, false);
+        String secondInvitation = inviteGuardian(universite, enfantUniversite, contact);
         Response anonymous = post("/api/v2/invitations/accept", null, Map.of(
                 "token", secondInvitation, "fullName", "Usurpateur", "password", PASSWORD));
         assertThat(anonymous.status()).as(anonymous.raw()).isEqualTo(401);

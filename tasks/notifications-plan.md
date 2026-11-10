@@ -36,15 +36,15 @@ Les seuls recouvrements avec #26 sont les helpers de test et la documentation de
 - PR indépendante [#27](https://github.com/SPX-tech/ScolaPay/pull/27), aucune fusion, aucun déploiement, aucun fournisseur réel appelé.
 - Configuration, SMS, confirmation juridique, supervision et réception réelle restent des conditions explicites, voir [le guide](../docs/notifications.md).
 
-## Revue du propriétaire et attente d'intégration
+## Revue du propriétaire et intégration avec le lot 6
 
 Le développement du socle a été validé le 2026-11-10. La suite est distincte du chantier terminé ; aucune autorisation de fusion, de déploiement ou de configuration réelle de Resend n'a été donnée.
 
 - [x] Vérifier que #26 est encore ouverte et différer la mise à jour depuis `main`.
 - [x] Documenter la proposition de canaux Families autorisés, sans changer la fermeture ni les règles juridiques.
 - [x] Documenter le refus transactionnel de création d'établissement en mode désactivé et les fixtures de démonstration.
-- [ ] Après intégration autorisée de #26 dans `main`, remettre #27 à jour et résoudre les recouvrements des helpers de test.
-- [ ] Exécuter la validation conjointe complète dans GitHub Actions sur PostgreSQL vierge, avec V7 puis V7_1 et vérification du rejeu des migrations.
-- [ ] Consigner les résultats conjoints avant toute nouvelle décision de fusion.
+- [x] Intégrer dans la branche #27 le `main` issu de #26 au commit `0164876`. Conserver les helpers de remise en test et résoudre les conflits documentaires.
+- [x] Ajouter au scénario de reprise le contrôle de V7 puis V7_1 sur base vierge et la validation de l'historique après redémarrage.
+- Les résultats ciblés et complets de GitHub Actions, avec leur SHA, sont consignés dans [#27](https://github.com/SPX-tech/ScolaPay/pull/27).
 
-Le [protocole d'intégration](../docs/integration-notifications-billing.md) et le principe d'une politique fondée sur les canaux Families autorisés sont validés par le propriétaire. La mise en œuvre de cette politique est explicitement différée ; elle devra être développée et testée avant toute ouverture, selon le modèle d'accès final, sans affaiblir les identités, les droits familiaux ou les contrôles juridiques. Aucun développement supplémentaire n'est engagé maintenant. #27 reste en brouillon jusqu'à #26, puis à la validation conjointe et à une nouvelle revue.
+Le [protocole d'intégration](../docs/integration-notifications-billing.md) et le principe d'une politique fondée sur les canaux Families autorisés sont validés par le propriétaire. La mise en œuvre de cette politique est différée avant toute ouverture, selon le modèle d'accès final, avec les garanties d'identité, de droits familiaux et de contrôle juridique. #27 reste en brouillon pour la revue du commit d'intégration.

@@ -78,8 +78,8 @@ Chaque lot est une PR verte, indépendante, et met à jour `PROJECT_CONTEXT.md`.
 | 2 | Catalogue académique structuré dans `schooling`, voir [0018](../decisions/0018-catalogue-academique.md) | | **Terminé** |
 | 3 | Module `billing` : catalogue de frais, identité stable des charges, applicabilité, périodes de facturation, publication et versions, voir [0020](../decisions/0020-catalogue-de-frais-et-periodes.md) | Lot 2 | **Terminé** |
 | 4 | Obligations, échéances et journal, émission sans double facturation, élèves déjà inscrits, distinction des [documents](../decisions/0019-nature-des-documents-et-numerotation.md), voir [0021](../decisions/0021-obligations-et-journal.md) | Lots 1 et 3 | **Terminé** |
-| 5 | Remises, corrections, annulations, confirmation par une seconde personne, réexamen, voir [0022](../decisions/0022-ajustements-et-reexamen.md) | Lot 4 | **Terminé, en revue** |
-| 6 | Personnes physiques et morales, rôles, vues par rôle, retrait de `financial_contributor` | Lot 4 | À faire |
+| 5 | Remises, corrections, annulations, confirmation par une seconde personne, réexamen, voir [0022](../decisions/0022-ajustements-et-reexamen.md) | Lot 4 | **Terminé** |
+| 6 | Personnes physiques et morales, rôles, vues par rôle, retrait de `financial_contributor`, voir [0023](../decisions/0023-personnes-liees-et-vues.md) | Lot 4 | **Terminé, en revue** |
 | 7 | Campagne de mutations et clôture | Tous | À faire |
 
 ## Décisions du propriétaire

@@ -2,7 +2,7 @@
 
 Le module `core/notifications` prépare une remise technique réutilisable. Aucun envoi réel, déploiement ou ouverture de Families n'est effectué par ce chantier. Décision : [0024](decisions/0024-notifications-et-remise-des-invitations.md).
 
-Le développement a été validé par le propriétaire. **L'intégration de #27 attend #26**, puis une mise à jour depuis `main` et une validation conjointe sur PostgreSQL vierge : voir [le protocole d'intégration](integration-notifications-billing.md). Aucune configuration réelle de Resend n'est autorisée à ce stade ; la section suivante reste une référence technique.
+Le développement a été validé par le propriétaire. La branche de #27 reprend `main` après #26 et reste en brouillon pour la revue. Le [protocole d'intégration](integration-notifications-billing.md) décrit les vérifications sur PostgreSQL vierge. Aucune configuration réelle de Resend n'est autorisée à ce stade. La section suivante reste une référence technique.
 
 ## Configurer l'e-mail
 
@@ -86,7 +86,7 @@ Un transport implémente `NotificationTransport`, avec un nom stable, un canal e
 
 Le workflow `Notifications` couvre les scénarios du chantier sur un PostgreSQL jetable et un faux fournisseur local. La CI générale couvre le reste du backend Java et démarre le JAR. Aucun build ni test lourd ne s'exécute sur le poste ou le VPS.
 
-Code validé : `d7224bd` (les commits suivants de clôture ne changent que la documentation).
+Validation du socle avant intégration : `d7224bd`. Les résultats du commit réunissant les notifications et le lot 6 sont consignés séparément dans [#27](https://github.com/SPX-tech/ScolaPay/pull/27).
 
 | Vérification | Résultat | Preuve |
 | --- | --- | --- |
@@ -100,4 +100,4 @@ Deux JVM sont réellement tuées : après le commit et avant le listener, puis a
 
 Le délai HTTP porte sur la lecture complète du corps. Au dépassement, la future encore en cours reçoit `cancel(true)`, selon le [contrat du JDK](https://docs.oracle.com/en/java/javase/25/docs/api/java.net.http/java/net/http/HttpClient.html). Ce geste vise à libérer les ressources ; il ne prouve pas que le fournisseur n'a pas reçu la demande. Les réponses excessives sont annulées à 8 Kio.
 
-Livraison pour revue : [PR #27](https://github.com/SPX-tech/ScolaPay/pull/27). Les contrôles du dernier commit documentaire sont visibles dans cette PR. Aucun appel au fournisseur réel, aucun SMS ni contrôle de délivrabilité en boîte n'est présenté comme testé.
+Les contrôles d'intégration couvrent V7 puis V7_1, la reprise sur la même base, les parcours financiers et les permissions réunis. Le transport de test reste local au runner. La réception en boîte, les SMS et les rebonds restent à traiter avant les mises en service concernées.

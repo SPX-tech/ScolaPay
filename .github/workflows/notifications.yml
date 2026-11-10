@@ -27,8 +27,8 @@ jobs:
           java-version: '25'
           cache: maven
           cache-dependency-path: core/pom.xml
-      - name: Vérifier les notifications et la modularité sur PostgreSQL réel
-        run: ./mvnw --batch-mode --no-transfer-progress -Dtest='Notification*Test,ResendEmailTransportTest,PayloadCipherTest,ModularityTest,GoLiveTest' test
+      - name: Vérifier les invitations, les reprises et le lot 6 sur PostgreSQL réel
+        run: ./mvnw --batch-mode --no-transfer-progress -Dtest='Notification*Test,ResendEmailTransportTest,PayloadCipherTest,ModularityTest,GoLiveTest,FoundationJourneyTest,SecurityHardeningTest,FamilyAccessTest,BillingPartyTest,FamilyBillingViewTest,Lot6FinalizationRegressionTest,PartyCorrectionTest,OutboxReliabilityTest' test
       - uses: actions/upload-artifact@v7.0.2
         if: always()
         with:

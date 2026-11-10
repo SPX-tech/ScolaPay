@@ -2,6 +2,8 @@ package com.scolapay.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +24,21 @@ class NotificationConfidentialityTest extends IntegrationTest {
                 Map.of("contact", uniqueEmail(), "role", "REGISTRAR"));
         assertThat(invited.status()).as(invited.raw()).isEqualTo(201);
         assertThat(invited.body().has("token")).isFalse();
+    }
+
+    @Test
+    void lesJetonsFamiliauxNeReviennentPasAuPersonnel() {
+        Tenant school = newTenant();
+        Response thirdParty = inviteThirdParty(school, newStudent(school), uniqueEmail(), true);
+        var adult = newStudent(school, LocalDate.now().minusYears(20));
+        Response self = post(school.path("/students/" + adult + "/self-access-invitations"),
+                school.adminToken(), Map.of("contact", uniqueEmail()));
+
+        for (Response invitation : List.of(thirdParty, self)) {
+            assertThat(invitation.status()).as(invitation.raw()).isEqualTo(201);
+            assertThat(invitation.body().has("token")).isFalse();
+            assertThat(invitation.raw()).doesNotContain(invitation.text("token"));
+        }
     }
 
     @Test

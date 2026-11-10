@@ -1,6 +1,6 @@
 # Mission 003 : journal de validation
 
-Moteur de facturation scolaire. Les choix sont dans [0015](decisions/0015-modele-de-facturation.md) à [0022](decisions/0022-ajustements-et-reexamen.md), le périmètre dans le [cadrage](missions/mission-003-billing-engine.md).
+Moteur de facturation scolaire. Les choix sont dans [0015](decisions/0015-modele-de-facturation.md) à [0023](decisions/0023-personnes-liees-et-vues.md), le périmètre dans le [cadrage](missions/mission-003-billing-engine.md).
 
 ## Méthode
 
@@ -20,7 +20,8 @@ Une campagne n'atteste que le commit qu'elle a testé. Ces défauts sont choisis
 | 2 | Catalogue académique | 129 | 15 sur 15 | 3 sur 3 | [#22](https://github.com/SPX-tech/ScolaPay/pull/22), fusionnée |
 | 3 | Catalogue de frais, identité stable des charges | 178 | 52 sur 52 | 3 sur 3 | [#23](https://github.com/SPX-tech/ScolaPay/pull/23), fusionnée |
 | 4 | Obligations, échéanciers, journal, émission | 236 | 46 sur 46 | 3 sur 3 | [#24](https://github.com/SPX-tech/ScolaPay/pull/24), fusionnée |
-| 5 | Remises, corrections, annulations, réexamen | 330 | 124 sur 124, dont 41 repris à l'identique du lot 4 | 3 sur 3 | [#25](https://github.com/SPX-tech/ScolaPay/pull/25), en revue |
+| 5 | Remises, corrections, annulations, réexamen | 330 | 124 sur 124, dont 41 repris à l'identique du lot 4 | 3 sur 3 | [#25](https://github.com/SPX-tech/ScolaPay/pull/25), fusionnée |
+| 6, finalisation | Personnes et rôles explicites, vues confidentielles cohérentes, corrections tracées | 390 | 15 sur 15 ciblés sur la reprise ; campagne historique distincte | 1 sur 1 | [#26](https://github.com/SPX-tech/ScolaPay/pull/26), revue finale |
 
 ## Lot 4 en détail
 
@@ -105,6 +106,20 @@ Toutes les validations ont tourné sur GitHub Actions. Ni le poste de développe
 | Campagne : une annulation contrepassée, puis un dû de nouveau nul, n'était pas testée | Nouveau test |
 | Campagne : le contrôle de permission du retrait se cachait derrière celui de l'auteur, tous deux en 403 | Le code d'erreur exact est exigé |
 
+## Lot 6 en détail
+
+**Code validé : `974e9c45eac9b1ed3725cbdeb4b68594d589b713`.** La reprise conserve le commit initial `253312a` et ses garanties. Les commits suivants de clôture sont documentaires.
+
+- [Régressions avant correction](https://github.com/SPX-tech/ScolaPay/actions/runs/42897808109) : neuf échecs attendus, sans erreur de compilation ni test ignoré.
+- [CI complète](https://github.com/SPX-tech/ScolaPay/actions/runs/42901332810) : 390 tests Java verts, compilation, vérification du JAR et de sa surface publique.
+- [Campagne ciblée](https://github.com/SPX-tech/ScolaPay/actions/runs/42901353861) : 15 défauts détectés sur 15, un contrôle sain de 390 tests. Pagination confidentielle, instantanés financiers, contraintes NULL et garanties de correction des personnes sont ciblés.
+- Les 19 nouvelles régressions incluent des transactions concurrentes ordonnées, une matrice de 144 combinaisons SQL, les permissions, l'isolation, le refus de transfert de compte, le journal immuable et le rollback après échec de l'audit.
+- La campagne historique du lot 6 attestait `253312a` : 176 défauts détectés et trois contrôles sains. Ses motifs restent applicables au code corrigé, mais cette campagne complète n'est pas revendiquée comme rejouée après la reprise.
+
+La [finalisation](lot6-finalization.md) détaille la provenance des documents locaux, la vérification pré-service de V7, le contrat de correction et la réassociation de compte exclue. L'ADR [0023](decisions/0023-personnes-liees-et-vues.md#décisions-ouvertes-pour-le-propriétaire) distingue les exigences validées des arbitrages métier encore ouverts. Le portail reste fermé ; aucun règlement n'est simulé.
+
+Les contrôles du commit final publié sont référencés dans #26. La validation des trois chantiers réunis, avec **V7 → V7_1 → V7_2**, reste à faire lors de leur intégration autorisée.
+
 ## Limites restantes
 
 **Non testé**
@@ -119,7 +134,7 @@ Toutes les validations ont tourné sur GitHub Actions. Ni le poste de développe
 - **Les écoles à un seul utilisateur** ne peuvent pas passer d'opération sensible sans seconde personne : sujet ouvert pour les pilotes, voir [0022](decisions/0022-ajustements-et-reexamen.md#questions-ouvertes).
 - Les catégories structurées de remises sont reportées.
 - Le remboursement d'un trop-perçu suppose le futur module de paiement.
-- Redevable, responsable, contributeur et vues associées. **Lot 6.**
+- La réassociation d'un compte à une personne financière existante reste un parcours sensible distinct. Rôles, vues et corrections de nom/identifiant sont construits au lot 6, voir [la finalisation](lot6-finalization.md).
 - L'alerte de l'outbox n'est qu'une ligne de journal, et l'archive des événements n'a pas de purge.
 
 **À valider hors du code**

@@ -50,7 +50,7 @@ abstract class BillingScenarioTest extends IntegrationTest {
         Map<String, Object> body = new HashMap<>();
         body.put("feeDefinitionId", charge.toString());
         body.put("feeCode", code);
-        body.put("label", "Frais");
+        body.put("label", "Frais de Terminale D");
         body.put("category", "TUITION");
         body.put("application", "AUTOMATIC");
         body.put("amountMinor", String.valueOf(amount));
@@ -78,7 +78,10 @@ abstract class BillingScenarioTest extends IntegrationTest {
     }
 
     UUID enrolledAndBilled(School school) throws InterruptedException {
-        UUID student = newStudent(school.tenant());
+        return enrolledAndBilled(school, newStudent(school.tenant()));
+    }
+
+    UUID enrolledAndBilled(School school, UUID student) throws InterruptedException {
         assertThat(enroll(school.tenant(), student, school.year(), school.level(), school.catalog()).status()).isEqualTo(201);
         long deadline = System.currentTimeMillis() + 30_000;
         while (obligationsOf(student) == 0 && System.currentTimeMillis() < deadline) {
@@ -163,6 +166,58 @@ abstract class BillingScenarioTest extends IntegrationTest {
 
     Response withdraw(Tenant tenant, String token, String request, String note) {
         return post(tenant.path("/billing/adjustment-requests/" + request + "/withdrawal"), token, Map.of("note", note));
+    }
+
+    record Linked(String token, UUID account, UUID grant) {}
+
+    /** Un tiers invité sur le dossier, avec ou sans accès académique, et le lien qui le rattache. */
+    Linked linkedThirdParty(Tenant tenant, UUID student, boolean academic) {
+        String contact = uniqueEmail();
+        Response invited = inviteThirdParty(tenant, student, contact, academic);
+        assertThat(invited.status()).as(invited.raw()).isEqualTo(201);
+        acceptAsNewAccount(invited.text("token"), "Tiers Test");
+        String token = login(contact, PASSWORD);
+        UUID account = get("/api/v2/me", token).id("id");
+        for (JsonNode grant : get(tenant.path("/students/" + student + "/access-grants"), tenant.adminToken()).body()) {
+            if (grant.path("accountId").asString().equals(account.toString())) {
+                return new Linked(token, account, UUID.fromString(grant.path("id").asString()));
+            }
+        }
+        throw new AssertionError("Lien introuvable");
+    }
+
+    Response createParty(Tenant tenant, String kind, String name, String identifier, UUID grant) {
+        return createParty(tenant, tenant.adminToken(), kind, name, identifier, grant);
+    }
+
+    Response createParty(Tenant tenant, String token, String kind, String name) {
+        return createParty(tenant, token, kind, name, null, null);
+    }
+
+    private Response createParty(Tenant tenant, String token, String kind, String name, String identifier, UUID grant) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("kind", kind);
+        body.put("displayName", name);
+        body.put("identifier", identifier);
+        body.put("grantId", grant == null ? null : grant.toString());
+        return post(tenant.path("/billing/parties"), token, body);
+    }
+
+    static UUID partyId(Response created) {
+        assertThat(created.status()).as(created.raw()).isEqualTo(201);
+        return created.id("id");
+    }
+
+    Response designate(Tenant tenant, String token, UUID obligation, UUID party, String role) {
+        return post(tenant.path("/billing/obligations/" + obligation + "/parties"), token, Map.of("partyId", party.toString(), "role", role));
+    }
+
+    Response confirm(Tenant tenant, String token, String designation, String reference) {
+        return post(tenant.path("/billing/obligation-parties/" + designation + "/confirmation"), token, Map.of("commitmentReference", reference));
+    }
+
+    Response endDesignation(Tenant tenant, String token, String designation, String reason) {
+        return post(tenant.path("/billing/obligation-parties/" + designation + "/end"), token, Map.of("reason", reason));
     }
 
     static String requestIdOf(Response pending) {

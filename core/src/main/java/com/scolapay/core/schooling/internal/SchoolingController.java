@@ -51,8 +51,7 @@ class SchoolingController {
     record ThirdPartyInvitationRequest(
             @NotBlank @Size(max = 254) String contact,
             @NotBlank @Pattern(regexp = "^(MOTHER|FATHER|GUARDIAN|OTHER)$") String relationship,
-            boolean academicAccess,
-            boolean financialContributor) {}
+            boolean academicAccess) {}
 
     record SelfAccessInvitationRequest(@NotBlank @Size(max = 254) String contact) {}
 
@@ -143,8 +142,7 @@ class SchoolingController {
                 studentId,
                 request.contact(),
                 request.relationship(),
-                request.academicAccess(),
-                request.financialContributor());
+                request.academicAccess());
     }
 
     @PostMapping(STUDENT + "/self-access-invitations")

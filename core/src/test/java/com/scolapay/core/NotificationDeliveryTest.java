@@ -101,6 +101,23 @@ class NotificationDeliveryTest {
     }
 
     @Test
+    void unAdministrateurInviteParLaFilePeutGererUnePersonneFinanciere() {
+        Issued invitation = issue();
+        worker.runOnce();
+        assertThat(state(invitation.id())).isEqualTo("SUBMITTED");
+        assertThat(transport.sent).hasSize(1);
+        String token = transport.sent.getFirst().text().split("Jeton : ")[1].split("\\s")[0];
+        assertThat(api.accept(token).status()).isEqualTo(200);
+        String adminToken = api.login(invitation.contact(), IntegrationTest.PASSWORD);
+
+        String parties = "/api/v2/establishments/" + invitation.school() + "/billing/parties";
+        TestApi.Reply created = api.post(parties, adminToken, Map.of("kind", "PERSON", "displayName", "Personne de test"));
+        assertThat(created.status()).as(created.raw()).isEqualTo(201);
+        assertThat(api.get(parties + "/" + created.id("id"), adminToken).status()).isEqualTo(200);
+        assertThat(api.get("/api/v2/me/billing/obligations", adminToken).status()).isEqualTo(404);
+    }
+
+    @Test
     void unEchecTemporaireEstReprisAvecLeMemeCorpsEtLaMemeCle() {
         Issued invitation = issue();
         transport.result.set(NotificationTransport.Result.retry("TRANSPORT_UNAVAILABLE"));

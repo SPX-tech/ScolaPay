@@ -45,14 +45,13 @@ public class SchoolingRepository {
             String kind,
             String relationship,
             boolean academicAccess,
-            boolean financialContributor,
             Instant academicConsentAt,
             Instant grantedAt,
             Instant revokedAt) {}
 
     private static final String GRANT_COLUMNS = """
             id, establishment_id, student_record_id, account_id, kind, relationship,
-            academic_access, financial_contributor, academic_consent_at, granted_at, revoked_at
+            academic_access, academic_consent_at, granted_at, revoked_at
             """;
 
     private final JdbcClient jdbc;
@@ -345,10 +344,10 @@ public class SchoolingRepository {
         jdbc.sql("""
                 INSERT INTO record_access_grants
                   (id, establishment_id, student_record_id, account_id, kind, relationship,
-                   academic_access, financial_contributor, granted_at, granted_by)
+                   academic_access, granted_at, granted_by)
                 VALUES
                   (:id, :establishmentId, :studentId, :accountId, :kind, :relationship,
-                   :academicAccess, :financialContributor, :grantedAt, :grantedBy)
+                   :academicAccess, :grantedAt, :grantedBy)
                 """)
                 .param("id", grant.id())
                 .param("establishmentId", grant.establishmentId())
@@ -357,7 +356,6 @@ public class SchoolingRepository {
                 .param("kind", grant.kind())
                 .param("relationship", grant.relationship())
                 .param("academicAccess", grant.academicAccess())
-                .param("financialContributor", grant.financialContributor())
                 .param("grantedAt", Columns.timestamp(grant.grantedAt()))
                 .param("grantedBy", grantedBy)
                 .update();
@@ -429,17 +427,23 @@ public class SchoolingRepository {
                 .update();
     }
 
-    public List<UUID> financialContributorAccounts(UUID establishmentId, UUID studentId) {
+    public Optional<UUID> accountOfActiveGrant(UUID establishmentId, UUID grantId) {
         return jdbc.sql("""
                 SELECT account_id FROM record_access_grants
-                WHERE establishment_id = :establishmentId AND student_record_id = :studentId
-                  AND financial_contributor AND revoked_at IS NULL
-                ORDER BY granted_at, id
+                WHERE establishment_id = :establishmentId AND id = :id AND revoked_at IS NULL
                 """)
                 .param("establishmentId", establishmentId)
-                .param("studentId", studentId)
+                .param("id", grantId)
                 .query((rs, rowNum) -> Columns.uuid(rs, "account_id"))
-                .list();
+                .optional();
+    }
+
+    public List<UUID> linkedStudentIds(UUID establishmentId, UUID accountId) {
+        return jdbc.sql("""
+                SELECT student_record_id FROM record_access_grants
+                WHERE establishment_id=:establishmentId AND account_id=:accountId AND revoked_at IS NULL
+                ORDER BY student_record_id
+                """).param("establishmentId", establishmentId).param("accountId", accountId).query(UUID.class).list();
     }
 
     private static String escapeLike(String value) {
@@ -475,7 +479,6 @@ public class SchoolingRepository {
                 rs.getString("kind"),
                 rs.getString("relationship"),
                 rs.getBoolean("academic_access"),
-                rs.getBoolean("financial_contributor"),
                 Columns.instant(rs, "academic_consent_at"),
                 Columns.instant(rs, "granted_at"),
                 Columns.instant(rs, "revoked_at"));
