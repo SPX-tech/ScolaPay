@@ -22,11 +22,12 @@ Aucun déploiement, VPS, fournisseur, changement financier ou notification.
 - [x] Intégration avant les endpoints et les calculs coûteux ; confidentialité et mot de passe dépassant 72 octets.
 - [x] Parcours légitimes derrière NAT, multi-instance, erreurs et pannes vérifiés sur vrai PostgreSQL.
 - [x] ADR, configuration, modèle de menace, limites et intégration des trois migrations documentés.
-- Validation complète et PR indépendante : résultats et statut de revue dans la description de la PR. Aucun droit de fusion ou de déploiement n'est donné par ce plan.
+- [x] Validation complète et PR indépendante : [PR #28](https://github.com/SPX-tech/ScolaPay/pull/28), 360 tests Java et démarrage du JAR verts. Aucun droit de fusion ou de déploiement n'est donné par ce plan.
 
 ## Preuves acquises
 
 - Régression d'origine observée : [CI initiale](https://github.com/SPX-tech/ScolaPay/actions/runs/42864193612).
 - Régression de troncature BCrypt observée : [CI](https://github.com/SPX-tech/ScolaPay/actions/runs/42866152616).
 - 30 tests ciblés, sans échec ni test ignoré : [CI](https://github.com/SPX-tech/ScolaPay/actions/runs/42868786498), code `5a02b9b`.
+- Validation complète du code identique, `985ca9b` : [360 tests Java et JAR](https://github.com/SPX-tech/ScolaPay/actions/runs/42869629507), [conteneurs](https://github.com/SPX-tech/ScolaPay/actions/runs/42869629777).
 - Aucun test ni build lourd local. Aucun VPS, fournisseur, fusion ou déploiement.

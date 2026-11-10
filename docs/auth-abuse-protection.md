@@ -36,7 +36,7 @@ Les paramètres sont lus sous `scolapay.auth-abuse`. Il n'existe pas de mode `di
 
 La mauvaise configuration des paramètres contrôlés empêche le démarrage. Le Binder prend en charge les noms canoniques et les alias d'environnement Spring Boot. Les paramètres doivent être identiques sur toutes les instances. Une variation de politique ou de clé pendant un déploiement progressif peut changer les quotas effectifs ; ne pas la traiter comme une opération transparente.
 
-Les valeurs de départ n'ont pas valeur de capacité certifiée pour un établissement ou un volume donné. Les ajuster après mesure du trafic et des contraintes des instances et du pool, en conservant une réserve pour les autres fonctions du backend. Par défaut, au plus trois calculs d'authentification et deux transactions de compteurs peuvent détenir une connexion par instance, sur les dix connexions Hikari configurées.
+Les valeurs de départ n'ont pas valeur de capacité certifiée pour un établissement ou un volume donné. Les ajuster après mesure du trafic et des contraintes des instances et du pool, en conservant une réserve pour les autres fonctions du backend. Par défaut, les calculs coûteux de ces deux routes publiques occupent au plus trois connexions, et les admissions de compteurs au plus deux, par instance, sur les dix connexions Hikari configurées. Ce n'est pas une borne pour les routes authentifiées ou pour l'ensemble du backend.
 
 ## Reverse proxy
 
@@ -75,7 +75,7 @@ Les compartiments stockent uniquement scope, numéro de compartiment et temps th
 - Les collisions de compartiments peuvent limiter des sujets sans lien. C'est une restriction supplémentaire, jamais une façon d'obtenir plus d'essais pour une même cible.
 - Le contrôle applicatif ne bloque ni un DDoS réseau, ni toutes les connexions lentes. Configurer et vérifier au proxy les délais totaux de lecture des en-têtes et corps, tailles d'en-têtes, connexions, files et bande passante. Les [timeouts et files Tomcat](https://tomcat.apache.org/tomcat-11.0-doc/config/http.html) ne constituent pas à eux seuls une garantie de durée totale d'envoi d'un corps.
 - Le pool de données reste partagé. Les attentes et délais SQL sont bornés ; une base indisponible rend l'authentification temporairement indisponible.
-- Les routes authentifiées et le healthcheck ne reçoivent pas ces quotas publics. Aucune protection globale de toutes les routes n'est revendiquée.
+- Les routes authentifiées, y compris le changement de mot de passe, et le healthcheck ne reçoivent pas ces quotas publics. Aucune protection globale de toutes les routes n'est revendiquée.
 - Les résultats de tests attestent les règles d'admission, pas une capacité de charge de production ni une conformité juridique.
 
 L'intégration persistante doit réunir V7 (#26), V7_1 (#27) et V7_2 (ce chantier), dans cet ordre, avec validation complète sur base vierge. Aucun déploiement n'est inclus.
@@ -83,5 +83,15 @@ L'intégration persistante doit réunir V7 (#26), V7_1 (#27) et V7_2 (ce chantie
 ## Preuves
 
 Les suites `AuthAbuseHttpTest` et `AuthAbuseProxyTest` tournent dans le workflow GitHub Actions `Auth abuse protection`. Les fixtures des parcours métier existants ont des seuils élevés sur le seul classpath de test ; les tests de ce chantier fixent explicitement de petits budgets. Elles ne changent ni le défaut du JAR ni les contrôles d'invitation.
+
+Résultats du code `5a02b9b`, repris sans changement fonctionnel dans `985ca9b` :
+
+| Vérification | Résultat | Preuve |
+| --- | --- | --- |
+| Protection ciblée, HTTP et PostgreSQL réels | 30 tests, aucun échec ni test ignoré | [CI ciblée](https://github.com/SPX-tech/ScolaPay/actions/runs/42869363613) |
+| Suite Java complète, compilation, démarrage et surface publique du JAR | 360 tests, aucun échec ni test ignoré ; JAR validé | [CI générale](https://github.com/SPX-tech/ScolaPay/actions/runs/42869629507) |
+| Images et proxy | Contrôles verts | [Containers](https://github.com/SPX-tech/ScolaPay/actions/runs/42869629777) |
+
+La [PR #28](https://github.com/SPX-tech/ScolaPay/pull/28) contient les résultats et le statut des contrôles de clôture documentaires.
 
 La première exécution a démontré l'absence de limitation d'origine. Les vérifications ultérieures ont détecté l'acceptation d'un suffixe après 72 octets. Elles couvrent également les alias d'environnement du forwarding, avec une source de configuration représentative de celle de Spring Boot. Les liens et résultats définitifs sont consignés dans la PR. La validation des chantiers #26, #27 et de ce chantier réunis reste à effectuer après leur intégration.
