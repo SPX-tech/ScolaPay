@@ -28,7 +28,7 @@ Une décision mérite une entrée ici lorsqu'elle est coûteuse à inverser ou q
 | [0020](0020-catalogue-de-frais-et-periodes.md) | Catalogue de frais, périodes de facturation et identité des charges | Acceptée | En place |
 | [0021](0021-obligations-et-journal.md) | Obligations, échéanciers et journal | Acceptée | En place, sans aucun encaissement |
 | [0022](0022-ajustements-et-reexamen.md) | Remises, corrections, annulations et réexamen | Acceptée | En place, sans aucun encaissement |
-| [0025](0025-protection-authentification-publique.md) | Protection des API publiques d'authentification | Proposée pour revue | Implémentée et testée sur PostgreSQL ; aucune infrastructure supplémentaire |
+| [0025](0025-protection-authentification-publique.md) | Protection des API publiques d'authentification | Acceptée, développement validé | Intégration différée après #26 puis #27 ; contention et collisions à mesurer avant montée en charge |
 
 ## Statuts
 

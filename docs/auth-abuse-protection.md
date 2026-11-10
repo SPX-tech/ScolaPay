@@ -2,6 +2,8 @@
 
 Décision : [0025](decisions/0025-protection-authentification-publique.md). Le périmètre est limité à la connexion et à l'acceptation d'invitations de `core/`. Le portail reste fermé par défaut. Les responsabilités financières, les notifications et les clients ne changent pas.
 
+Le développement et l'ADR 0025 sont acceptés par le propriétaire. #28 reste en brouillon jusqu'à la stabilisation et la validation de #26 puis #27. Cette acceptation n'autorise ni la fusion ni le déploiement de #28.
+
 ## Seuils de départ
 
 | Route | Origine | Origine + cible | Cible toutes origines | Global | Calculs simultanés par instance |
@@ -79,6 +81,28 @@ Les compartiments stockent uniquement scope, numéro de compartiment et temps th
 - Les résultats de tests attestent les règles d'admission, pas une capacité de charge de production ni une conformité juridique.
 
 L'intégration persistante doit réunir V7 (#26), V7_1 (#27) et V7_2 (ce chantier), dans cet ordre, avec validation complète sur base vierge. Aucun déploiement n'est inclus.
+
+## Mesures avant montée en charge
+
+Ces mesures restent à effectuer avant une exploitation à grande échelle ; aucun banc de charge, nouveau service ou changement de quota n'est ajouté maintenant.
+
+| Risque à suivre | Mesures attendues |
+| --- | --- |
+| Contention PostgreSQL | Latences p50, p95 et p99 des admissions, attentes de verrous, expirations des délais SQL, taux de 503 et occupation du pool. Distinguer l'admission des calculs BCrypt et des autres traitements métier |
+| Collisions de compartiments | Occupation des compartiments et refus supplémentaires pour des sujets synthétiques distincts partageant un quota, avec une référence permettant de distinguer collision et dépassement légitime |
+
+La campagne devra faire varier le nombre d'instances, la taille des cohortes et les profils de trafic : comptes distincts derrière NAT, rafales légitimes, identifiants variés et attaques distribuées. Elle utilisera des données synthétiques et une base jetable dans GitHub Actions, sans enregistrer d'IP, de contact ou de jeton réels pour instrumenter les collisions.
+
+Les résultats permettront de revoir les seuils, le dimensionnement ou l'architecture si un problème est démontré. Ils ne justifient pas par avance l'ajout de Redis. Aucun engagement de capacité ou seuil d'acceptation chiffré n'est inventé avant ces mesures.
+
+## Intégration différée
+
+1. Intégrer et valider #26, puis #27, selon leurs revues autorisées.
+2. Remettre #28 à jour depuis ce `main` et résoudre les conflits sans supprimer les assertions métier ou de sécurité.
+3. Exécuter la validation complète des trois chantiers sur PostgreSQL vierge dans GitHub Actions : migrations **V7 → V7_1 → V7_2**, vérification des sommes de contrôle, redémarrage sans rejeu des migrations versionnées, parcours financiers, invitations, protection anti-abus et JAR.
+4. Consigner les SHA et les résultats conjoints, puis effectuer une nouvelle revue avant toute décision de fusion de #28. Un déploiement reste une décision séparée.
+
+Ne pas activer `outOfOrder`, réparer l'historique ou modifier des migrations existantes pour masquer un problème d'intégration. Les résultats du socle ci-dessous ne sont pas une validation conjointe des trois PR. Le code de #28 reste inchangé pendant cette attente.
 
 ## Preuves
 

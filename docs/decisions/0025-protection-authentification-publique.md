@@ -1,8 +1,8 @@
 # 0025 : protection des API publiques d'authentification
 
-- **Statut** : Proposée, implémentée pour revue
+- **Statut** : Acceptée par le propriétaire le 2026-11-10 ; développement accepté, intégration différée après validation de #26 puis #27
 - **Date** : 2026-11-10
-- **Décideur** : propriétaire du projet, à la revue
+- **Décideur** : propriétaire du projet, validation du développement et de l'ADR dans la revue de la PR #28
 - **Complète** : [0010](0010-identite-et-acces.md), sans remplacer le verrouillage des comptes, les contrôles d'invitation ou les JWT révocables
 
 ## Risques évalués
@@ -20,6 +20,8 @@ Le [guide OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_C
 | PostgreSQL existant | Cohérence inter-instance, horloge commune, transactions et contraintes explicites | Écritures et contention ; dépendance de l'admission à la base | Retenue avec bornes strictes |
 
 Aucune dépendance n'est ajoutée.
+
+Le propriétaire valide PostgreSQL à ce stade. Redis reste exclu tant que son intérêt opérationnel n'est pas démontré. La contention des compteurs partagés et les collisions de compartiments feront l'objet de mesures avant une exploitation à grande échelle, selon le [suivi prévu](../auth-abuse-protection.md#mesures-avant-montée-en-charge), sans complexification immédiate du mécanisme.
 
 ## Architecture
 
@@ -68,5 +70,7 @@ Un test a aussi démontré qu'un mot de passe valide de 72 octets suivi d'un suf
 Les suites `AuthAbuse*Test` utilisent un vrai serveur HTTP et un vrai PostgreSQL. Deux contextes applicatifs indépendants partagent la même base pour vérifier les quotas inter-instance, y compris en concurrence. Une sonde de calcul retenue par un verrou de test vérifie la saturation et la libération des créneaux. Les anciennes suites métier ont des quotas élevés mais finis sur le seul classpath de test ; les nouvelles suites fixent explicitement leurs petits seuils. Aucun interrupteur de désactivation n'est ajouté au code de production.
 
 `V7_2__auth_abuse_protection.sql` ne touche aucune table financière ou de notifications et évite les versions des PR #26 et #27. **Ne pas appliquer cette branche seule à une base persistante** : l'intégration doit inclure V7, V7_1 et V7_2 dans cet ordre, sur PostgreSQL vierge, avant toute décision de mise en service. Ni `outOfOrder`, ni renumérotation des migrations existantes, ni déploiement ne sont autorisés par cette mission.
+
+La PR #28 reste en brouillon. Intégrer et valider d'abord #26, puis #27 ; ensuite remettre #28 à jour depuis `main`, résoudre les conflits éventuels et valider les trois chantiers ensemble sur PostgreSQL vierge. Les SHA, l'ordre des migrations et les résultats conjoints doivent être soumis à une nouvelle revue. Les 360 tests du socle accepté ne remplacent pas cette validation d'intégration. Aucune fusion ou aucun déploiement de #28 n'est autorisé à ce stade.
 
 Configuration et limites : [guide d'exploitation](../auth-abuse-protection.md).

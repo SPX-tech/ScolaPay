@@ -3,7 +3,7 @@
 Branche `feat/auth-abuse-protection`, issue de `main` c28862c. Worktree séparé des PR #26 et #27.
 Aucun déploiement, VPS, fournisseur, changement financier ou notification.
 
-## Décisions à vérifier
+## Décisions retenues
 
 - Conserver le verrouillage de compte et la révocation JWT. La limitation ne dépend pas de l'existence du compte.
 - PostgreSQL plutôt que mémoire seule ou Redis : quotas atomiques GCRA, horloge de la base, transactions courtes et bornées avant BCrypt.
@@ -31,3 +31,14 @@ Aucun déploiement, VPS, fournisseur, changement financier ou notification.
 - 30 tests ciblés, sans échec ni test ignoré : [CI](https://github.com/SPX-tech/ScolaPay/actions/runs/42868786498), code `5a02b9b`.
 - Validation complète du code identique, `985ca9b` : [360 tests Java et JAR](https://github.com/SPX-tech/ScolaPay/actions/runs/42869629507), [conteneurs](https://github.com/SPX-tech/ScolaPay/actions/runs/42869629777).
 - Aucun test ni build lourd local. Aucun VPS, fournisseur, fusion ou déploiement.
+
+## Acceptation et intégration différée
+
+Le propriétaire accepte le développement et l'ADR 0025 le 2026-11-10. PostgreSQL est retenu ; Redis ne sera pas introduit sans intérêt opérationnel démontré. Aucun code ni seuil ne change maintenant.
+
+- [x] Remettre #28 en brouillon, sans fusion automatique.
+- [x] Consigner l'acceptation de l'ADR et le suivi de la contention et des collisions.
+- [ ] Après intégration et validation de #26 puis #27, remettre #28 à jour depuis `main` et résoudre les conflits éventuels.
+- [ ] Valider les trois chantiers ensemble sur PostgreSQL vierge dans GitHub Actions, avec V7 puis V7_1 puis V7_2, sans contournement Flyway.
+- [ ] Consigner les résultats conjoints et les SHA pour une nouvelle revue ; aucune fusion ni aucun déploiement de #28 n'est autorisé maintenant.
+- [ ] Avant exploitation à grande échelle, mesurer contention et collisions sur données synthétiques selon le [guide](../docs/auth-abuse-protection.md#mesures-avant-montée-en-charge).
