@@ -1,5 +1,7 @@
 # Finalisation du lot 6 de la Mission 003
 
+Le périmètre du lot 6 a été validé par le propriétaire puis intégré par #26 au commit `0164876`. Les choix restrictifs du code livré sont conservés et les questions métier de l'ADR 0023 restent ouvertes. Ce document conserve les preuves de la reprise. La consolidation après #27 et #28 relève du [lot 7](mission-003-validation.md#lot-7-et-code-consolidé).
+
 La reprise part du commit publié `253312a2f76904ab673b0de68f483fec0313dd49`. Le propriétaire a confié la finalisation à un seul responsable après arrêt du travail concurrent de l'agent initial. Aucun historique Git n'est réécrit.
 
 ## Reconstitution des documents

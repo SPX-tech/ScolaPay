@@ -13,7 +13,7 @@ Référence stratégique et technique du projet, lisible sans l'historique des c
 | Données de l'ancienne instance | **Archivées**, chiffrées, hors du serveur et hors du dépôt, avec restauration et relecture vérifiées. La clé est conservée séparément |
 | Mission 002 (fondation Java) | **Finalisée** : identités, établissements, inscriptions et liens familiaux dans `core/`. Testée en CI, jamais déployée |
 | Facturation, paiements, portail familles | **Facturation Java intégrée jusqu'au lot 6.** Aucun encaissement réel ni portail web construit |
-| Mission 003 (moteur de facturation) | **Cadrage validé, construction en cours lot par lot.** État tenu dans le [cadrage](missions/mission-003-billing-engine.md) |
+| Mission 003 (moteur de facturation) | **Lots 1 à 6 intégrés, lot 7 en revue de consolidation.** [Cadrage](missions/mission-003-billing-engine.md) et [bilan de validation](mission-003-validation.md) |
 | Android | **Hors de la feuille de route active**, code conservé comme référence ([0014](decisions/0014-android-hors-feuille-de-route.md)) |
 | Ordre de construction | Backend Java, puis interfaces web. L'APK viendra une fois les parcours métier et financiers stabilisés |
 
@@ -41,7 +41,7 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Invitations | Vérifié, transport e-mail optionnel | Usage unique, contact lié, jeton retiré du JSON et remis via une file chiffrée. Sans canal disponible, création refusée | `identity`, `NotificationConfidentialityTest`, `NotificationDeliveryTest` |
 | Notifications | Vérifié en CI, aucun envoi réel | File chiffrée, listener durable, worker hors transaction, baux, reprises bornées et suivi autorisé. Resend désactivé par défaut. Aucun SMS ni preuve de réception en boîte | `notifications`, `NotificationRecoveryTest`, [0024](decisions/0024-notifications-et-remise-des-invitations.md) |
 | Intégration des notifications | #27 intégrée dans `main` au commit `212b6d3` | PostgreSQL vierge, V7 avant V7_1 et contrôle du redémarrage. Principe des canaux accepté, mise en œuvre différée avant Families | [Protocole et décision de canaux](integration-notifications-billing.md), [résultats de #27](https://github.com/SPX-tech/ScolaPay/pull/27) |
-| Protection des API publiques d'authentification | Développement et ADR acceptés, #28 en brouillon | Quotas PostgreSQL partagés, concurrence et corps bornés, proxy explicite. La branche reprend `main` après #26 et #27 | `AuthAbuseHttpTest`, `AuthAbuseProxyTest`, [0025](decisions/0025-protection-authentification-publique.md), [résultats de #28](https://github.com/SPX-tech/ScolaPay/pull/28) |
+| Protection des API publiques d'authentification | Développement et intégration validés, #28 fusionnée | Quotas PostgreSQL partagés, concurrence et corps bornés, proxy explicite. Intégrés après #26 et #27 au commit `7eb7ddb` | `AuthAbuseHttpTest`, `AuthAbuseProxyTest`, [0025](decisions/0025-protection-authentification-publique.md), [résultats de #28](https://github.com/SPX-tech/ScolaPay/pull/28) |
 | Établissements | Vérifié | Création par un opérateur, type, fuseau, devise, pays, suspension | `establishment` |
 | Personnel et permissions | Vérifié | Adhésion par établissement, rôles multiples, dernier administrateur protégé | `establishment`, `TenantIsolationTest` |
 | Isolation entre établissements | Vérifié | Barrière d'adhésion, 404 aux non-membres, clés composites en base | `TenantIsolationTest`, `DatabaseGuardsTest` |
@@ -158,11 +158,11 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 - **0021**, acceptée : une obligation par dossier et par charge, sans la version du catalogue dans la clé, dû et statut déduits du journal, règlement impossible sans le module de paiement.
 
 - **0024**, socle intégré par #27 : file chiffrée, remise des invitations et reprises externes bornées. Le principe des canaux Families explicitement autorisés est accepté. Sa mise en œuvre et ses tests sont différés avant toute ouverture, selon le modèle d'accès final.
-- **0025**, acceptée par le propriétaire : protection des routes publiques d'authentification par PostgreSQL, quotas bornés et politique explicite d'origine. #28 reprend `main` après #26 et #27. Contention et collisions restent à mesurer avant montée en charge.
+- **0025**, acceptée et intégrée par #28 : protection des routes publiques d'authentification par PostgreSQL, quotas bornés et politique explicite d'origine. Contention et collisions restent à mesurer avant montée en charge.
 
 ## Priorités actuelles
 
-1. **Mission 003, ScolaPay Billing Engine** : priorité absolue, en construction par lots. Elle s'appuie sur `schooling` sans refaire les utilisateurs ni les établissements. Voir le [cadrage](missions/mission-003-billing-engine.md).
+1. **Mission 003, ScolaPay Billing Engine** : consolidation finale et revue de clôture dans #29. Le périmètre livré et ses limites figurent dans le [cadrage](missions/mission-003-billing-engine.md) et le journal.
 2. **Sites web ScolaPay Schools et ScolaPay Families**, sur `/api/v2`, une fois le cœur financier en place.
 
 ## Risques connus
@@ -211,7 +211,7 @@ Ce serait un nouveau déploiement, avec des secrets neufs :
 - Ne pas exécuter le seed : ses comptes de démonstration ont des mots de passe publics.
 - Définir HTTPS, les origines, les limites du proxy et une sauvegarde restaurée : voir les [conditions de production](architecture-scolapay-2.md#conditions-avant-une-future-ouverture-en-production).
 
-**Prochain chantier : Mission 003, ScolaPay Billing Engine**
+**Consolidation de la Mission 003**
 
 Périmètre, critères d'acceptation et état des lots dans le [cadrage](missions/mission-003-billing-engine.md). L'outbox durable et le contrôle de mise en service sont en place. Le catalogue académique et le catalogue de frais sont en place. Les obligations, les échéanciers, le journal immuable, l'émission idempotente, les remises, les corrections et le réexamen aussi. Le lot 6, personnes liées et vues financières, a été intégré par [#26](https://github.com/SPX-tech/ScolaPay/pull/26) au commit `0164876`. Les preuves et limites figurent dans [le journal de finalisation](lot6-finalization.md). Les décisions ouvertes de [0023](decisions/0023-personnes-liees-et-vues.md#décisions-ouvertes-pour-le-propriétaire) restent à arbitrer.
 
@@ -228,7 +228,7 @@ La CI GitHub (`.github/workflows/ci.yml`) est la source de preuve : `core` avec 
 
 Le poste de développement (8 Go) est réservé aux éditions légères. Les commandes locales figurent dans le [README](../README.md).
 
-La CI de `main` a validé 390 tests Java après #26 et 431 après #27. Les 360 tests du socle anti-abus ont été exécutés avant son intégration. Les résultats des trois chantiers réunis sont consignés dans [#28](https://github.com/SPX-tech/ScolaPay/pull/28). Le scénario de reprise couvre l'ordre V7 → V7_1 → V7_2, les sommes de contrôle et l'historique Flyway au redémarrage. Il vérifie aussi le quota d'acceptation sur une invitation remise par la file, puis les droits financiers de l'administrateur invité.
+La CI de `main` a validé 390 tests Java après #26, 431 après #27 et 461 après #28, au commit `7eb7ddb`. Le scénario de reprise couvre l'ordre V7 → V7_1 → V7_2, les sommes de contrôle et l'historique Flyway au redémarrage. Il vérifie aussi le quota d'acceptation sur une invitation remise par la file, puis les droits financiers de l'administrateur invité. Les preuves de consolidation et les limites de clôture figurent dans [le journal de la Mission 003](mission-003-validation.md).
 
 Les 15 mutations ciblées de la [finalisation du lot 6](lot6-finalization.md#validation) ont été détectées avant fusion, avec un contrôle sain de 390 tests. Les preuves historiques restent distinctes : 23 mutations à la [Mission 002](mission-002-validation.md), 224 sur les lots 1 à 5 de la [Mission 003](mission-003-validation.md), puis 176 sur la version initiale du lot 6. Pour le backend NestJS et le web : 190 tests unitaires, 35 E2E et 47 tests Playwright ; la compilation et le lancement Android relèvent de la [Mission 001](mission-001-validation.md#résultats-finaux).
 

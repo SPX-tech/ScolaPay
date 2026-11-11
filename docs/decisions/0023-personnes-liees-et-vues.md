@@ -1,6 +1,6 @@
 # 0023 : personnes liées à une obligation et vues par rôle
 
-- **Statut** : Proposée pour revue finale. Les principes viennent de [0013](0013-majorite-et-autorisations-familiales.md) et [0015](0015-modele-de-facturation.md). Les corrections de confidentialité, de cohérence transactionnelle et de contraintes, ainsi que la correction tracée des personnes, ont été demandées par le propriétaire le 2026-11-10. Les choix métier encore ouverts sont distingués ci-dessous.
+- **Statut** : Périmètre du lot 6 accepté par le propriétaire et intégré par #26 au commit `0164876`. Les choix restrictifs du code livré sont conservés. Les décisions métier de la section finale restent ouvertes, notamment avant toute ouverture de Families.
 - **Date** : 2026-11-07
 - **Finalisation** : 2026-11-10, reprise du commit publié `253312a`, sans réécriture de l'historique Git
 - **Implémentation** : en place dans `core/`, derrière le portail fermé par défaut. **Aucun encaissement : un contributeur peut voir ce qu'il aurait à régler, sans pouvoir le régler.**

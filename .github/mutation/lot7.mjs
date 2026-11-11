@@ -8,10 +8,14 @@ const migration = 'core/src/main/resources/db/migration/V4__fee_catalog.sql';
 export default {
   controls: 3,
   // La CI complète contrôle aussi identité, notifications et anti-abus sur le même code.
-  testSelector: 'FeeCatalogTest,ObligationTest,AdjustmentTest,AdjustmentPolicyTest,ObligationReviewTest,ReasonConfidentialityTest,BillingPartyTest,FamilyBillingViewTest,Lot6FinalizationRegressionTest,PartyCorrectionTest,ModularityTest,TenantIsolationTest,DatabaseGuardsTest',
+  testSelector: 'FeeCatalogTest,ObligationTest,IssuanceLimitTest,AdjustmentTest,AdjustmentPolicyTest,ObligationReviewTest,ReasonConfidentialityTest,BillingPartyTest,FamilyBillingViewTest,Lot6FinalizationRegressionTest,PartyCorrectionTest,ModularityTest,TenantIsolationTest,DatabaseGuardsTest',
   mutations: [
     // Même garde que correction-without-trace, qui exige le test de régression dédié.
-    ...lot6.mutations.filter((mutation) => mutation.id !== 'db-party-mutable'),
+    ...lot6.mutations
+      .filter((mutation) => mutation.id !== 'db-party-mutable')
+      .map((mutation) => mutation.id === 'size-limit-ignored'
+        ? { ...mutation, mustFail: ['IssuanceLimitTest.unLotTropGrandEstRefuseEtSeDecoupeParUnite'] }
+        : mutation),
     ...finalization.mutations,
     {
       id: 'catalog-nearest-unit-loses-priority',

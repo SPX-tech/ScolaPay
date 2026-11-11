@@ -40,5 +40,5 @@ Le propriétaire accepte le développement et l'ADR 0025 le 2026-11-10. PostgreS
 - [x] Consigner l'acceptation de l'ADR et le suivi de la contention et des collisions.
 - [x] Reprendre `main` au SHA `212b6d3` après #26 et #27 et résoudre les conflits documentaires.
 - [x] Ajouter au scénario de reprise la vérification de V7 puis V7_1 puis V7_2 et du quota d'acceptation après redémarrage.
-- Les résultats GitHub Actions et le SHA d'intégration sont consignés dans [#28](https://github.com/SPX-tech/ScolaPay/pull/28), en brouillon pour revue.
+- Les résultats GitHub Actions et le SHA d'intégration sont consignés dans [#28](https://github.com/SPX-tech/ScolaPay/pull/28), fusionnée au commit `7eb7ddb`. Les 461 tests Java et Containers sont verts sur `main` après fusion.
 - [ ] Avant exploitation à grande échelle, mesurer contention et collisions sur données synthétiques selon le [guide](../docs/auth-abuse-protection.md#mesures-avant-montée-en-charge).
