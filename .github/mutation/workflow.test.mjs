@@ -21,6 +21,8 @@ function step(name) {
     const remaining = block.slice(run.index + run[0].length + 1);
     command = remaining.split('\n').filter((line) => line.startsWith('          '))
       .map((line) => line.slice(10)).join('\n');
+  } else if (command.startsWith("'") && command.endsWith("'")) {
+    command = command.slice(1, -1).replace(/''/g, "'");
   }
   const options = block.includes('        shell: bash\n') ? ['-e', '-o', 'pipefail'] : ['-e'];
   return { command, options };
