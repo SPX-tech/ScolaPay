@@ -21,6 +21,10 @@ Le rapport est l'artefact `campaign-report` et le résumé de l'exécution. Il p
 
 Une campagne n'est concluante que si tous les défauts sont `DETECTE` et tous les contrôles `VERT`. Le rapport vérifie aussi les identifiants attendus, les résultats manquants, inattendus ou en double. Un test désigné par `mustFail` doit avoir échoué par assertion. Les contrôles refusent les tests ignorés.
 
+Les statuts sont vérifiés selon le rôle du résultat. Un mutant `VERT` ou un contrôle `DETECTE` interdit une conclusion positive. Le workflow exige à la fois la réussite de la génération et une ligne exacte `Conclusion : CONCLUANTE`. Un rapport vide, une conclusion absente ou un générateur en erreur fait échouer le job.
+
+Le workflow `Mutation evidence` requalifie les artefacts JSON de la campagne finale existante avec l'outillage corrigé. Il vérifie le SHA source et publie un rapport mentionnant les deux SHA. Il exécute les 13 tests du rapport et des commandes réelles du workflow, dont un générateur qui imprime une conclusion positive avant de terminer en erreur.
+
 Pour ajouter une campagne, créer `<nom>.mjs` sur le modèle de `lot4.mjs`. Le plan vérifie que chaque défaut s'applique avant de lancer le moindre test.
 
 Une campagne peut préciser `testSelector` pour ses mutants et contrôles. Les campagnes historiques gardent par défaut toute la suite Java. La campagne `lot7` utilise les suites financières, de modularité et d'isolation sur le même code que la CI complète. Son rapport indique le nombre de tests de ces contrôles, distinct du nombre de tests de la CI complète.

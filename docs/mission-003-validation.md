@@ -150,7 +150,9 @@ Les suites financières, de catalogue, d'isolation et de modularité sont sélec
 
 ### Qualification des preuves
 
-La revue de l'outillage a trouvé qu'un résultat absent ou dupliqué pouvait passer inaperçu dans la conclusion. Le rapport compare désormais son inventaire au plan de campagne. Une erreur de test sans échec d'assertion ne vaut pas détection. Un test requis doit avoir échoué par assertion, et un contrôle du code intact refuse tout test ignoré. Cinq tests de l'outillage vérifient ces règles dans le plan GitHub Actions. Une compilation échouée reste toujours `NE_COMPILE_PAS`.
+La revue de l'outillage a trouvé qu'un résultat absent ou dupliqué pouvait passer inaperçu dans la conclusion. Le rapport compare son inventaire au plan de campagne. Une erreur de test sans échec d'assertion ne vaut pas détection. Un test requis doit avoir échoué par assertion, et un contrôle du code intact refuse tout test ignoré. Une compilation échouée reste toujours `NE_COMPILE_PAS`.
+
+La revue suivante de #29 a identifié deux défauts supplémentaires. Le rapport acceptait indifféremment `VERT` et `DETECTE` pour chaque résultat. Le workflow pouvait masquer l'échec du générateur avec son pipeline et acceptait l'absence de conclusion négative. La correction exige `DETECTE` pour chaque mutant et `VERT` pour chaque contrôle. La génération utilise Bash avec propagation des erreurs, puis la conclusion positive exacte est obligatoire.
 
 ### Résultats de consolidation
 
@@ -162,8 +164,12 @@ Les preuves suivantes portent sur `1278ca717dbc374b6376904d94a1edf713b216c8`, d�
 | Tests de qualification du rapport | Cinq tests réussis dans le plan de campagne | [Plan de campagne](https://github.com/SPX-tech/ScolaPay/actions/runs/42988964544) |
 | Suite Java complète, compilation, démarrage et surface publique du JAR | 461 tests, zéro échec, erreur ou test ignoré | [CI complète](https://github.com/SPX-tech/ScolaPay/actions/runs/42988964481) |
 | Images et vérification de la pile historique | Vert | [Containers](https://github.com/SPX-tech/ScolaPay/actions/runs/42988964500) |
+| Régressions du rapport et du workflow avant correction | Six échecs attendus parmi 13 tests, dont les statuts inversés, rapports sans conclusion positive et générateurs en erreur | [Régressions avant correction](https://github.com/SPX-tech/ScolaPay/actions/runs/43026340130) |
+| Requalification des 198 artefacts JSON originaux par l'outillage `2bf81a8` | 13 tests d'outillage verts, 195 mutants `DETECTE` et trois contrôles `VERT` de 276 tests | [Requalification corrigée](https://github.com/SPX-tech/ScolaPay/actions/runs/43026773053) |
 
 Le rapport final confirme notamment `size-limit-ignored` détecté par `IssuanceLimitTest.unLotTropGrandEstRefuseEtSeDecoupeParUnite`. Aucun mutant ne reste survivant, inapplicable, non compilable ou sans assertion de détection.
+
+La requalification télécharge les résultats bruts du run `42988964544`, vérifie son commit source `1278ca717dbc374b6376904d94a1edf713b216c8`, puis applique le rapport corrigé. L'artefact conserve séparément le SHA des tests financiers d'origine et celui de l'outillage de requalification. L'inventaire contient exactement les 195 mutants et les trois contrôles attendus. Les artefacts disponibles permettent cette vérification sans relancer la campagne financière.
 
 Les commits ultérieurs de clôture documentaire conservent le code et les campagnes testés. Les contrôles de la tête finale et son SHA figurent dans #29.
 

@@ -10,6 +10,8 @@ Base intégrée de référence `7eb7ddb6c268b8ca503c1b6518decaa5397fb88d`, 461 t
 - [x] CI complète sur `1278ca7`, 461 tests Java verts et Containers vert. [CI](https://github.com/SPX-tech/ScolaPay/actions/runs/42988964481), [Containers](https://github.com/SPX-tech/ScolaPay/actions/runs/42988964500).
 - [x] Actualiser le cadrage, les ADR et le contexte à partir des fusions et des résultats vérifiés.
 - [x] Préparer le bilan pour la [PR #29](https://github.com/SPX-tech/ScolaPay/pull/29), en brouillon, avec les limites et évolutions à arbitrer.
+- [x] Corriger la correspondance des statuts aux rôles et la propagation des échecs de génération. Six échecs observés avant correction, 13 tests d'outillage verts après correction.
+- [x] Requalifier les 198 résultats JSON originaux avec l'outillage corrigé. 195 mutants `DETECTE` et trois contrôles `VERT` de 276 tests, [preuve](https://github.com/SPX-tech/ScolaPay/actions/runs/43026773053). La campagne financière n'a pas été relancée.
 
 Le verdict propose la clôture technique du périmètre livré. Les contrôles du commit documentaire final et le statut de livraison sont consignés dans #29.
 
