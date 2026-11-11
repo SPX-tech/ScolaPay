@@ -33,5 +33,7 @@ jobs:
         if: always()
         with:
           name: cash-test-reports
-          path: core/target/surefire-reports/
+          path: |
+            core/target/surefire-reports/
+            core/target/cash-probe/
           if-no-files-found: error

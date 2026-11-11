@@ -57,4 +57,9 @@ class CashReceptionController {
     View find(@PathVariable UUID establishmentId, @PathVariable UUID id) {
         return View.of(service.find(establishmentId, id));
     }
+
+    @GetMapping("/by-key/{key}")
+    View findByKey(@PathVariable UUID establishmentId, @PathVariable UUID key) {
+        return View.of(service.findByKey(establishmentId, key));
+    }
 }

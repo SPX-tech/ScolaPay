@@ -60,7 +60,7 @@ class CashReceptionService {
                 now, actorId, now.atZone(ZoneId.of(establishment.timezone())).toLocalDate(), establishment.timezone());
         try {
             if (!repository.insert(establishmentId, reception)) {
-                Reception existing = repository.findByKey(establishmentId, key);
+                Reception existing = repository.findByKey(establishmentId, key).orElseThrow();
                 if (!existing.recordedByAccountId().equals(actorId)
                         || existing.amountReceivedMinor() != received || existing.changeGivenMinor() != change) {
                     throw ApiException.conflict("CASH_RECEPTION_KEY_CONFLICT", "Cette clé désigne une autre déclaration.");
@@ -82,6 +82,13 @@ class CashReceptionService {
     public Reception find(UUID establishmentId, UUID id) {
         access.require(establishmentId, Permission.CASH_RECEPTIONS_READ);
         return repository.find(establishmentId, id)
+                .orElseThrow(() -> ApiException.notFound("CASH_RECEPTION_NOT_FOUND", "Déclaration introuvable."));
+    }
+
+    @Transactional(readOnly = true)
+    public Reception findByKey(UUID establishmentId, UUID key) {
+        access.require(establishmentId, Permission.CASH_RECEPTIONS_READ);
+        return repository.findByKey(establishmentId, key)
                 .orElseThrow(() -> ApiException.notFound("CASH_RECEPTION_NOT_FOUND", "Déclaration introuvable."));
     }
 }

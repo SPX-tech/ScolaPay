@@ -59,10 +59,10 @@ class CashReceptionRepository {
                 .query(CashReceptionRepository::reception).optional();
     }
 
-    Reception findByKey(UUID establishmentId, UUID key) {
+    Optional<Reception> findByKey(UUID establishmentId, UUID key) {
         return jdbc.sql(SELECT + " AND idempotency_key = :key")
                 .param("establishmentId", establishmentId).param("key", key)
-                .query(CashReceptionRepository::reception).single();
+                .query(CashReceptionRepository::reception).optional();
     }
 
     private static Reception reception(ResultSet rs, int row) throws SQLException {
