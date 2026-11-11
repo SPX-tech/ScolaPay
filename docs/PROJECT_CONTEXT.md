@@ -2,7 +2,7 @@
 
 Référence stratégique et technique du projet, lisible sans l'historique des conversations. En cas de désaccord entre ce document et le code, **le code prime** : corriger le document.
 
-**Dernière mise à jour : 2026-11-11.** Le statut des fonctionnalités décrit le code du dépôt. **Aucune instance de ScolaPay n'est en service** : « implémenté » ne signifie pas « déployé ».
+**Dernière mise à jour : 2026-11-12.** Le statut des fonctionnalités décrit le code du dépôt. **Aucune instance de ScolaPay n'est en service** : « implémenté » ne signifie pas « déployé ».
 
 ## État du projet en bref
 
@@ -14,7 +14,7 @@ Référence stratégique et technique du projet, lisible sans l'historique des c
 | Mission 002 (fondation Java) | **Finalisée** : identités, établissements, inscriptions et liens familiaux dans `core/`. Testée en CI, jamais déployée |
 | Facturation, paiements, portail familles | **Facturation Java intégrée jusqu'au lot 6.** Aucun encaissement réel ni portail web construit |
 | Mission 003 (moteur de facturation) | **Techniquement clôturée pour le périmètre livré**, #29 fusionnée au commit `9f54029`. [Cadrage](missions/mission-003-billing-engine.md) et [bilan de validation](mission-003-validation.md) |
-| Mission 004 (encaissements espèces) | **Lot 1 terminé**, #30 intégrée. #31 fusionnée au commit `6a2fdaa` : réceptions durables. **Lot 2 en cours, première chaîne de règlement en revue**, désactivée par défaut. A05 sans remettant et statuts A08 validés pour cette seule tranche ; autres arbitrages partiellement ouverts. [Cadrage](missions/mission-004-cash-collections.md) |
+| Mission 004 (encaissements espèces) | **Lot 1 terminé**, #30 intégrée. #31 fusionnée au commit `6a2fdaa` : réceptions durables. **Lot 2 en cours, première chaîne de règlement en revue**, désactivée par défaut. Orientations A01 à A04 arbitrées ; A05 à A08 ouverts. Absence d'identité du remettant et codes de statut décrivent des limites techniques, sans validation métier attribuée au propriétaire. [Cadrage](missions/mission-004-cash-collections.md) |
 | Android | **Hors de la feuille de route active**, code conservé comme référence ([0014](decisions/0014-android-hors-feuille-de-route.md)) |
 | Ordre de construction | Backend Java, puis interfaces web. L'APK viendra une fois les parcours métier et financiers stabilisés |
 
@@ -166,7 +166,7 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 
 ## Priorités actuelles
 
-1. **Mission 004, encaissements espèces** : lot 1 terminé, lot 2 en cours. Revoir la [première chaîne de règlement](payments-cash-settlements.md), ses preuves et limites. La restitution des excédents jamais affectés reste exigée pour terminer le lot 2. Pas de pilote avant le contrôle quotidien A04 et le secours A03 réalisés ; A05 à A08 restent partiellement ouverts hors des validations limitées de cette tranche.
+1. **Mission 004, encaissements espèces** : lot 1 terminé, lot 2 en cours. Revoir la [première chaîne de règlement](payments-cash-settlements.md), ses preuves et limites. La restitution des excédents jamais affectés reste exigée pour terminer le lot 2. Pas de pilote avant le contrôle quotidien A04 et le secours A03 réalisés ; A05 à A08 restent ouverts, sans être tranchés par les choix techniques de cette tranche.
 2. **Mission 003 clôturée** : préserver les garanties et les limites du périmètre livré. Les futures interfaces Schools et Families restent à cadrer après les missions backend retenues.
 
 ## Risques connus
@@ -223,7 +223,7 @@ La [portée des scénarios par lot](missions/mission-004-cash-collections.md#por
 
 **Mission 004, lot 2 autorisé**
 
-Le lot 1 est terminé par #30 et la fondation de réceptions intégrée par #31 au commit `6a2fdaa`. Les orientations A01 à A04 sont validées sans prétendre que leurs capacités opérationnelles sont réalisées. Le propriétaire autorise pour cette tranche l'affectation d'une réception existante sans identité de remettant, sans désigner de payeur/redevable/bénéficiaire, et les quatre statuts techniques de 0028. La nouvelle chaîne de règlement, ses projections A02 et ses gardes V9 sont en revue, toujours désactivées pour tout usage réel. Les autres points A05 à A08 restent ouverts ; aucune restitution, rectification ou ouverture Families n'est prête. Voir [0029](decisions/0029-premier-reglement-especes.md), notamment le contrat SQL `READ COMMITTED` des écritures et les instantanés cohérents des lectures.
+Le lot 1 est terminé par #30 et la fondation de réceptions intégrée par #31 au commit `6a2fdaa`. Les orientations A01 à A04 sont validées sans prétendre que leurs capacités opérationnelles sont réalisées. La tranche technique réutilise une réception existante sans collecter l'identité du remettant et utilise les codes de statut décrits dans 0028 ; ces constats ne valent pas arbitrage métier A05 ou A08. La nouvelle chaîne de règlement, ses projections A02 et ses gardes V9 sont en revue, toujours désactivées pour tout usage réel. A05 à A08 restent ouverts ; aucune restitution, rectification ou ouverture Families n'est prête. Voir [0029](decisions/0029-premier-reglement-especes.md), notamment le contrat SQL `READ COMMITTED` des écritures et les instantanés cohérents des lectures.
 
 **Ensuite, sans ordre arrêté**
 

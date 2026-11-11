@@ -27,7 +27,7 @@ La devise est celle de l'établissement. L'auteur, l'horodatage, la date locale 
 
 La réponse conserve `id`, `reference`, `currency`, `amountReceivedMinor`, `changeGivenMinor`, `amountRetainedMinor`, `recordedAt`, `recordedByAccountId`, `businessDate` et `timezone`. Les champs courants `unallocatedMinor` et `settledMinor` suivent les affectations confirmées : initialement montant conservé et zéro, puis montant conservé moins affectations et cumul affecté. `allocationState` est dérivé : `UNALLOCATED`, `PARTIALLY_ALLOCATED` ou `ALLOCATED`. `proofNature` reste `INTERNAL_CASH_DECLARATION`. Les montants JSON sont des chaînes, suivant 0012.
 
-Ces codes décrivent la couverture technique de la réception, distincte des statuts d'obligation validés pour la tranche. La référence `CR-{uuid}` n'est ni un numéro fiscal ni une preuve externe de présence des billets. Les faits physiques déclarés sont immuables ; leur couverture courante peut évoluer. Un rejeu conserve la même réception et ces faits, sans restaurer les fonds déjà affectés. Aucun PDF fiscal, transfert de caisse, crédit libre, restitution ou rectification n'est disponible.
+Ces codes décrivent la couverture technique de la réception, distincte des codes d'obligation proposés pour revue. Ils ne constituent pas un arbitrage métier A08. La référence `CR-{uuid}` n'est ni un numéro fiscal ni une preuve externe de présence des billets. Les faits physiques déclarés sont immuables ; leur couverture courante peut évoluer. Un rejeu conserve la même réception et ces faits, sans restaurer les fonds déjà affectés. Aucun PDF fiscal, transfert de caisse, crédit libre, restitution ou rectification n'est disponible.
 
 ## Permissions et confidentialité
 

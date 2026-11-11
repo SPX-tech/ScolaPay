@@ -2,7 +2,7 @@
 
 - **Statut** : Orientation métier acceptée, lot 1 revu et fusionné. Lot 2 autorisé ; les arbitrages métier encore ouverts ne sont pas implicitement acceptés.
 - **Date** : 2026-11-11
-- **Décideur** : propriétaire du projet. Orientations A01 à A04 validées lors du lancement du lot 2 ; A05 à A08 restent partiellement ouverts.
+- **Décideur** : propriétaire du projet. Orientations A01 à A04 validées lors du lancement du lot 2 ; A05 à A08 restent ouverts.
 - **Implémentation** : réceptions intégrées par #31 ; port public `BillingSettlements` et [première chaîne d'affectation](../payments-cash-settlements.md) en revue, désactivée par défaut. Aucune restitution ni rectification disponible.
 - **Complète** : [0010](0010-identite-et-acces.md), [0012](0012-convention-monetaire.md), [0015](0015-modele-de-facturation.md), [0016](0016-outbox-durable.md), [0019](0019-nature-des-documents-et-numerotation.md), [0021](0021-obligations-et-journal.md) et [0022](0022-ajustements-et-reexamen.md).
 - **Remplace** : aucune décision passée. Prépare l'extension additive de la facturation pour les règlements confirmés.
@@ -112,4 +112,4 @@ S01 à S23 constituent le référentiel de la Mission 004, réparti dans la [mat
 
 Les garanties fondamentales restent exigées dès le premier `SETTLEMENT`, notamment la provenance jamais affectée et le refus de toute compensation ou rectification qui les contournerait. Chaque nouvelle capacité reçoit ses preuves complètes avant activation. Les relations financières, budgets, acteurs distincts et sources sont testés par la vraie API, la concurrence et le SQL direct sur PostgreSQL jetable.
 
-Les orientations A01 à A04 sont validées, A05 à A08 restent partiellement ouverts. L'autorisation du lot 2 permet une première PR intermédiaire sans règlement. Le [contrat exécuté](../payments-cash-receptions.md) distingue ces déclarations des contrats cibles de cette ADR. Aucun `SETTLEMENT` ne peut être introduit avant les garanties complètes de 0028.
+Les orientations A01 à A04 sont validées ; A05 à A08 restent ouverts. Les choix conservateurs du [contrat technique](../payments-cash-settlements.md) décrivent les capacités construites et leurs limites, sans attribuer de validation métier au propriétaire. Aucun `SETTLEMENT` ne peut être introduit avant les garanties complètes de 0028 et aucune activation réelle n'est autorisée ici.

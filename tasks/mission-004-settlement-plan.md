@@ -4,15 +4,15 @@ Base `6a2fdaaac64b66b684a97829b124801bb8cb4423`, branche `mission004/lot2-single
 
 ## Décisions et périmètre
 
-Le propriétaire confirme pour cette tranche l'utilisation d'une réception existante sans identité de remettant, sans création de payeur, redevable ou bénéficiaire (A05 limité). Il valide les statuts techniques OPEN, PARTIALLY_SETTLED, SETTLED et SETTLED_WITH_ADJUSTMENTS, avec conservation des états historiques sans paiement (A08 limité).
+Les orientations A01 à A04 sont explicitement arbitrées. A05 à A08 restent ouverts. Le contrat technique ne collecte pas l'identité du remettant et utilise OPEN, PARTIALLY_SETTLED, SETTLED et SETTLED_WITH_ADJUSTMENTS avec conservation des états historiques sans paiement. Ces choix d'implémentation ne valent pas validation métier d'A05 ou d'A08.
 
 Une commande affecte un montant explicite à une obligation, depuis une réception déjà confirmée. La réception n'est jamais recréée ni supprimée par un échec d'affectation. Une réception reste liée à une seule obligation dans cette tranche ; plusieurs versements à cette obligation sont possibles.
 
-Les corrections actives non couvertes par A02 et les années non ouvertes empêchent le premier règlement. Après règlement, les corrections, annulations et contrepassations génériques restent fermées ; les remises compatibles avec le reste suivent A02 et les validations sensibles existantes. Aucun remboursement ou restitution n'est activé. A05 à A08 restent ouverts hors des points limités ci-dessus.
+Les corrections actives non couvertes par A02 et les années non ouvertes empêchent le premier règlement. Après règlement, les corrections, annulations et contrepassations génériques restent fermées ; les remises compatibles avec le reste suivent A02 et les validations sensibles existantes. Aucun remboursement ou restitution n'est activé. Les limites techniques de cette tranche ne résolvent aucun arbitrage d'identité, de statut ou de restitution encore ouvert.
 
 ## Étapes
 
-- [x] Examiner les contrats et gardes, isoler les arbitrages indispensables et recevoir leurs réponses.
+- [x] Examiner les contrats et gardes et identifier les limites techniques et arbitrages métier encore ouverts, sans présenter A05 ou A08 comme validés.
 - [x] Échec fonctionnel avant implémentation : [43107035908](https://github.com/SPX-tech/ScolaPay/actions/runs/43107035908), 201 attendu contre 404, zéro erreur de compilation.
 - [x] Port public de billing, projections monétaires et couverture A02 sans modifier l'échéancier initial.
 - [x] Transaction d'affectation, idempotence et preuve durable ; réception source et lectures après désactivation conservées.

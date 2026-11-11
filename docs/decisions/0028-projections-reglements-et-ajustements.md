@@ -1,6 +1,6 @@
 # 0028 : projections des règlements et préservation des ajustements
 
-- **Statut** : Invariants M003 acquis. Orientation A02 et quatre statuts techniques A08 validés pour la tranche de règlement. Restrictions conservatrices et implémentation en revue ; les autres arbitrages restent ouverts.
+- **Statut** : Invariants M003 acquis et orientations A01 à A04 arbitrées. Codes techniques et restrictions conservatrices de l'implémentation en revue ; A05 à A08 restent ouverts.
 - **Date** : 2026-11-11
 - **Décideur** : propriétaire du projet pour les invariants existants, arbitrages de Mission 004 encore attendus.
 - **Implémentation** : première chaîne en revue, projections et couverture A02 pour les cas pris en charge. Voir [0029](0029-premier-reglement-especes.md). Aucune activation réelle.
@@ -34,7 +34,9 @@ Dans la proposition V1, B, P et R sont positifs ou nuls. P ne dépasse pas B. Un
 
 Les montants reçus, monnaie rendue et restitutions sont des projections de réception distinctes selon 0027. La somme P de cette obligation n'est pas le montant total reçu d'une réception multi-obligations.
 
-## Statuts techniques validés pour cette tranche
+## Statuts techniques de l'implémentation, proposés pour revue
+
+Ces codes sont implémentés et testés pour distinguer les effets financiers. Ils ne constituent pas un arbitrage métier A08 ; leur usage opérationnel reste à décider.
 
 | Condition | État interne proposé | Sens |
 | --- | --- | --- |
@@ -96,6 +98,6 @@ Les nouvelles écritures de paiement ne sont pas copiées brutes dans les vues d
 
 ## Critères et arbitrages
 
-Les garanties ci-dessus sont requises dès le premier lot activant les paiements, selon A01, A02, A07 et A08 approuvés. La [matrice de portée par lot](../missions/mission-004-cash-collections.md#portée-des-scénarios-par-lot) distingue les cas sur une obligation des variantes multi-obligations, multi-élèves et des rectifications ultérieures. S17 impose dès le socle le refus d'une rectification non autorisée ; le parcours fonctionnel complet doit être prouvé lorsqu'A07 en autorise l'introduction. Les validations sont exécutées dans GitHub Actions sur PostgreSQL jetable, en conservant les preuves de la Mission 003.
+Les garanties ci-dessus sont requises dès le premier lot activant les paiements. Les orientations A01 à A04 sont arbitrées ; les choix relevant d'A05 à A08 restent ouverts et les parcours qui en dépendent restent fermés tant que leurs règles et contrôles sont incomplets. La [matrice de portée par lot](../missions/mission-004-cash-collections.md#portée-des-scénarios-par-lot) distingue les cas sur une obligation des variantes multi-obligations, multi-élèves et des rectifications ultérieures. S17 impose dès le socle le refus d'une rectification non autorisée ; le parcours fonctionnel complet doit être prouvé lorsqu'A07 en autorise l'introduction. Les validations sont exécutées dans GitHub Actions sur PostgreSQL jetable, en conservant les preuves de la Mission 003.
 
-Le lot 1 documentaire n'étendait aucun enum, route ou contrainte. Le propriétaire a ensuite validé les quatre statuts techniques et la réception sans remettant pour cette seule tranche. La nouvelle implémentation les utilise sans considérer les autres arbitrages, notamment restitution, identité avant pilote et corrections, comme résolus.
+Le lot 1 documentaire n'étendait aucun enum, route ou contrainte. La tranche actuelle utilise des codes techniques et ne collecte pas l'identité du remettant ; ces constats d'implémentation ne valent pas validation du propriétaire sur A05 ou A08. Aucun arbitrage d'identité, de restitution, de correction ou de justificatif n'est considéré comme résolu par la présence de ce code ou ses tests.

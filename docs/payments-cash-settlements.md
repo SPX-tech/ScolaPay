@@ -2,7 +2,7 @@
 
 Cette livraison du lot 2 réutilise les [réceptions intégrées par #31](payments-cash-receptions.md). Une réception déclarée n'est pas une obligation réglée. Seule une affectation confirmée, liée à son `SETTLEMENT`, sa preuve et son audit, réduit le reste à payer.
 
-La tranche reste désactivée pour tout usage réel. La restitution des excédents jamais affectés n'est pas opérationnelle et le lot 2 n'est pas terminé. Les décisions et restrictions figurent dans [0029](decisions/0029-premier-reglement-especes.md).
+La tranche reste désactivée pour tout usage réel. La restitution des excédents jamais affectés n'est pas opérationnelle et le lot 2 n'est pas terminé. Les orientations A01 à A04 sont arbitrées ; A05 à A08 restent ouverts. Les choix techniques conservateurs décrits ici ne constituent pas des décisions métier validées. Voir [0029](decisions/0029-premier-reglement-especes.md).
 
 ## Parcours et contrat
 
@@ -19,7 +19,7 @@ La tranche reste désactivée pour tout usage réel. La restitution des excéden
 }
 ```
 
-La création répond 201 ; un rejeu identique répond 200 avec la même preuve historique. Toute réutilisation différente de clé donne 409. La commande ne contient ni auteur, devise choisie, payeur, bénéficiaire, date forcée ou montant de remise. Aucun rôle financier ni accès familial n'est créé.
+La création répond 201 ; un rejeu identique répond 200 avec la même preuve historique. Toute réutilisation différente de clé donne 409. La commande ne contient ni auteur, devise choisie, payeur, bénéficiaire, date forcée ou montant de remise. Aucun rôle financier ni accès familial n'est créé. L'identité du remettant n'est pas collectée dans ce contrat technique ; cette limite ne vaut pas autorisation métier A05 d'encaisser sans identification.
 
 La réception source doit appartenir au compte déclarant habilité, dans le même établissement et la même devise. Une seule obligation par réception est autorisée dans cette tranche. Plusieurs affectations successives à cette obligation et plusieurs réceptions pour la régler sont possibles. Aucun montant n'est affecté automatiquement à une autre charge.
 
@@ -33,7 +33,7 @@ Les échéances exposent séparément montant original, net après remise, règl
 
 Les corrections ou annulations actives ne reçoivent pas de ventilation inventée : `installmentsAvailable=false`, liste de couverture vide et confirmation refusée. Les montants courants restent lisibles. Les années non ouvertes sont également refusées.
 
-Les statuts techniques validés sont `OPEN`, `PARTIALLY_SETTLED`, `SETTLED`, `SETTLED_WITH_ADJUSTMENTS`. Sans paiement, les états M003 `WAIVED`, `CORRECTED`, `CANCELLED` et `ADJUSTED_TO_ZERO` restent distincts. Une remise complète n'est jamais déclarée encaissée.
+Les codes techniques implémentés et proposés pour revue sont `OPEN`, `PARTIALLY_SETTLED`, `SETTLED`, `SETTLED_WITH_ADJUSTMENTS`. Ils décrivent les calculs testés, sans trancher l'arbitrage métier A08 sur les statuts et leur usage opérationnel. Sans paiement, les états M003 `WAIVED`, `CORRECTED`, `CANCELLED` et `ADJUSTED_TO_ZERO` restent distincts. Une remise complète n'est jamais déclarée encaissée.
 
 ## Preuve et reprise
 

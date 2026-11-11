@@ -62,7 +62,7 @@ Une demande d'ajustement antérieure à un paiement devient périmée si le jour
 
 ## Décisions reçues et arbitrages restants
 
-Les orientations A01 à A04 ci-dessous ont été validées par le propriétaire lors de l'autorisation du lot 2. Leurs modalités restant à préciser sont distinguées. A05 à A08 ne sont pas entièrement validés. Les permissions de déclaration et de lecture technique sont décrites dans le [contrat intermédiaire](../payments-cash-receptions.md#permissions-et-confidentialité).
+Les orientations A01 à A04 ci-dessous ont été validées par le propriétaire lors de l'autorisation du lot 2. Leurs modalités restant à préciser sont distinguées. A05 à A08 restent ouverts : les limites et codes techniques de la tranche ne valent pas arbitrage métier. Les permissions de déclaration et de lecture technique sont décrites dans le [contrat intermédiaire](../payments-cash-receptions.md#permissions-et-confidentialité).
 
 | Référence | Choix à soumettre | Proposition et impact |
 | --- | --- | --- |
@@ -70,14 +70,14 @@ Les orientations A01 à A04 ci-dessous ont été validées par le propriétaire 
 | A02 | Orientation validée, application requise avant règlement | Paiements sur les échéances impayées les plus anciennes, remises sur les échéances non couvertes les plus éloignées, échéancier initial immuable. Définir encore les cas de correction et d'arriérés concernés par A06/A07 |
 | A03 | Secours manuel autorisé, procédure à réaliser | Références uniques, justificatifs, rapprochement et contrôle indépendant à la reprise. Définir supports, responsables et limites. Aucun système de paiement hors ligne complet n'est autorisé |
 | A04 | Contrôle quotidien requis avant pilote | Rapprochement des espèces physiques par caissier, écarts constatés et validation indépendante. Architecture prévue dès la première PR, réalisation obligatoire avant pilote, sans imposer sa livraison dans cette tranche intermédiaire |
-| A05 | Validation limitée reçue, reste ouvert avant pilote/restitution | Pour cette tranche, affecter une réception existante sans identité de remettant est autorisé, sans désigner de payeur/redevable/bénéficiaire. Identité, mandat et lien au bénéficiaire restent à décider avant pilote et restitution |
+| A05 | Arbitrage métier ouvert | L'implémentation ne collecte pas l'identité du remettant et ne désigne ni payeur, ni redevable, ni bénéficiaire. Ce périmètre technique ne vaut pas validation de l'absence d'identification. Politique d'identité, mandat et lien au bénéficiaire restent à décider avant pilote et restitution |
 | A06 | Dates métier, arriérés et années clôturées | Horodatage serveur immuable. Autorisation d'une date de réception distincte, antidatage et encaissement d'arriérés à décider. Les exigences de validation des ajustements d'année clôturée restent acquises |
 | A07 | Rectifications et refus post-paiement | Définir les erreurs corrigeables, la seconde validation, le remplacement d'affectations et le traitement d'une correction de montant qui contredit des mouvements déjà confirmés. Valider le refus V1 des réductions créant un excédent et de l'annulation administrative avec règlement actif |
-| A08 | Statuts techniques de cette tranche validés, autres points ouverts | OPEN, PARTIALLY_SETTLED, SETTLED et SETTLED_WITH_ADJUSTMENTS validés, montants séparés et statuts historiques sans paiement conservés. Informations imprimables/fiscales, futurs justificatifs et bornes des paniers restent ouverts |
+| A08 | Arbitrage métier ouvert | OPEN, PARTIALLY_SETTLED, SETTLED et SETTLED_WITH_ADJUSTMENTS sont des codes techniques implémentés et proposés pour revue, avec montants séparés et états historiques sans paiement conservés. Ils ne valent pas validation métier ; usage opérationnel, informations imprimables/fiscales, justificatifs et bornes des paniers restent à décider |
 
 Les seuils de 25 % et 100 000 XAF des ajustements ne sont pas transposés automatiquement aux restitutions. Leur double validation est déjà exigée par V05 quel que soit le montant. Une école à une seule personne habilitée ne peut pas auto-approuver une restitution.
 
-Répartition cible : seule l'orientation A01 reçue et les capacités techniques effectivement construites sont acquises. Les parcours de restitution et rectification du tableau restent à préciser avant activation :
+Répartition cible : les orientations A01 à A04 sont arbitrées ; les capacités effectivement construites décrivent le code, sans trancher les autres décisions métier. Les parcours de restitution et rectification du tableau restent à préciser avant activation :
 
 | Capacité future | Proposition de rôles | Choix restant |
 | --- | --- | --- |
