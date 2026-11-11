@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Vérifier la qualification et la complétude des rapports
-        run: node --test .github/mutation/report.test.mjs
+        run: node --test .github/mutation/*.test.mjs
       - id: plan
         name: Vérifier que chaque défaut s'applique, sans rien lancer d'autre
         run: |
@@ -105,13 +105,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'result-*' --dir results
       - name: Établir le rapport
+        shell: bash
         env:
           COMMIT: ${{ github.sha }}
-        run: node .github/mutation/report.mjs results "${{ needs.plan.outputs.campaign }}" | tee report.md >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          node .github/mutation/report.mjs results "${{ needs.plan.outputs.campaign }}" > report.md
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7.0.2
+        if: always()
         if: always()
         with:
           name: campaign-report
           path: report.md
       - name: Échouer si la campagne n'est pas concluante
-        run: '! grep -q "^Conclusion : NON CONCLUANTE" report.md'
+        run: grep -Fxq 'Conclusion : CONCLUANTE' report.md

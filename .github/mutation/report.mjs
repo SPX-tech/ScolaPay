@@ -13,7 +13,10 @@ const results = readdirSync(directory)
 const controls = results.filter((result) => result.id.startsWith('control-'));
 const mutations = results.filter((result) => !result.id.startsWith('control-'));
 const detected = mutations.filter((result) => result.status === 'DETECTE');
-const problems = results.filter((result) => !['DETECTE', 'VERT'].includes(result.status));
+const problems = [
+  ...mutations.filter((result) => result.status !== 'DETECTE'),
+  ...controls.filter((result) => result.status !== 'VERT'),
+];
 const counts = new Set(controls.map((result) => result.tests));
 const observed = results.map((result) => result.id);
 const missing = expected.filter((id) => !observed.includes(id));
