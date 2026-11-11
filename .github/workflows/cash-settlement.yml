@@ -24,10 +24,12 @@ jobs:
           cache: maven
           cache-dependency-path: core/pom.xml
       - name: Vérifier le règlement sur PostgreSQL jetable
-        run: ./mvnw --batch-mode --no-transfer-progress -Dtest='SingleObligationSettlementTest,CashSettlementSqlTest,CashAllocationDisabledTest,InstallmentCoverageTest,CashReception*Test,Adjustment*Test,FamilyBillingViewTest,Lot6FinalizationRegressionTest,ModularityTest' test
+        run: ./mvnw --batch-mode --no-transfer-progress -Dtest='SingleObligationSettlementTest,CashSettlement*Test,CashAllocationDisabledTest,InstallmentCoverageTest,CashReception*Test,Adjustment*Test,FamilyBillingViewTest,Lot6FinalizationRegressionTest,ModularityTest' test
       - uses: actions/upload-artifact@v7.0.2
         if: always()
         with:
           name: settlement-test-reports
-          path: core/target/surefire-reports/
+          path: |
+            core/target/surefire-reports/
+            core/target/settlement-probe/
           if-no-files-found: error

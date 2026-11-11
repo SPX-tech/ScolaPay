@@ -22,12 +22,14 @@ public final class CashProbeApplication {
     @Configuration(proxyBeanMethods = false)
     static class ProbeConfiguration {
         @Bean
-        FilterRegistrationBean<Filter> dropCommittedResponse(@Value("${probe.drop-cash-response:false}") boolean drop) {
+        FilterRegistrationBean<Filter> dropCommittedResponse(@Value("${probe.drop-cash-response:false}") boolean drop,
+                @Value("${probe.drop-allocation-response:false}") boolean dropAllocation) {
             FilterRegistrationBean<Filter> registration = new FilterRegistrationBean<>();
             registration.setFilter((request, response, chain) -> {
                 var httpRequest = (jakarta.servlet.http.HttpServletRequest) request;
-                if (!drop || !"POST".equals(httpRequest.getMethod())
-                        || !httpRequest.getRequestURI().endsWith("/payments/cash-receptions")) {
+                boolean target=(drop && httpRequest.getRequestURI().endsWith("/payments/cash-receptions"))
+                        || (dropAllocation && httpRequest.getRequestURI().endsWith("/allocations"));
+                if (!target || !"POST".equals(httpRequest.getMethod())) {
                     chain.doFilter(request, response);
                     return;
                 }

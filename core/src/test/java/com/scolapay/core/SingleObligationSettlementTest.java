@@ -44,7 +44,7 @@ class SingleObligationSettlementTest extends CashSettlementScenario {
         UUID source=receive(t,t.adminToken(),60000); UUID key=UUID.randomUUID();
         Response first=allocate(t,t.adminToken(),source,o,key,40000,1);
         assertThat(first.status()).as(first.raw()).isEqualTo(201);
-        assertThat(discount(t,t.adminToken(),o,5000).status()).isEqualTo(200);
+        assertThat(discount(t,t.adminToken(),o,5000).status()).isEqualTo(201);
         Response replay=allocate(t,t.adminToken(),source,o,key,40000,1);
         assertThat(replay.status()).as(replay.raw()).isEqualTo(200);
         assertThat(replay.body()).isEqualTo(first.body());
@@ -89,7 +89,7 @@ class SingleObligationSettlementTest extends CashSettlementScenario {
         School school=school(); Tenant t=school.tenant(); UUID o=issuedObligation(school);
         UUID source=receive(t,t.adminToken(),100000);
         assertThat(allocate(t,t.adminToken(),source,o,UUID.randomUUID(),80000,1).status()).isEqualTo(201);
-        assertThat(discount(t,t.adminToken(),o,5000).status()).isEqualTo(200);
+        assertThat(discount(t,t.adminToken(),o,5000).status()).isEqualTo(201);
         Response finalDiscount=discount(t,t.adminToken(),o,15000);
         assertThat(finalDiscount.status()).as(finalDiscount.raw()).isEqualTo(202);
         assertThat(approve(t,t.adminToken(),finalDiscount.body().path("request").path("id").asString()).status()).isEqualTo(403);
@@ -147,7 +147,7 @@ class SingleObligationSettlementTest extends CashSettlementScenario {
     @Test
     void lesCorrectionsActivesEtAnneesFermeesNeRecoiventPasDeReglement() throws Exception {
         School school=school(); Tenant t=school.tenant(); UUID o=issuedObligation(school);
-        assertThat(correction(t,t.adminToken(),o,1000).status()).isEqualTo(200);
+        assertThat(correction(t,t.adminToken(),o,1000).status()).isEqualTo(201);
         assertThat(position(t,o).path("installmentsAvailable").asBoolean()).isFalse();
         UUID source=receive(t,t.adminToken(),10000);
         assertThat(allocate(t,t.adminToken(),source,o,UUID.randomUUID(),10000,2).code()).isEqualTo("ADJUSTMENT_POLICY_UNDEFINED");
@@ -160,7 +160,7 @@ class SingleObligationSettlementTest extends CashSettlementScenario {
     void laReceptionNeDevientPasUnCreditTransferableEtLePlanPerimeNestPasAjusteSilencieusement() throws Exception {
         School school=school(); Tenant t=school.tenant(); UUID a=issuedObligation(school),b=issuedObligation(school);
         UUID source=receive(t,t.adminToken(),50000);
-        assertThat(discount(t,t.adminToken(),a,1000).status()).isEqualTo(200);
+        assertThat(discount(t,t.adminToken(),a,1000).status()).isEqualTo(201);
         assertThat(allocate(t,t.adminToken(),source,a,UUID.randomUUID(),10000,1).code()).isEqualTo("ALLOCATION_OUTDATED");
         assertThat(allocate(t,t.adminToken(),source,a,UUID.randomUUID(),10000,2).status()).isEqualTo(201);
         assertThat(allocate(t,t.adminToken(),source,b,UUID.randomUUID(),10000,1).code()).isEqualTo("RECEPTION_ALREADY_BOUND");
@@ -171,7 +171,7 @@ class SingleObligationSettlementTest extends CashSettlementScenario {
     @Test
     void paiementsEtRemisesCouvrentLesEcheancesDansLesSensValidesSansLesModifier() throws Exception {
         School school=twoTermsSchool(); Tenant t=school.tenant(); UUID o=issuedObligation(school);
-        assertThat(discount(t,t.adminToken(),o,20000).status()).isEqualTo(200);
+        assertThat(discount(t,t.adminToken(),o,20000).status()).isEqualTo(201);
         assertThat(allocate(t,t.adminToken(),receive(t,t.adminToken(),50000),o,UUID.randomUUID(),50000,2).status()).isEqualTo(201);
         var p=position(t,o);
         assertThat(p.path("installments").get(0).path("netMinor").asString()).isEqualTo("40000");
@@ -207,5 +207,60 @@ class SingleObligationSettlementTest extends CashSettlementScenario {
         }
         assertThat(Long.parseLong(position(t,o).path("dueMinor").asString())).isGreaterThanOrEqualTo(0);
         assertThat(journalSize(o)).isEqualTo(2);
+    }
+
+    @Test
+    void unEchecDAuditAnnuleAffectationEtReglementMaisConserveLesEspecesRecues() throws Exception {
+        School school=school(); Tenant t=school.tenant(); UUID o=issuedObligation(school);
+        UUID source=receive(t,t.adminToken(),100000), key=UUID.randomUUID();
+        String constraint="test_allocation_"+UUID.randomUUID().toString().replace("-","");
+        jdbc.sql("ALTER TABLE audit_events ADD CONSTRAINT "+constraint+" CHECK (NOT (establishment_id='"+t.id()
+                +"'::uuid AND action='payments.cash.allocated')) NOT VALID").update();
+        try {
+            Response failed=allocate(t,t.adminToken(),source,o,key,40000,1);
+            assertThat(failed.status()).as(failed.raw()).isEqualTo(409);
+            assertThat(failed.raw()).doesNotContain("INSERT","SQLException","cash_allocations","40000");
+            assertThat(count("cash_allocations",t)).isZero();
+            assertThat(journalSize(o)).isEqualTo(1);
+            assertThat(count("cash_receptions",t)).isEqualTo(1);
+            assertThat(get(t.path("/payments/cash-receptions/"+source),t.adminToken()).text("unallocatedMinor")).isEqualTo("100000");
+        } finally { jdbc.sql("ALTER TABLE audit_events DROP CONSTRAINT "+constraint).update(); }
+        assertThat(allocate(t,t.adminToken(),source,o,key,40000,1).status()).isEqualTo(201);
+        assertThat(count("cash_receptions",t)).isEqualTo(1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings={"CONTRACTUAL_DEBTOR","FINANCIAL_RESPONSIBLE","VOLUNTARY_CONTRIBUTOR"})
+    void lesVuesFamilialesNeConfondentPasReglementEtRemiseEtNeRecoiventPasLesPreuvesIndividuelles(String role) throws Exception {
+        School school=school(); Tenant t=school.tenant(); UUID o=issuedObligation(school);
+        UUID student=UUID.fromString(obligationView(t,o).path("studentId").asString());
+        Linked linked=linkedThirdParty(t,student,false);
+        UUID party=partyId(createParty(t,"PERSON","Tiers désigné",null,linked.grant()));
+        assertThat(designate(t,t.adminToken(),o,party,role).status()).isEqualTo(201);
+        assertThat(discount(t,t.adminToken(),o,10000).status()).isEqualTo(201);
+        UUID source=receive(t,t.adminToken(),30000);
+        Response paid=allocate(t,t.adminToken(),source,o,UUID.randomUUID(),30000,2);
+        assertThat(paid.status()).as(paid.raw()).isEqualTo(201);
+        Response family=get("/api/v2/me/billing/obligations/"+o,linked.token());
+        assertThat(family.status()).as(family.raw()).isEqualTo(200);
+        assertThat(family.text("dueMinor")).isEqualTo("60000");
+        assertThat(family.raw()).doesNotContain(paid.text("reference"),paid.text("settlementEntryId"),source.toString(),"SETTLEMENT");
+        if ("FINANCIAL_RESPONSIBLE".equals(role)) assertThat(family.text("adjustmentsTotalMinor")).isEqualTo("-10000");
+        if ("VOLUNTARY_CONTRIBUTOR".equals(role)) {
+            assertThat(family.body().properties().stream().map(Map.Entry::getKey))
+                    .containsExactlyInAnyOrder("view","id","establishmentName","reference","currency","dueMinor","nextDueOn","studentName");
+        }
+        assertThat(allocate(t,linked.token(),source,o,UUID.randomUUID(),1000,3).status()).isEqualTo(404);
+    }
+
+    @Test
+    void affecterDesEspecesNeCreeAucuneDesignationFinanciere() throws Exception {
+        School school=school(); Tenant t=school.tenant(); UUID o=issuedObligation(school);
+        UUID student=UUID.fromString(obligationView(t,o).path("studentId").asString());
+        Linked parent=linkedThirdParty(t,student,true);
+        assertThat(allocate(t,t.adminToken(),receive(t,t.adminToken(),10000),o,UUID.randomUUID(),10000,1).status()).isEqualTo(201);
+        assertThat(count("billing_parties",t)).isZero();
+        assertThat(count("obligation_parties",t)).isZero();
+        assertThat(get("/api/v2/me/billing/obligations/"+o,parent.token()).status()).isEqualTo(404);
     }
 }

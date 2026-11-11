@@ -57,8 +57,8 @@ public class ObligationService {
     /**
      * Déduit du journal, jamais saisi. Un dû nul n'a pas toujours le même sens : annulée, abandonnée par
      * remise, ramenée à zéro par correction, ou par une combinaison des deux, qui ne prétend alors à aucune
-     * cause unique. Le détail reste au journal. SETTLED n'existe pas : seul le futur module de paiement
-     * pourra l'introduire, sur preuve d'un règlement confirmé.
+     * cause unique. Les états de règlement exigent des écritures liées à une réception et une preuve,
+     * et ne se déduisent jamais d'une remise ou d'une correction.
      */
     public enum ObligationStatus {
         OPEN,

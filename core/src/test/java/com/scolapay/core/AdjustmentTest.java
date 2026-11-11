@@ -3,7 +3,6 @@ package com.scolapay.core;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -342,8 +341,6 @@ class AdjustmentTest extends BillingScenarioTest {
 
     @Test
     void aucunStatutNiEcritureNeSimuleUnReglement() throws Exception {
-        assertThat(Arrays.stream(com.scolapay.core.billing.internal.ObligationService.ObligationStatus.values()).map(Enum::name))
-                .doesNotContain("SETTLED", "PAID");
         School school = school();
         Tenant tenant = school.tenant();
         UUID obligation = issuedObligation(school);
@@ -358,6 +355,13 @@ class AdjustmentTest extends BillingScenarioTest {
                 .param("actor", get("/api/v2/me", tenant.adminToken()).id("id"))
                 .update())
                 .isInstanceOf(DataIntegrityViolationException.class);
+        assertDue(tenant, obligation, AMOUNT, "OPEN");
+        assertThat(obligationView(tenant, obligation).path("settledMinor").asString()).isEqualTo("0");
+        approve(tenant, newStaff(tenant, "ACCOUNTANT"), requestIdOf(discount(tenant, tenant.adminToken(), obligation, AMOUNT)));
+        assertDue(tenant, obligation, 0, "WAIVED");
+        assertThat(obligationView(tenant, obligation).path("settledMinor").asString()).isEqualTo("0");
+        assertThat(jdbc.sql("SELECT count(*) FROM obligation_entries WHERE obligation_id=:id AND kind='SETTLEMENT'")
+                .param("id", obligation).query(Long.class).single()).isZero();
     }
 
     /** Une charge annulée reste émise : la réinscription ne la refacture pas, seule une contrepassée la rétablit. */
