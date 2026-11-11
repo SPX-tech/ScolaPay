@@ -11,17 +11,17 @@ Une décision mérite une entrée ici lorsqu'elle est coûteuse à inverser ou q
 | [D-003](../architecture-scolapay-2.md#décision-003--conserver-les-unités-financières-historiques) | Unités financières historiques | Acceptée pour le code NestJS, remplacée par 0012 pour le nouveau backend | En place dans `backend/` |
 | [D-004](../architecture-scolapay-2.md#décision-004--prestataires-financiers-fermés-par-défaut) | Prestataires fermés par défaut | Acceptée | En place |
 | [D-005](../architecture-scolapay-2.md#décision-005--migrations-séparées-du-démarrage) | Migrations séparées du démarrage | Acceptée | En place |
-| [0006](0006-backend-java-spring-boot.md) | Nouveau backend ScolaPay 2.0 en Java/Spring Boot, code NestJS conservé comme référence | Acceptée | Fondation en place dans `core/`, facturation à venir |
+| [0006](0006-backend-java-spring-boot.md) | Nouveau backend ScolaPay 2.0 en Java/Spring Boot, code NestJS conservé comme référence | Acceptée | Fondation et facturation intégrées dans `core/` |
 | [0007](0007-portail-familles-avant-apk.md) | Portail web des familles avant une application Android | Acceptée | Non démarrée |
 | [0008](0008-go-services-paiement.md) | Go pour de futurs services financiers spécialisés | Orientation validée, introduction non prévue immédiatement | Non démarrée |
 | [0009](0009-fondation-technique-core.md) | Fondation technique du backend Java | Acceptée | En place dans `core/` |
-| [0010](0010-identite-et-acces.md) | Modèle d'identité et d'accès | Acceptée | En place dans `core/`, sans remise des invitations |
+| [0010](0010-identite-et-acces.md) | Modèle d'identité et d'accès | Acceptée | En place, complété par 0024 pour la remise et 0025 pour les protections publiques |
 | [0011](0011-transition-depuis-nestjs.md) | Transition depuis NestJS | Acceptée | Schéma et contrat séparés en place, portage des clients à venir |
-| [0012](0012-convention-monetaire.md) | Montants entiers dans l'unité minimale ISO de chaque devise | Acceptée | S'imposera à la Mission 003 : aucun montant dans `core/` à ce jour |
+| [0012](0012-convention-monetaire.md) | Montants entiers dans l'unité minimale ISO de chaque devise | Acceptée | Appliquée dans le moteur de facturation |
 | [0013](0013-majorite-et-autorisations-familiales.md) | Majorité légale et autorisations familiales | Acceptée, modalités juridiques à confirmer | En place dans `core/` |
 | [0014](0014-android-hors-feuille-de-route.md) | Android hors de la feuille de route active | Acceptée | Contrôles CI séparés, code conservé |
-| [0015](0015-modele-de-facturation.md) | Modèle du moteur de facturation | Acceptée, règles juridiques à valider | À venir, lots de la Mission 003 |
-| [0016](0016-outbox-durable.md) | Outbox durable | Acceptée, registre Spring Modulith prouvé par les tests | En place, sans listener de production |
+| [0015](0015-modele-de-facturation.md) | Modèle du moteur de facturation | Acceptée, règles juridiques à valider | Mission 003 techniquement clôturée, sans encaissement réel |
+| [0016](0016-outbox-durable.md) | Outbox durable | Acceptée, registre Spring Modulith prouvé par les tests | Utilisée par l'émission des obligations et la préparation des notifications |
 | [0017](0017-controles-de-mise-en-service.md) | Contrôles de mise en service | Acceptée | En place, portail fermé |
 | [0018](0018-catalogue-academique.md) | Catalogue académique | Acceptée | En place |
 | [0019](0019-nature-des-documents-et-numerotation.md) | Nature des documents et numérotation, étude de la FEN | Principes acceptés, traitement fiscal à valider | Référence interne seulement |
@@ -31,6 +31,9 @@ Une décision mérite une entrée ici lorsqu'elle est coûteuse à inverser ou q
 | [0023](0023-personnes-liees-et-vues.md) | Personnes liées à une obligation et vues par rôle | Périmètre du lot 6 validé, questions métier ouvertes | Intégré dans `main` par #26, portail fermé, aucun encaissement |
 | [0024](0024-notifications-et-remise-des-invitations.md) | Notifications et remise sécurisée des invitations | Socle, protocole et principe des canaux acceptés | Intégré dans `main` par #27, remise désactivée par défaut et politique à implémenter avant Families |
 | [0025](0025-protection-authentification-publique.md) | Protection des API publiques d'authentification | Acceptée, développement et intégration validés | Intégrée par #28 dans `main` au commit `7eb7ddb`. Contention et collisions à mesurer avant montée en charge |
+| [0026](0026-contrats-encaissements-especes.md) | Contrats entre encaissement, facturation, identité et audit | Orientation acceptée, contrats proposés pour revue | Lot 1 documentaire, module `payments` absent |
+| [0027](0027-restitution-excedents-jamais-affectes.md) | Restitution des seuls excédents jamais affectés | Décision métier acceptée, provenance et états proposés | Aucune implémentation, permissions et contrôle physique à arbitrer |
+| [0028](0028-projections-reglements-et-ajustements.md) | Projections et garanties de facturation avec règlements | Proposée, invariants hérités acquis | Aucune modification du moteur ou des migrations |
 
 ## Statuts
 
