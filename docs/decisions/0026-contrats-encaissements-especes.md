@@ -1,9 +1,9 @@
 # 0026 : contrats du domaine d'encaissement espèces
 
-- **Statut** : Orientation métier acceptée. Contrats d'architecture proposés pour la revue du lot 1, avant autorisation du développement.
+- **Statut** : Orientation métier acceptée, lot 1 revu et fusionné. Lot 2 autorisé ; les arbitrages métier encore ouverts ne sont pas implicitement acceptés.
 - **Date** : 2026-11-11
-- **Décideur** : propriétaire du projet pour l'orientation. Les arbitrages A01 à A08 du cadrage restent ouverts.
-- **Implémentation** : aucune. Le module `payments`, ses ports Java et ses routes n'existent pas.
+- **Décideur** : propriétaire du projet. Orientations A01 à A04 validées lors du lancement du lot 2 ; A05 à A08 restent partiellement ouverts.
+- **Implémentation** : première PR intermédiaire de `payments` pour les [déclarations non affectées](../payments-cash-receptions.md). Aucun port d'écriture de `billing`, affectation, règlement ou restitution n'est activé.
 - **Complète** : [0010](0010-identite-et-acces.md), [0012](0012-convention-monetaire.md), [0015](0015-modele-de-facturation.md), [0016](0016-outbox-durable.md), [0019](0019-nature-des-documents-et-numerotation.md), [0021](0021-obligations-et-journal.md) et [0022](0022-ajustements-et-reexamen.md).
 - **Remplace** : aucune décision passée. Prépare l'extension additive de la facturation pour les règlements confirmés.
 
@@ -17,7 +17,7 @@ La Mission 003 est clôturée au commit `9f54029`. `billing` conserve ses servic
 
 Un module Java `payments` enregistre les espèces effectivement reçues, leurs affectations et leurs preuves. Il est distinct de `billing`. Les paiements partiels sont conservés et les paniers multi-obligations puis multi-élèves sont introduits progressivement. La restitution des excédents jamais affectés suit [0027](0027-restitution-excedents-jamais-affectes.md).
 
-La confirmation d'espèces repose sur l'attestation d'un acteur habilité. Le logiciel garantit la cohérence et l'historique de cette déclaration, sans constater les billets. La procédure de contrôle physique reste à arbitrer en A04.
+La confirmation d'espèces repose sur l'attestation d'un acteur habilité. Le logiciel garantit la cohérence et l'historique de cette déclaration, sans constater les billets. Le contrôle physique quotidien avec validation indépendante est requis par A04 avant un pilote ; ses modalités restent à préciser et sa réalisation n'entre pas dans la première tranche intermédiaire.
 
 ## Contrats proposés entre modules
 
@@ -33,7 +33,7 @@ La confirmation d'espèces repose sur l'attestation d'un acteur habilité. Le lo
 | `payments` | Demander, approuver puis confirmer une restitution | Contrat de 0027, dont la provenance jamais affectée et la remise physique |
 | `audit` | Tracer l'opération et ses décisions | Établissement, acteur serveur, action, cible et références techniques. Écriture dans la même transaction que le changement |
 
-Les capacités et leur attribution aux rôles sont proposées, pas ajoutées au code par cette ADR. Le caissier possède aujourd'hui `BILLING_READ`, sans capacité d'encaissement. A01 doit préciser réception, affectation, lecture, demande, approbation, remise physique et rectification.
+Le [contrat intermédiaire](../payments-cash-receptions.md#permissions-et-confidentialité) décrit les permissions exécutables de déclaration et de lecture technique reçues en A01. Les capacités d'affectation, de demande et d'approbation de restitution, de remise physique et de rectification ne sont pas activées par cette PR. Leurs modalités doivent être définies avant activation.
 
 Ce sont des API de modules internes. La future surface HTTP d'encaissement reste sous `/api/v2/establishments/{establishmentId}`, protégée par la barrière d'adhésion existante. Aucun point d'entrée HTTP libre n'autorise l'insertion d'un règlement dans le journal.
 
@@ -112,4 +112,4 @@ S01 à S23 constituent le référentiel de la Mission 004, réparti dans la [mat
 
 Les garanties fondamentales restent exigées dès le premier `SETTLEMENT`, notamment la provenance jamais affectée et le refus de toute compensation ou rectification qui les contournerait. Chaque nouvelle capacité reçoit ses preuves complètes avant activation. Les relations financières, budgets, acteurs distincts et sources sont testés par la vraie API, la concurrence et le SQL direct sur PostgreSQL jetable.
 
-A01 à A08 précisent les permissions, échéances, secours, contrôle physique, identité du remettant, dates, rectifications et justificatifs. Cette ADR ne crée aucun contrat HTTP ou Java exécutable et ne vaut pas autorisation de développement.
+Les orientations A01 à A04 sont validées, A05 à A08 restent partiellement ouverts. L'autorisation du lot 2 permet une première PR intermédiaire sans règlement. Le [contrat exécuté](../payments-cash-receptions.md) distingue ces déclarations des contrats cibles de cette ADR. Aucun `SETTLEMENT` ne peut être introduit avant les garanties complètes de 0028.

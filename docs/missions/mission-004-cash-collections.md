@@ -1,8 +1,8 @@
 # Mission 004 : encaissements espèces et affectations
 
-**Statut du lot 1 documentaire en revue.** La Mission 003 est techniquement clôturée dans `main` au commit `9f540291d2e9c2d0108e9a0249d2cfde69fe6a3e`. Le présent cadrage prépare le domaine d'encaissement. Le module `payments`, ses contrats Java, ses routes et ses migrations restent à développer après autorisation du propriétaire.
+**Lot 1 terminé**, #30 fusionnée au commit `2bb5922aef4bf141525a13b9d1c67a815c9d8925`. **Lot 2 autorisé**, première PR intermédiaire de [déclarations d'espèces non affectées](../payments-cash-receptions.md) en revue. Aucun `SETTLEMENT` n'est activé et le lot 2 n'est pas terminé. La Mission 003 reste techniquement clôturée.
 
-La décision de restituer en V1 les excédents jamais affectés est validée. Les propositions de permissions, de statuts et de procédures ci-dessous ne constituent pas des arbitrages acquis.
+La restitution en V1 des excédents jamais affectés et les orientations A01 à A04 reçues au démarrage du lot 2 sont validées. Les autres propositions de permissions détaillées, de statuts et de procédures ci-dessous ne constituent pas des arbitrages acquis.
 
 ## Objectif
 
@@ -60,16 +60,16 @@ L'annulation administrative d'une obligation avec règlement actif serait égale
 
 Une demande d'ajustement antérieure à un paiement devient périmée si le journal change, conformément à 0022. Sa confirmation ne reprend pas automatiquement le nouveau montant.
 
-## Arbitrages ouverts avant le lot 2
+## Décisions reçues et arbitrages restants
 
-Les capacités ci-dessous sont des propositions de contrat. Le code actuel de `Permission` et `StaffRole` reste inchangé.
+Les orientations A01 à A04 ci-dessous ont été validées par le propriétaire lors de l'autorisation du lot 2. Leurs modalités restant à préciser sont distinguées. A05 à A08 ne sont pas entièrement validés. Les permissions de déclaration et de lecture technique sont décrites dans le [contrat intermédiaire](../payments-cash-receptions.md#permissions-et-confidentialité).
 
 | Référence | Choix à soumettre | Proposition et impact |
 | --- | --- | --- |
-| A01 | Permissions, périmètre de consultation et rôles de restitution | Confirmation ordinaire par caissier, comptable ou administrateur habilité. Demande et approbation de restitution par deux comptes distincts. Le remettant physique autorisé et la capacité du directeur restent à fixer. Aucune exigence de troisième personne n'est présumée |
-| A02 | Échéances et répartition des ajustements | Priorité à l'échéance la plus ancienne, puis aux suivantes. Définir aussi la réduction des échéances par remises et corrections et le traitement des arriérés. Aucune échéance initiale ne change |
-| A03 | Procédure de secours et retour au service | Référence de secours unique, montant, date, auteur et remettant, puis rapprochement contrôlé. Définir support, responsables et limites. La réception hors ligne n'est pas une fonctionnalité déjà autorisée |
-| A04 | Contrôle physique et traitement des écarts | Définir preuve de remise au bénéficiaire, contrôle des espèces, suivi des incidents et délai de résolution. Une approbation informatique ne démontre pas le geste physique |
+| A01 | Orientation validée, modalités de restitution à préciser | Déclaration ordinaire par caissier, comptable ou administrateur habilité. Restitution demandée puis approuvée par un second compte habilité. Directeur pouvant approuver sans encaisser, auditeur en lecture seule. Auteur de remise physique et périmètre des données enrichies restent à préciser avant leur activation |
+| A02 | Orientation validée, application requise avant règlement | Paiements sur les échéances impayées les plus anciennes, remises sur les échéances non couvertes les plus éloignées, échéancier initial immuable. Définir encore les cas de correction et d'arriérés concernés par A06/A07 |
+| A03 | Secours manuel autorisé, procédure à réaliser | Références uniques, justificatifs, rapprochement et contrôle indépendant à la reprise. Définir supports, responsables et limites. Aucun système de paiement hors ligne complet n'est autorisé |
+| A04 | Contrôle quotidien requis avant pilote | Rapprochement des espèces physiques par caissier, écarts constatés et validation indépendante. Architecture prévue dès la première PR, réalisation obligatoire avant pilote, sans imposer sa livraison dans cette tranche intermédiaire |
 | A05 | Identification du remettant et bénéficiaire de restitution | Proposer un payeur sans compte, identité déclarée minimale et preuve du lien avec la réception. Le contenu obligatoire et le traitement d'un mandataire restent à valider |
 | A06 | Dates métier, arriérés et années clôturées | Horodatage serveur immuable. Autorisation d'une date de réception distincte, antidatage et encaissement d'arriérés à décider. Les exigences de validation des ajustements d'année clôturée restent acquises |
 | A07 | Rectifications et refus post-paiement | Définir les erreurs corrigeables, la seconde validation, le remplacement d'affectations et le traitement d'une correction de montant qui contredit des mouvements déjà confirmés. Valider le refus V1 des réductions créant un excédent et de l'annulation administrative avec règlement actif |
@@ -77,7 +77,7 @@ Les capacités ci-dessous sont des propositions de contrat. Le code actuel de `P
 
 Les seuils de 25 % et 100 000 XAF des ajustements ne sont pas transposés automatiquement aux restitutions. Leur double validation est déjà exigée par V05 quel que soit le montant. Une école à une seule personne habilitée ne peut pas auto-approuver une restitution.
 
-Proposition de répartition à valider en A01, sans modification des rôles actuels :
+Répartition cible : seule l'orientation A01 reçue et les capacités techniques effectivement construites sont acquises. Les parcours de restitution et rectification du tableau restent à préciser avant activation :
 
 | Capacité future | Proposition de rôles | Choix restant |
 | --- | --- | --- |
@@ -158,4 +158,4 @@ Les propositions ont été confrontées aux ports `CurrentActor`, `Establishment
 
 Le lot documentaire vérifie la cohérence des références, la distinction entre état réel et cible et le périmètre du diff. Les futurs invariants seront prouvés par la vraie API, des transactions concurrentes et du SQL direct sur PostgreSQL jetable dans GitHub Actions.
 
-Le présent lot autorise uniquement la documentation et sa PR en brouillon. Le lancement du lot 2 demande une décision explicite. La Mission 003 reste clôturée, Families fermé et les fournisseurs désactivés. Aucun frontend, déploiement, import réel, migration persistante ou modification du code n'entre dans ce lot.
+Le lot 1 est terminé. Le propriétaire a autorisé le développement du lot 2 et des PR intermédiaires n'activant pas de règlement incomplet. La première PR conserve toutes les espèces non affectées et l'interdiction SQL de `SETTLEMENT`. La Mission 003 reste clôturée, Families fermé et les fournisseurs désactivés. Aucun frontend, déploiement, import réel ou migration persistante n'est autorisé.

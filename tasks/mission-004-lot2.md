@@ -15,11 +15,11 @@ Le propriétaire autorise le développement du lot 2 et des PR intermédiaires s
 ## Ordre de travail
 
 - [x] Examiner les frontières, l'audit transactionnel, les contraintes de facturation et les conventions de tests réels.
-- [ ] Écrire les tests HTTP de déclaration et observer leur échec fonctionnel en CI avant implémentation.
-- [ ] Ajouter `payments` avec enregistrement fermé par défaut, permissions explicites, montants bornés et auteur serveur.
-- [ ] Ajouter V8 sans modifier les migrations existantes : déclaration immuable, preuve interne, devise et auteur cohérents, unicité idempotente et audit obligatoire au commit.
-- [ ] Vérifier concurrence, rejeux, droits, SQL direct, désactivation, redémarrage et absence de règlement.
-- [ ] Vérifier les régressions de facturation, la modularité et la CI complète sur PostgreSQL jetable.
-- [ ] Publier la PR en brouillon avec preuves et limites précises.
+- [x] Écrire les tests HTTP de déclaration et observer leur échec fonctionnel en CI avant implémentation : [43091216562](https://github.com/SPX-tech/ScolaPay/actions/runs/43091216562), deux assertions 201/404, aucune erreur de compilation.
+- [x] Ajouter `payments` avec enregistrement fermé par défaut, permissions explicites, montants bornés et auteur serveur.
+- [x] Ajouter V8 sans modifier les migrations existantes : déclaration immuable, preuve interne, devise et auteur cohérents, unicité idempotente et audit obligatoire au commit.
+- [x] Vérifier concurrence, rejeux, droits, SQL direct, désactivation, redémarrage et absence de règlement. Premières validations vertes [43092378092](https://github.com/SPX-tech/ScolaPay/actions/runs/43092378092) et [43093203990](https://github.com/SPX-tech/ScolaPay/actions/runs/43093203990), dont arrêt après commit avant réponse et deux instances réelles.
+- [x] Vérifier les régressions de facturation sélectionnées et la modularité sur PostgreSQL jetable dans les campagnes ciblées ci-dessus.
+- La PR en brouillon consigne la CI complète, les contrôles de sa tête exacte, les derniers cas de refus et les limites restantes. Ses résultats dynamiques restent dans le bilan de PR pour ne pas les attribuer à un autre SHA.
 
 La prochaine PR fonctionnelle autorisant `SETTLEMENT` devra relier réception, affectation, preuve et journal dans une même transaction et prouver toutes les garanties de 0028. Les restitutions et rectifications restent fermées tant que leurs règles et preuves ne sont pas complètes.

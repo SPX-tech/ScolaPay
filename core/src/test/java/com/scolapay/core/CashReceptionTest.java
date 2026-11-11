@@ -7,7 +7,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -126,6 +128,28 @@ class CashReceptionTest extends BillingScenarioTest {
     }
 
     @Test
+    void unLienFamilialNeDonneAucunDroitSurLesDeclarationsDeCaisse() {
+        Tenant tenant = newTenant();
+        String guardian = newGuardian(tenant, newStudent(tenant));
+        UUID key = UUID.randomUUID();
+        Response created = record(tenant, tenant.adminToken(), key, "25000", "0");
+        assertThat(record(tenant, guardian, UUID.randomUUID(), "25000", "0").status()).isEqualTo(404);
+        assertThat(get(tenant.path("/payments/cash-receptions/" + created.id("id")), guardian).status()).isEqualTo(404);
+        assertThat(get(tenant.path("/payments/cash-receptions/by-key/" + key), guardian).status()).isEqualTo(404);
+    }
+
+    @Test
+    void lesBornesMonetairesGardentLeurPrecisionEtNeDeviennentPasDesFlottants() {
+        Tenant tenant = newTenant();
+        Response created = record(tenant, tenant.adminToken(), UUID.randomUUID(), "999999999999999", "999999999999998");
+        assertThat(created.status()).as(created.raw()).isEqualTo(201);
+        assertThat(created.text("amountReceivedMinor")).isEqualTo("999999999999999");
+        assertThat(created.text("amountRetainedMinor")).isEqualTo("1");
+        assertThat(created.text("unallocatedMinor")).isEqualTo("1");
+        assertThat(created.text("settledMinor")).isEqualTo("0");
+    }
+
+    @Test
     void laRevocationRetireAussiLeDroitDeRejouerEtDeRelire() {
         Tenant tenant = newTenant();
         String cashier = newStaff(tenant, "CASHIER");
@@ -174,25 +198,69 @@ class CashReceptionTest extends BillingScenarioTest {
     }
 
     @Test
+    void unAuditDuneAutrePreuveNeValidePasLaReception() {
+        Tenant tenant = newTenant();
+        UUID actor = get("/api/v2/me", tenant.adminToken()).id("id");
+        UUID id = UUID.randomUUID();
+        assertThatThrownBy(() -> new TransactionTemplate(transactions).executeWithoutResult(tx -> {
+            insertRaw(tenant, id, actor, "XAF", 25000, 0, true, "CR-" + id);
+            jdbc.sql("""
+                    INSERT INTO audit_events(id,occurred_at,establishment_id,actor_account_id,action,target_type,target_id,details)
+                    VALUES (:audit,now(),:tenant,:actor,'payments.cash.received','cash_reception',:id,'{"reference":"autre"}')
+                    """).param("audit", UUID.randomUUID()).param("tenant", tenant.id()).param("actor", actor).param("id", id).update();
+        })).isInstanceOf(RuntimeException.class).hasStackTraceContaining("audit lie");
+        assertThat(receptions(tenant)).isZero();
+        assertThat(audits(tenant)).isZero();
+    }
+
+    @Test
+    @Timeout(25)
+    void uneCleVerrouilleeProduitUnRefusBorneSansPerdreLaPossibiliteDeRejeu() {
+        Tenant tenant = newTenant();
+        UUID actor = get("/api/v2/me", tenant.adminToken()).id("id");
+        AtomicReference<UUID> blockedKey = new AtomicReference<>();
+        new TransactionTemplate(transactions).executeWithoutResult(tx -> {
+            UUID id = UUID.randomUUID();
+            insertRaw(tenant, id, actor, "XAF", 25000, 0, true, "CR-" + id);
+            blockedKey.set(jdbc.sql("SELECT idempotency_key FROM cash_receptions WHERE establishment_id=:tenant AND id=:id")
+                    .param("tenant", tenant.id()).param("id", id).query(UUID.class).single());
+            tx.setRollbackOnly();
+            Response busy = record(tenant, tenant.adminToken(), blockedKey.get(), "25000", "0");
+            assertThat(busy.status()).as(busy.raw()).isEqualTo(409);
+            assertThat(busy.code()).isEqualTo("CASH_RECEPTION_BUSY");
+        });
+        assertThat(receptions(tenant)).isZero();
+        assertThat(record(tenant, tenant.adminToken(), blockedKey.get(), "25000", "0").status()).isEqualTo(201);
+        assertThat(receptions(tenant)).isEqualTo(1);
+        assertThat(audits(tenant)).isEqualTo(1);
+    }
+
+    @Test
     void lesContraintesSqlRefusentNullFauxMontantsDeviseEtAuteurDUnAutreEtablissement() {
         Tenant tenant = newTenant();
         UUID actor = get("/api/v2/me", tenant.adminToken()).id("id");
         UUID foreignActor = get("/api/v2/me", newTenant().adminToken()).id("id");
         for (Boolean confirmed : new Boolean[] {null, false}) {
             UUID id = UUID.randomUUID();
-            assertThatThrownBy(() -> insertRaw(tenant, id, actor, "XAF", 25000, 0, confirmed, "CR-" + id))
+            assertThatThrownBy(() -> insertRawWithAudit(tenant, id, actor, "XAF", 25000, 0, confirmed, "CR-" + id))
                     .isInstanceOf(DataAccessException.class);
         }
         for (long[] amounts : new long[][] {{0,0}, {-1,0}, {10,10}, {10,-1}, {1_000_000_000_000_000L,0}}) {
             UUID id = UUID.randomUUID();
-            assertThatThrownBy(() -> insertRaw(tenant, id, actor, "XAF", amounts[0], amounts[1], true, "CR-" + id))
+            assertThatThrownBy(() -> insertRawWithAudit(tenant, id, actor, "XAF", amounts[0], amounts[1], true, "CR-" + id))
                     .isInstanceOf(DataAccessException.class);
         }
         UUID id = UUID.randomUUID();
-        assertThatThrownBy(() -> insertRaw(tenant, id, actor, "EUR", 25000, 0, true, "CR-" + id)).isInstanceOf(DataAccessException.class);
-        assertThatThrownBy(() -> insertRaw(tenant, id, foreignActor, "XAF", 25000, 0, true, "CR-" + id)).isInstanceOf(DataAccessException.class);
-        assertThatThrownBy(() -> insertRaw(tenant, id, actor, "XAF", 25000, 0, true, null)).isInstanceOf(DataAccessException.class);
+        assertThatThrownBy(() -> insertRawWithAudit(tenant, id, actor, "EUR", 25000, 0, true, "CR-" + id)).isInstanceOf(DataAccessException.class);
+        assertThatThrownBy(() -> insertRawWithAudit(tenant, id, foreignActor, "XAF", 25000, 0, true, "CR-" + id)).isInstanceOf(DataAccessException.class);
+        assertThatThrownBy(() -> insertRawWithAudit(tenant, id, actor, "XAF", 25000, 0, true, null)).isInstanceOf(DataAccessException.class);
+        assertThatThrownBy(() -> insertRawWithAudit(tenant, id, actor, "XAF", 25000, 0, true, "CR-autre"))
+                .isInstanceOf(DataAccessException.class);
         assertThat(receptions(tenant)).isZero();
+        UUID valid = UUID.randomUUID();
+        insertRawWithAudit(tenant, valid, actor, "XAF", 25000, 0, true, "CR-" + valid);
+        assertThat(receptions(tenant)).isEqualTo(1);
+        assertThat(get(tenant.path("/payments/cash-receptions/" + valid), tenant.adminToken()).text("unallocatedMinor")).isEqualTo("25000");
     }
 
     @Test
@@ -270,6 +338,18 @@ class CashReceptionTest extends BillingScenarioTest {
                 """).param("id", id).param("tenant", tenant.id()).param("reference", reference).param("key", UUID.randomUUID())
                 .param("currency", currency).param("received", received).param("change", change)
                 .param("confirmed", confirmed).param("actor", actor).update();
+    }
+
+    void insertRawWithAudit(Tenant tenant, UUID id, UUID actor, String currency, long received, long change, Boolean confirmed, String reference) {
+        new TransactionTemplate(transactions).executeWithoutResult(tx -> {
+            insertRaw(tenant, id, actor, currency, received, change, confirmed, reference);
+            jdbc.sql("""
+                    INSERT INTO audit_events(id,occurred_at,establishment_id,actor_account_id,action,target_type,target_id,details)
+                    VALUES (:audit,now(),:tenant,:actor,'payments.cash.received','cash_reception',:id,
+                            jsonb_build_object('reference',CAST(:reference AS text)))
+                    """).param("audit", UUID.randomUUID()).param("tenant", tenant.id()).param("actor", actor)
+                    .param("id", id).param("reference", reference).update();
+        });
     }
 
     Response record(Tenant tenant, String token, UUID key, String received, String change) {

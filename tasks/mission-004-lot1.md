@@ -1,5 +1,7 @@
 # Mission 004, lot 1 documentaire
 
+**Terminé**, PR #30 fusionnée dans `main` au commit `2bb5922aef4bf141525a13b9d1c67a815c9d8925`. La liste ci-dessous garde la trace des arbitrages initiaux. Le développement du lot 2 est désormais autorisé et les orientations A01 à A04 sont validées, sans résoudre toutes leurs modalités. A05 à A08 restent partiellement ouverts. Le travail actif est suivi dans [mission-004-lot2.md](mission-004-lot2.md).
+
 Base `9f540291d2e9c2d0108e9a0249d2cfde69fe6a3e`. Branche `mission004/lot1-cash-contracts`.
 
 ## Livrables du lot autorisé
