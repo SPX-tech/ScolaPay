@@ -22,7 +22,7 @@ Une campagne n'atteste que le commit qu'elle a testé. Ces défauts sont choisis
 | 4 | Obligations, échéanciers, journal, émission | 236 | 46 sur 46 | 3 sur 3 | [#24](https://github.com/SPX-tech/ScolaPay/pull/24), fusionnée |
 | 5 | Remises, corrections, annulations, réexamen | 330 | 124 sur 124, dont 41 repris à l'identique du lot 4 | 3 sur 3 | [#25](https://github.com/SPX-tech/ScolaPay/pull/25), fusionnée |
 | 6, finalisation | Personnes et rôles explicites, vues confidentielles cohérentes, corrections tracées | 390 | 15 sur 15 ciblés sur la reprise ; campagne historique distincte | 1 sur 1 | [#26](https://github.com/SPX-tech/ScolaPay/pull/26), fusionnée |
-| 7 | Consolidation sur le code intégré, catalogue, obligations, ajustements et vues | 461 en CI, 276 pour les mutations | 195 sur 195 | 3 sur 3 | [#29](https://github.com/SPX-tech/ScolaPay/pull/29), brouillon pour revue de clôture |
+| 7 | Consolidation sur le code intégré, catalogue, obligations, ajustements et vues | 461 en CI, 276 pour les mutations | 195 sur 195 | 3 sur 3 | [#29](https://github.com/SPX-tech/ScolaPay/pull/29), fusionnée |
 
 ## Lot 4 en détail
 
@@ -183,7 +183,7 @@ La [première campagne](https://github.com/SPX-tech/ScolaPay/actions/runs/429835
 | Limites conservées | Volumes et latences des grands lots non mesurés, erreurs possibles au délai de verrou, supervision et purge d'archives encore à cadrer, contention et collisions des quotas à mesurer. Ces preuves fonctionnelles ne donnent aucune capacité d'exploitation chiffrée |
 | Décisions et évolutions futures | Questions juridiques, accès de l'étudiant sans rôle, détail du responsable, pluralité de redevables, réassociation de compte, parcours d'une école à un seul utilisateur, politique des canaux Families et encaissement réel relèvent de décisions ou chantiers distincts |
 
-**Verdict de la revue technique du lot 7. Le périmètre livré de la Mission 003 peut être déclaré techniquement terminé.** La clôture formelle est soumise au propriétaire dans #29, conservée en brouillon. Les exigences juridiques, les autorisations familiales et les contrôles de mise en service gardent leur portée. Les expérimentations utilisent des données et bases jetables, avec les transports de test existants.
+**Mission 003 techniquement clôturée pour le périmètre livré, après validation du propriétaire.** #29 est fusionnée au commit `9f540291d2e9c2d0108e9a0249d2cfde69fe6a3e`, avec [CI](https://github.com/SPX-tech/ScolaPay/actions/runs/43031124770) et [Containers](https://github.com/SPX-tech/ScolaPay/actions/runs/43031124951) verts après fusion. Les exigences juridiques, les autorisations familiales et les contrôles de mise en service gardent leur portée. Les expérimentations utilisent des données et bases jetables, avec les transports de test existants.
 
 ## Limites restantes
 

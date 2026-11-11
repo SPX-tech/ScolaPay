@@ -1,6 +1,6 @@
 # Mission 003 : ScolaPay Billing Engine
 
-**Périmètre livré techniquement terminé, clôture proposée dans #29.** Les lots 1 à 6 sont intégrés. Le lot 7 a validé 195 mutations sur 195 avec trois contrôles sains et une CI complète de 461 tests Java sur le code consolidé après #26, #27 et #28. Les preuves et leurs SHA figurent dans le [journal de validation](../mission-003-validation.md).
+**Mission techniquement clôturée pour son périmètre livré.** La PR #29 a été fusionnée par merge commit `9f540291d2e9c2d0108e9a0249d2cfde69fe6a3e`. Le lot 7 a validé 195 mutations sur 195 avec trois contrôles sains et une CI complète de 461 tests Java. Les questions métier et juridiques ouvertes restent identifiées dans les ADR et le [journal de validation](../mission-003-validation.md).
 
 ## Objectif
 
@@ -80,7 +80,7 @@ Chaque lot est une PR verte, indépendante, et met à jour `PROJECT_CONTEXT.md`.
 | 4 | Obligations, échéances et journal, émission sans double facturation, élèves déjà inscrits, distinction des [documents](../decisions/0019-nature-des-documents-et-numerotation.md), voir [0021](../decisions/0021-obligations-et-journal.md) | Lots 1 et 3 | **Terminé** |
 | 5 | Remises, corrections, annulations, confirmation par une seconde personne, réexamen, voir [0022](../decisions/0022-ajustements-et-reexamen.md) | Lot 4 | **Terminé** |
 | 6 | Personnes physiques et morales, rôles, vues par rôle, retrait de `financial_contributor`, voir [0023](../decisions/0023-personnes-liees-et-vues.md) | Lot 4 | **Terminé, intégré par #26** |
-| 7 | Consolidation, campagne finale et bilan de clôture | Tous | **Validation technique terminée, clôture en revue dans #29** |
+| 7 | Consolidation, campagne finale et bilan de clôture | Tous | **Terminé, intégré par #29** |
 
 ## Décisions du propriétaire
 

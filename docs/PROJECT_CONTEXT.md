@@ -13,7 +13,8 @@ Référence stratégique et technique du projet, lisible sans l'historique des c
 | Données de l'ancienne instance | **Archivées**, chiffrées, hors du serveur et hors du dépôt, avec restauration et relecture vérifiées. La clé est conservée séparément |
 | Mission 002 (fondation Java) | **Finalisée** : identités, établissements, inscriptions et liens familiaux dans `core/`. Testée en CI, jamais déployée |
 | Facturation, paiements, portail familles | **Facturation Java intégrée jusqu'au lot 6.** Aucun encaissement réel ni portail web construit |
-| Mission 003 (moteur de facturation) | **Périmètre livré techniquement terminé, clôture en revue dans #29.** [Cadrage](missions/mission-003-billing-engine.md) et [bilan de validation](mission-003-validation.md) |
+| Mission 003 (moteur de facturation) | **Techniquement clôturée pour le périmètre livré**, #29 fusionnée au commit `9f54029`. [Cadrage](missions/mission-003-billing-engine.md) et [bilan de validation](mission-003-validation.md) |
+| Mission 004 (encaissements espèces) | **Lot 1 documentaire en revue.** Orientation du module et restitution des excédents jamais affectés validées. Contrats proposés, permissions et procédures à arbitrer. Développement du lot 2 non autorisé. [Cadrage](missions/mission-004-cash-collections.md) |
 | Android | **Hors de la feuille de route active**, code conservé comme référence ([0014](decisions/0014-android-hors-feuille-de-route.md)) |
 | Ordre de construction | Backend Java, puis interfaces web. L'APK viendra une fois les parcours métier et financiers stabilisés |
 
@@ -57,7 +58,8 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Outbox durable | Vérifié | Registre Spring Modulith, reprise après arrêt brutal et entre deux instances. **Utilisé par la facturation et la préparation des notifications** | `core/`, `OutboxReliabilityTest`, [0016](decisions/0016-outbox-durable.md) |
 | Contrôles de mise en service | Vérifié | Portail fermé par défaut, démarrage refusé si une condition manque. **Il ne peut pas être ouvert aujourd'hui** : règle du Tchad non confirmée, aucun canal SMS ; un e-mail seul ne suffit pas | `core/`, `GoLiveTest`, [0017](decisions/0017-controles-de-mise-en-service.md) |
 | Redevables, responsables, contributeurs | Vérifié, intégré dans `main`, portail fermé | Désignations explicites, vues typées, autorisations avant pagination, instantanés cohérents et confirmations NULL cohérentes. Corrections de nom/identifiant motivées et historisées ; compte et identité immuables | `BillingPartyTest`, `FamilyBillingViewTest`, `Lot6FinalizationRegressionTest`, `PartyCorrectionTest`, [0023](decisions/0023-personnes-liees-et-vues.md) |
-| Encaissement réel, comptabilité | Prévu | Rien | [0006](decisions/0006-backend-java-spring-boot.md) |
+| Encaissement espèces | Cadrage documentaire en revue | Aucun module, route ou schéma. Première chaîne cohérente et garanties de facturation prévues au lot 2 après arbitrages et autorisation | [Mission 004](missions/mission-004-cash-collections.md), [0026](decisions/0026-contrats-encaissements-especes.md) à [0028](decisions/0028-projections-reglements-et-ajustements.md) |
+| Paiements numériques et comptabilité | Évolutions futures | Aucun code Java | [0006](decisions/0006-backend-java-spring-boot.md), [0008](decisions/0008-go-services-paiement.md) |
 | Portail web des familles | Prévu | L'API `/api/v2/me/students` existe mais reste fermée par défaut, aucune interface | [0007](decisions/0007-portail-familles-avant-apk.md) |
 | Application Android des familles | Hors feuille de route active | Rien. L'application `android/` sert le personnel | [0014](decisions/0014-android-hors-feuille-de-route.md) |
 | Services Go de paiement | Envisagé, sans échéance | Aucun code | [0008](decisions/0008-go-services-paiement.md) |
@@ -159,11 +161,12 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 
 - **0024**, socle intégré par #27 : file chiffrée, remise des invitations et reprises externes bornées. Le principe des canaux Families explicitement autorisés est accepté. Sa mise en œuvre et ses tests sont différés avant toute ouverture, selon le modèle d'accès final.
 - **0025**, acceptée et intégrée par #28 : protection des routes publiques d'authentification par PostgreSQL, quotas bornés et politique explicite d'origine. Contention et collisions restent à mesurer avant montée en charge.
+- **0026 à 0028**, lot 1 documentaire de Mission 004 : orientation d'un module d'encaissement distinct acceptée, contrats et projections proposés. La restitution en V1 des seuls excédents jamais affectés est validée, avec justification, approbation distincte, remise physique et trace intégrale. Les rôles, échéances, secours et contrôle physique restent à arbitrer.
 
 ## Priorités actuelles
 
-1. **Mission 003, ScolaPay Billing Engine** : clôture technique proposée à la revue de #29 après la campagne finale concluante. Le périmètre livré et ses limites figurent dans le [cadrage](missions/mission-003-billing-engine.md) et le journal.
-2. **Sites web ScolaPay Schools et ScolaPay Families**, sur `/api/v2`, une fois le cœur financier en place.
+1. **Mission 004, encaissements espèces** : revue du lot 1 documentaire, puis arbitrages et autorisation explicite avant le lot 2. Le [cadrage](missions/mission-004-cash-collections.md) fixe les contrats, les scénarios et les garanties exigées dès le premier `SETTLEMENT`.
+2. **Mission 003 clôturée** : préserver les garanties et les limites du périmètre livré. Les futures interfaces Schools et Families restent à cadrer après les missions backend retenues.
 
 ## Risques connus
 
@@ -211,9 +214,11 @@ Ce serait un nouveau déploiement, avec des secrets neufs :
 - Ne pas exécuter le seed : ses comptes de démonstration ont des mots de passe publics.
 - Définir HTTPS, les origines, les limites du proxy et une sauvegarde restaurée : voir les [conditions de production](architecture-scolapay-2.md#conditions-avant-une-future-ouverture-en-production).
 
-**Consolidation de la Mission 003**
+**Mission 004, lot 1 documentaire**
 
-Périmètre, critères d'acceptation et état des lots dans le [cadrage](missions/mission-003-billing-engine.md). L'outbox durable et le contrôle de mise en service sont en place. Le catalogue académique et le catalogue de frais sont en place. Les obligations, les échéanciers, le journal immuable, l'émission idempotente, les remises, les corrections et le réexamen aussi. Le lot 6, personnes liées et vues financières, a été intégré par [#26](https://github.com/SPX-tech/ScolaPay/pull/26) au commit `0164876`. Les preuves et limites figurent dans [le journal de finalisation](lot6-finalization.md). Les décisions ouvertes de [0023](decisions/0023-personnes-liees-et-vues.md#décisions-ouvertes-pour-le-propriétaire) restent à arbitrer.
+La Mission 003 est techniquement clôturée dans `main` au commit `9f54029`. Ses preuves et limites figurent dans le [journal](mission-003-validation.md). Le [cadrage de Mission 004](missions/mission-004-cash-collections.md) prépare les contrats entre `payments`, `billing`, `identity`, `establishment` et `audit`. Le lot 1 reste documentaire. Les décisions ouvertes de [0023](decisions/0023-personnes-liees-et-vues.md#décisions-ouvertes-pour-le-propriétaire) restent à arbitrer, ainsi que A01 à A08 du nouveau cadrage. La restitution ne peut pas réutiliser un montant ayant déjà été affecté, même après contrepassation.
+
+La [portée des scénarios par lot](missions/mission-004-cash-collections.md#portée-des-scénarios-par-lot) exige le socle et les refus de sécurité dès le premier `SETTLEMENT`. Les preuves des parcours multi-obligations, multi-élèves et des rectifications ultérieures suivent l'introduction de ces capacités, sans différer leurs garanties ni accepter implicitement les recommandations métier.
 
 **Ensuite, sans ordre arrêté**
 
