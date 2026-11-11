@@ -94,6 +94,10 @@ Toutes les routes sont sous `/api/v2`. Les erreurs suivent la RFC 9457, avec un 
 
 Les corrections de personnes conservent l'identité et le compte. Une révision périmée donne `409 PARTY_CORRECTION_OUTDATED` ; le client relit la personne avant une nouvelle demande. Le compte, le type et les désignations ne se changent pas par cette route. Les lectures financières composites disposent d'un instantané cohérent et les droits sont filtrés avant pagination. Voir [0023](../docs/decisions/0023-personnes-liees-et-vues.md) et [les preuves de finalisation](../docs/lot6-finalization.md).
 
+## Déclarations d'espèces
+
+Les [déclarations d'espèces de `payments`](../docs/payments-cash-receptions.md) constituent une première étape intermédiaire du lot 2. `SCOLAPAY_CASH_RECEPTIONS_ENABLED=false` par défaut ; les lectures autorisées restent disponibles après désactivation. V8 ajoute les constats immuables et leur audit obligatoire sans modifier les migrations existantes. Aucun `SETTLEMENT`, affectation, restitution, crédit libre ou justificatif fiscal n'est disponible. Le premier règlement attend la chaîne complète et les garanties de 0028.
+
 ## Ajouter un module
 
 1. Créer `com.scolapay.core.<module>` avec un `package-info.java` déclarant `allowedDependencies`.

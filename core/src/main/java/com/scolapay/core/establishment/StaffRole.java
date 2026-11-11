@@ -9,6 +9,8 @@ import static com.scolapay.core.establishment.Permission.BILLING_ISSUE;
 import static com.scolapay.core.establishment.Permission.BILLING_PARTIES_MANAGE;
 import static com.scolapay.core.establishment.Permission.BILLING_READ;
 import static com.scolapay.core.establishment.Permission.BILLING_REASONS_READ;
+import static com.scolapay.core.establishment.Permission.CASH_RECEPTIONS_READ;
+import static com.scolapay.core.establishment.Permission.CASH_RECEPTIONS_RECORD;
 import static com.scolapay.core.establishment.Permission.ENROLLMENTS_MANAGE;
 import static com.scolapay.core.establishment.Permission.ESTABLISHMENT_READ;
 import static com.scolapay.core.establishment.Permission.FEES_MANAGE;
@@ -24,12 +26,12 @@ public enum StaffRole {
     ESTABLISHMENT_ADMIN(EnumSet.allOf(Permission.class)),
     REGISTRAR(EnumSet.of(
             ESTABLISHMENT_READ, ACADEMIC_YEARS_MANAGE, ACADEMIC_CATALOG_MANAGE, STUDENTS_READ, STUDENTS_MANAGE, ENROLLMENTS_MANAGE, GUARDIANS_MANAGE)),
-    CASHIER(EnumSet.of(ESTABLISHMENT_READ, STUDENTS_READ, BILLING_READ)),
+    CASHIER(EnumSet.of(ESTABLISHMENT_READ, STUDENTS_READ, BILLING_READ, CASH_RECEPTIONS_READ, CASH_RECEPTIONS_RECORD)),
     ACCOUNTANT(EnumSet.of(
-            ESTABLISHMENT_READ, STUDENTS_READ, AUDIT_READ, FEES_MANAGE, BILLING_READ, BILLING_ISSUE, BILLING_ADJUST, BILLING_APPROVE, BILLING_REASONS_READ, BILLING_PARTIES_MANAGE)),
-    AUDITOR(EnumSet.of(ESTABLISHMENT_READ, STUDENTS_READ, AUDIT_READ, BILLING_READ, BILLING_REASONS_READ)),
+            ESTABLISHMENT_READ, STUDENTS_READ, AUDIT_READ, FEES_MANAGE, BILLING_READ, BILLING_ISSUE, BILLING_ADJUST, BILLING_APPROVE, BILLING_REASONS_READ, BILLING_PARTIES_MANAGE, CASH_RECEPTIONS_READ, CASH_RECEPTIONS_RECORD)),
+    AUDITOR(EnumSet.of(ESTABLISHMENT_READ, STUDENTS_READ, AUDIT_READ, BILLING_READ, BILLING_REASONS_READ, CASH_RECEPTIONS_READ)),
     // Confirme ce qu'un autre a préparé, sans pouvoir opérer : il reste la seconde personne d'une petite école.
-    DIRECTOR(EnumSet.of(ESTABLISHMENT_READ, STUDENTS_READ, BILLING_READ, BILLING_APPROVE, BILLING_REASONS_READ));
+    DIRECTOR(EnumSet.of(ESTABLISHMENT_READ, STUDENTS_READ, BILLING_READ, BILLING_APPROVE, BILLING_REASONS_READ, CASH_RECEPTIONS_READ));
 
     private final Set<Permission> permissions;
 
