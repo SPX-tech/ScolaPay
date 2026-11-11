@@ -1,0 +1,42 @@
+name: Mutation evidence
+
+on:
+  push:
+    branches: ['mission003/lot7-consolidation', 'validation/lot7-report']
+    paths: ['.github/mutation/**', '.github/workflows/mutation-campaign.yml', '.github/workflows/mutation-evidence.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  requalify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      SOURCE_RUN: '42988964544'
+      COMMIT: '1278ca717dbc374b6376904d94a1edf713b216c8'
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Vérifier les régressions du rapport et du workflow
+        run: node --test .github/mutation/*.test.mjs
+      - name: Récupérer les preuves originales
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN" --jq .head_sha)" = "$COMMIT"
+          gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" --pattern 'result-*' --dir results
+      - name: Requalifier les résultats existants
+        run: |
+          node .github/mutation/report.mjs results lot7 > report.md
+          grep -Fxq 'Conclusion : CONCLUANTE' report.md
+          printf '\nOutillage de requalification : %s\nSource : https://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$SOURCE_RUN" >> report.md
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: requalified-campaign-report
+          path: |
+            report.md
+            results/

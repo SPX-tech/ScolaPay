@@ -36,6 +36,18 @@ test('une campagne complète peut conclure', () => fixture((root, execute) => {
   assert.match(execute('report.mjs', ['results', 'sample']), /^Conclusion : CONCLUANTE/);
 }));
 
+test('un mutant VERT interdit de conclure', () => fixture((root, execute) => {
+  writeResult(root, 'result-defect', 'defect', 'VERT');
+  writeResult(root, 'result-control', 'control-1', 'VERT');
+  assert.match(execute('report.mjs', ['results', 'sample']), /^Conclusion : NON CONCLUANTE/);
+}));
+
+test('un contrôle DETECTE interdit de conclure', () => fixture((root, execute) => {
+  writeResult(root, 'result-defect', 'defect', 'DETECTE');
+  writeResult(root, 'result-control', 'control-1', 'DETECTE');
+  assert.match(execute('report.mjs', ['results', 'sample']), /^Conclusion : NON CONCLUANTE/);
+}));
+
 test('une mutation manquante interdit de conclure', () => fixture((root, execute) => {
   writeResult(root, 'result-control', 'control-1', 'VERT');
   assert.match(execute('report.mjs', ['results', 'sample']), /^Conclusion : NON CONCLUANTE/);
