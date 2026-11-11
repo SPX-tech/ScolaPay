@@ -13,7 +13,7 @@ Référence stratégique et technique du projet, lisible sans l'historique des c
 | Données de l'ancienne instance | **Archivées**, chiffrées, hors du serveur et hors du dépôt, avec restauration et relecture vérifiées. La clé est conservée séparément |
 | Mission 002 (fondation Java) | **Finalisée** : identités, établissements, inscriptions et liens familiaux dans `core/`. Testée en CI, jamais déployée |
 | Facturation, paiements, portail familles | **Facturation Java intégrée jusqu'au lot 6.** Aucun encaissement réel ni portail web construit |
-| Mission 003 (moteur de facturation) | **Lots 1 à 6 intégrés, lot 7 en revue de consolidation.** [Cadrage](missions/mission-003-billing-engine.md) et [bilan de validation](mission-003-validation.md) |
+| Mission 003 (moteur de facturation) | **Périmètre livré techniquement terminé, clôture en revue dans #29.** [Cadrage](missions/mission-003-billing-engine.md) et [bilan de validation](mission-003-validation.md) |
 | Android | **Hors de la feuille de route active**, code conservé comme référence ([0014](decisions/0014-android-hors-feuille-de-route.md)) |
 | Ordre de construction | Backend Java, puis interfaces web. L'APK viendra une fois les parcours métier et financiers stabilisés |
 
@@ -162,7 +162,7 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 
 ## Priorités actuelles
 
-1. **Mission 003, ScolaPay Billing Engine** : consolidation finale et revue de clôture dans #29. Le périmètre livré et ses limites figurent dans le [cadrage](missions/mission-003-billing-engine.md) et le journal.
+1. **Mission 003, ScolaPay Billing Engine** : clôture technique proposée à la revue de #29 après la campagne finale concluante. Le périmètre livré et ses limites figurent dans le [cadrage](missions/mission-003-billing-engine.md) et le journal.
 2. **Sites web ScolaPay Schools et ScolaPay Families**, sur `/api/v2`, une fois le cœur financier en place.
 
 ## Risques connus
@@ -229,6 +229,8 @@ La CI GitHub (`.github/workflows/ci.yml`) est la source de preuve : `core` avec 
 Le poste de développement (8 Go) est réservé aux éditions légères. Les commandes locales figurent dans le [README](../README.md).
 
 La CI de `main` a validé 390 tests Java après #26, 431 après #27 et 461 après #28, au commit `7eb7ddb`. Le scénario de reprise couvre l'ordre V7 → V7_1 → V7_2, les sommes de contrôle et l'historique Flyway au redémarrage. Il vérifie aussi le quota d'acceptation sur une invitation remise par la file, puis les droits financiers de l'administrateur invité. Les preuves de consolidation et les limites de clôture figurent dans [le journal de la Mission 003](mission-003-validation.md).
+
+Le lot 7, sur `1278ca7`, valide 195 mutations sur 195 avec trois contrôles sains de 276 tests financiers, de modularité et d'isolation. La CI complète confirme 461 tests Java sans échec, erreur ou test ignoré. La première campagne non concluante et la correction de sa sélection sont conservées dans le journal. Les questions métier ouvertes de l'ADR 0023 et les limites de mise en service restent explicites.
 
 Les 15 mutations ciblées de la [finalisation du lot 6](lot6-finalization.md#validation) ont été détectées avant fusion, avec un contrôle sain de 390 tests. Les preuves historiques restent distinctes : 23 mutations à la [Mission 002](mission-002-validation.md), 224 sur les lots 1 à 5 de la [Mission 003](mission-003-validation.md), puis 176 sur la version initiale du lot 6. Pour le backend NestJS et le web : 190 tests unitaires, 35 E2E et 47 tests Playwright ; la compilation et le lancement Android relèvent de la [Mission 001](mission-001-validation.md#résultats-finaux).
 

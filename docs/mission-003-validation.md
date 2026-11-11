@@ -22,6 +22,7 @@ Une campagne n'atteste que le commit qu'elle a testé. Ces défauts sont choisis
 | 4 | Obligations, échéanciers, journal, émission | 236 | 46 sur 46 | 3 sur 3 | [#24](https://github.com/SPX-tech/ScolaPay/pull/24), fusionnée |
 | 5 | Remises, corrections, annulations, réexamen | 330 | 124 sur 124, dont 41 repris à l'identique du lot 4 | 3 sur 3 | [#25](https://github.com/SPX-tech/ScolaPay/pull/25), fusionnée |
 | 6, finalisation | Personnes et rôles explicites, vues confidentielles cohérentes, corrections tracées | 390 | 15 sur 15 ciblés sur la reprise ; campagne historique distincte | 1 sur 1 | [#26](https://github.com/SPX-tech/ScolaPay/pull/26), fusionnée |
+| 7 | Consolidation sur le code intégré, catalogue, obligations, ajustements et vues | 461 en CI, 276 pour les mutations | 195 sur 195 | 3 sur 3 | [#29](https://github.com/SPX-tech/ScolaPay/pull/29), brouillon pour revue de clôture |
 
 ## Lot 4 en détail
 
@@ -151,7 +152,20 @@ Les suites financières, de catalogue, d'isolation et de modularité sont sélec
 
 La revue de l'outillage a trouvé qu'un résultat absent ou dupliqué pouvait passer inaperçu dans la conclusion. Le rapport compare désormais son inventaire au plan de campagne. Une erreur de test sans échec d'assertion ne vaut pas détection. Un test requis doit avoir échoué par assertion, et un contrôle du code intact refuse tout test ignoré. Cinq tests de l'outillage vérifient ces règles dans le plan GitHub Actions. Une compilation échouée reste toujours `NE_COMPILE_PAS`.
 
-Les SHA et conclusions des exécutions de consolidation sont consignés dans #29 avant toute recommandation définitive de clôture.
+### Résultats de consolidation
+
+Les preuves suivantes portent sur `1278ca717dbc374b6376904d94a1edf713b216c8`, dérivé du `main` intégré `7eb7ddb`. Les sources du moteur, les tests métier, les migrations et les dépendances sont identiques à cette base.
+
+| Vérification | Résultat | Preuve |
+| --- | --- | --- |
+| Campagne finale sur PostgreSQL jetable | 195 mutants détectés sur 195, inventaire complet et trois contrôles sains de 276 tests | [Campagne finale](https://github.com/SPX-tech/ScolaPay/actions/runs/42988964544) |
+| Tests de qualification du rapport | Cinq tests réussis dans le plan de campagne | [Plan de campagne](https://github.com/SPX-tech/ScolaPay/actions/runs/42988964544) |
+| Suite Java complète, compilation, démarrage et surface publique du JAR | 461 tests, zéro échec, erreur ou test ignoré | [CI complète](https://github.com/SPX-tech/ScolaPay/actions/runs/42988964481) |
+| Images et vérification de la pile historique | Vert | [Containers](https://github.com/SPX-tech/ScolaPay/actions/runs/42988964500) |
+
+Le rapport final confirme notamment `size-limit-ignored` détecté par `IssuanceLimitTest.unLotTropGrandEstRefuseEtSeDecoupeParUnite`. Aucun mutant ne reste survivant, inapplicable, non compilable ou sans assertion de détection.
+
+Les commits ultérieurs de clôture documentaire conservent le code et les campagnes testés. Les contrôles de la tête finale et son SHA figurent dans #29.
 
 La [première campagne](https://github.com/SPX-tech/ScolaPay/actions/runs/42983559011), sur `629feb3`, est non concluante avec 194 détections sur 195 et trois contrôles verts de 275 tests. Le survivant `size-limit-ignored` a révélé l'omission d'`IssuanceLimitTest` dans la sélection de campagne. Ce test existant passe dans la suite complète de 461 tests. La sélection corrigée l'inclut et le mutant exige désormais l'échec de son assertion. Les preuves de cette première exécution sont conservées.
 
@@ -159,11 +173,11 @@ La [première campagne](https://github.com/SPX-tech/ScolaPay/actions/runs/429835
 
 | Catégorie | Traitement pour la clôture |
 | --- | --- |
-| Défaut bloquant | Une régression d'un invariant, un mutant survivant ou une campagne incomplète doit être résolu avant de conclure. Le rapport final de #29 indique les problèmes rencontrés et leur résolution |
+| Défaut bloquant | Aucun défaut bloquant du moteur mis en évidence par la revue et les validations finales. L'omission du test de plafond dans la première sélection est corrigée et la campagne complète est concluante |
 | Limites conservées | Volumes et latences des grands lots non mesurés, erreurs possibles au délai de verrou, supervision et purge d'archives encore à cadrer, contention et collisions des quotas à mesurer. Ces preuves fonctionnelles ne donnent aucune capacité d'exploitation chiffrée |
 | Décisions et évolutions futures | Questions juridiques, accès de l'étudiant sans rôle, détail du responsable, pluralité de redevables, réassociation de compte, parcours d'une école à un seul utilisateur, politique des canaux Families et encaissement réel relèvent de décisions ou chantiers distincts |
 
-La clôture technique concerne le moteur de facturation livré selon les décisions validées. Les exigences juridiques, les autorisations familiales et les contrôles de mise en service gardent leur portée. Les expérimentations utilisent des données et bases jetables, avec les transports de test existants.
+**Verdict de la revue technique du lot 7. Le périmètre livré de la Mission 003 peut être déclaré techniquement terminé.** La clôture formelle est soumise au propriétaire dans #29, conservée en brouillon. Les exigences juridiques, les autorisations familiales et les contrôles de mise en service gardent leur portée. Les expérimentations utilisent des données et bases jetables, avec les transports de test existants.
 
 ## Limites restantes
 
