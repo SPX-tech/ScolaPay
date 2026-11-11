@@ -117,4 +117,5 @@ jobs:
           name: campaign-report
           path: report.md
       - name: Échouer si la campagne n'est pas concluante
-        run: grep -Fxq 'Conclusion : CONCLUANTE' report.md
+        run: |
+          grep -Fxq 'Conclusion : CONCLUANTE' report.md
