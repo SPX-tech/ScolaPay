@@ -1,6 +1,6 @@
 # Déclarations d'espèces, première PR intermédiaire du lot 2
 
-Cette étape construit `payments` et la trace durable d'espèces déclarées reçues, toutes non affectées. Elle ne construit pas encore la chaîne d'affectation et de règlement. V6 refuse toujours `SETTLEMENT` et aucun code de `billing` n'est modifié. Le lot 2 n'est donc pas terminé et aucun pilote réel n'est prêt.
+La PR #31, intégrée au commit `6a2fdaa`, a construit les réceptions durables, initialement toutes non affectées. La [chaîne de règlement d'une obligation](payments-cash-settlements.md) réutilise ces sources sans les recréer. La réception physique déclarée reste distincte de ses affectations et du reste facturé. Le lot 2 n'est pas terminé et aucun pilote réel n'est prêt.
 
 ## Contrat HTTP
 
@@ -25,9 +25,9 @@ Corps de déclaration :
 
 La devise est celle de l'établissement. L'auteur, l'horodatage, la date locale et le fuseau sont déterminés par le serveur. Aucun compte, élève, bénéficiaire, montant affecté, date antidatée ou statut ne peut être fourni. Les champs inconnus sont refusés. Le montant reçu est compris entre 1 et 999 999 999 999 999 unités minimales ; la monnaie rendue est positive ou nulle et strictement inférieure au montant reçu.
 
-La réponse conserve `id`, `reference`, `currency`, `amountReceivedMinor`, `changeGivenMinor`, `amountRetainedMinor`, `recordedAt`, `recordedByAccountId`, `businessDate` et `timezone`. Elle expose explicitement `unallocatedMinor` égal au montant conservé, `settledMinor` à `"0"`, `allocationState` à `UNALLOCATED` et `proofNature` à `INTERNAL_CASH_DECLARATION`. Les montants JSON sont des chaînes, suivant 0012.
+La réponse conserve `id`, `reference`, `currency`, `amountReceivedMinor`, `changeGivenMinor`, `amountRetainedMinor`, `recordedAt`, `recordedByAccountId`, `businessDate` et `timezone`. Les champs courants `unallocatedMinor` et `settledMinor` suivent les affectations confirmées : initialement montant conservé et zéro, puis montant conservé moins affectations et cumul affecté. `allocationState` est dérivé : `UNALLOCATED`, `PARTIALLY_ALLOCATED` ou `ALLOCATED`. `proofNature` reste `INTERNAL_CASH_DECLARATION`. Les montants JSON sont des chaînes, suivant 0012.
 
-Ces noms décrivent ce contrat technique intermédiaire. Ils ne tranchent pas les statuts métier finaux d'A08. La référence `CR-{uuid}` n'est ni un numéro fiscal ni une preuve externe de présence des billets. Les faits immuables constituent une attestation enregistrée par l'acteur habilité. Aucun PDF fiscal, transfert, crédit libre, affectation, restitution ou rectification n'est disponible.
+Ces codes décrivent la couverture technique de la réception, distincte des statuts d'obligation validés pour la tranche. La référence `CR-{uuid}` n'est ni un numéro fiscal ni une preuve externe de présence des billets. Les faits physiques déclarés sont immuables ; leur couverture courante peut évoluer. Un rejeu conserve la même réception et ces faits, sans restaurer les fonds déjà affectés. Aucun PDF fiscal, transfert de caisse, crédit libre, restitution ou rectification n'est disponible.
 
 ## Permissions et confidentialité
 
@@ -45,7 +45,7 @@ Le dépassement du délai de verrouillage PostgreSQL `55P03` donne `409 CASH_REC
 
 Après résultat HTTP inconnu, relire par clé ou rejouer la même intention avant tout nouveau geste physique. Une clé différente ne permet pas au logiciel de constater qu'il s'agit des mêmes billets : le contrôle physique et la procédure de secours restent nécessaires. Cette étape ne revendique aucune remise physique exactement une fois.
 
-Le serveur n'effectue aucune communication externe ni écriture dans le journal de facturation. Aucun événement secondaire n'est nécessaire à cette étape ; un futur consommateur devra suivre l'outbox durable sans décider de la confirmation monétaire après commit.
+Le POST de déclaration ne communique avec aucun fournisseur et n'écrit pas dans le journal de facturation. L'affectation passe par son propre contrat atomique. Aucun événement secondaire n'est nécessaire à cette étape ; un futur consommateur devra suivre l'outbox durable sans décider de la confirmation monétaire après commit.
 
 ## Migration V8
 
@@ -59,7 +59,7 @@ V8 suit V7, V7_1 et V7_2 sans les modifier. `cash_receptions` conserve le consta
 
 L'index auteur/date prépare le futur contrôle quotidien. L'index partiel d'audit sert uniquement au contrôle SQL d'intégration ; le dépôt Java de `payments` ne lit pas la table d'audit. L'autorisation métier reste dans `EstablishmentAccess`, les clés étrangères ne prouvent pas le rôle ni le geste physique.
 
-Aucun solde de crédit n'est créé. Le montant non affecté reste attaché à cette seule réception. Les contraintes de provenance consommée, réservations de restitution, affectations et écritures correspondantes seront exigées ensemble avant leur activation ; elles ne sont pas prétendues implémentées ici.
+Aucun solde de crédit n'est créé. Le montant non affecté reste attaché à cette seule réception. V9 ajoute les affectations et leurs écritures correspondantes. Leurs faits immuables préservent l'historique de consommation ; réservations et contrôles complets de restitution restent à construire avant leur activation.
 
 ## Configuration et mise en service
 
@@ -69,11 +69,11 @@ Avant tout pilote, réaliser notamment le contrôle quotidien par caissier, le r
 
 ## Suite du lot 2 et arbitrages
 
-Les orientations A01 à A04 ont été validées par le propriétaire au démarrage du lot 2. Les paiements couvriront les échéances impayées les plus anciennes ; les remises réduiront les échéances non couvertes les plus éloignées, sans modifier l'échéancier initial (A02). Ces règles ne sont pas encore implémentées, car aucun règlement n'est activé.
+Les orientations A01 à A04 sont validées. La nouvelle chaîne applique A02 aux paiements et remises pris en charge, sans modifier l'échéancier initial. Les autres corrections ne reçoivent pas de ventilation inventée et empêchent le règlement.
 
 A05 à A08 restent partiellement ouverts : identité du remettant et bénéficiaire, mandat, dates métier et arriérés, rectifications, statuts et justificatifs finaux. La restitution des seuls excédents jamais affectés reste acquise, avec justification, second compte approbateur, remise physique confirmée et trace. Son parcours reste fermé tant que permissions détaillées, bénéficiaire et preuves ne sont pas suffisamment définis.
 
-La prochaine PR fonctionnelle doit fournir le port public de `billing`, la transaction réception-affectation-preuve-journal-audit, les projections et échéances, la non-négativité, la concurrence et toutes les protections de 0028, y compris les ajustements sensibles et demandes périmées. Le premier `SETTLEMENT` ne peut pas précéder ces preuves.
+La [livraison de règlement](payments-cash-settlements.md) ajoute le port public de `billing` et la transaction affectation-preuve-journal-audit reliée à la réception confirmée. Elle doit être revue avec toutes les preuves de 0028. Les activations restent fermées pour tout usage réel ; restitution et contrôle quotidien ne sont pas livrés par cette chaîne.
 
 ## Validation
 

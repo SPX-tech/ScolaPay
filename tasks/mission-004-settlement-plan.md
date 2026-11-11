@@ -13,12 +13,12 @@ Les corrections actives non couvertes par A02 et les années non ouvertes empêc
 ## Étapes
 
 - [x] Examiner les contrats et gardes, isoler les arbitrages indispensables et recevoir leurs réponses.
-- [ ] Observer en CI l'échec fonctionnel des nouveaux parcours avant implémentation.
-- [ ] Construire le port public de billing, les projections monétaires et la couverture A02 sans modifier l'échéancier initial.
-- [ ] Ajouter la transaction d'affectation, son idempotence et sa preuve durable ; conserver la réception source et les lectures après désactivation.
-- [ ] Ajouter une migration additive avec intégrité bilatérale, non-négativité et refus des chemins non autorisés, y compris SQL direct et isolations non prises en charge.
-- [ ] Préserver les seuils, doubles validations, demandes périmées et la confidentialité des vues financières.
-- [ ] Vérifier les API, SQL direct, concurrence, reprise, migrations et régressions sur PostgreSQL jetable dans GitHub Actions.
+- [x] Échec fonctionnel avant implémentation : [43107035908](https://github.com/SPX-tech/ScolaPay/actions/runs/43107035908), 201 attendu contre 404, zéro erreur de compilation.
+- [x] Port public de billing, projections monétaires et couverture A02 sans modifier l'échéancier initial.
+- [x] Transaction d'affectation, idempotence et preuve durable ; réception source et lectures après désactivation conservées.
+- [x] Migration additive avec intégrité bilatérale, non-négativité et refus des chemins non autorisés, y compris SQL direct et isolations non prises en charge.
+- [x] Seuils, doubles validations, demandes périmées et confidentialité des vues financières exercés en campagne ciblée.
+- [x] API, SQL direct, concurrence, reprise et régressions sélectionnées : [43110987893](https://github.com/SPX-tech/ScolaPay/actions/runs/43110987893), 162 tests verts sans erreur ni test ignoré. Les derniers contrôles SQL ajoutés et la CI complète sont consignés pour la tête exacte dans le bilan de PR.
 - Le bilan de PR consigne les SHA et résultats exacts, sans prétendre clôturer le lot 2 ni rendre un pilote possible.
 
 Les écritures financières restent désactivées par défaut. Aucun frontend, fournisseur, déploiement, migration persistante ou ouverture Families. Les contrôles A03/A04 restent nécessaires avant pilote. Aucune fusion sans autorisation.

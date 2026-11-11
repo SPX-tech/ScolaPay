@@ -3,6 +3,7 @@ package com.scolapay.core;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.scolapay.core.shared.Columns;
+import com.scolapay.core.billing.BillingSettlements;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -19,7 +20,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 class CashSettlementSqlTest extends CashSettlementScenario {
     @Autowired PlatformTransactionManager transactions;
+    @Autowired BillingSettlements billing;
     record Raw(Tenant tenant,UUID reception,UUID obligation,UUID actor,UUID id,UUID entry,Instant at) {}
+    @Test void lePortDeReglementNePeutOuvrirUneTransactionIndependante() {
+        assertThatThrownBy(()->billing.post(UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID(),1,Instant.now()))
+                .isInstanceOf(org.springframework.transaction.IllegalTransactionStateException.class);
+    }
     Raw raw() throws Exception {
         School school=school(); Tenant t=school.tenant(); UUID o=issuedObligation(school);
         return new Raw(t,receive(t,t.adminToken(),100000),o,get("/api/v2/me",t.adminToken()).id("id"),
@@ -167,5 +173,35 @@ class CashSettlementSqlTest extends CashSettlementScenario {
                     .param("entry",entry).param("second",second).param("id",request).update();
         })).isInstanceOf(RuntimeException.class).hasStackTraceContaining("Le journal a changé");
         assertThat(position(r.tenant(),r.obligation()).path("dueMinor").asString()).isEqualTo("80000");
+    }
+
+    @Test void leSqlNePeutReglerPlusQueLesEspecesRecuesMemeSiLaDetteEstSuffisante() throws Exception {
+        Raw original=raw();
+        UUID small=receive(original.tenant(),original.tenant().adminToken(),10000);
+        Raw r=new Raw(original.tenant(),small,original.obligation(),original.actor(),UUID.randomUUID(),UUID.randomUUID(),Instant.now().truncatedTo(ChronoUnit.MICROS));
+        assertThatThrownBy(()->pair(r,Map.of(),Map.of())).isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("especes disponibles");
+        assertThat(count("cash_allocations",r.tenant())).isZero();
+        assertThat(journalSize(r.obligation())).isEqualTo(1);
+        pair(r,Map.of("amount",10000L),Map.of("amount",-10000L));
+        assertThat(position(r.tenant(),r.obligation()).path("dueMinor").asString()).isEqualTo("90000");
+        assertThat(get(r.tenant().path("/payments/cash-receptions/"+small),r.tenant().adminToken()).text("unallocatedMinor")).isEqualTo("0");
+    }
+
+    @Test void lesPolitiquesNonDefiniesEtAnneesFermeesRestentBloqueesMemeEnSql() throws Exception {
+        Raw r=raw();
+        assertThat(correction(r.tenant(),r.tenant().adminToken(),r.obligation(),1000).status()).isEqualTo(201);
+        assertThatThrownBy(()->pair(r,Map.of("billed",101000L,"due",101000L,"journal",2L),Map.of()))
+                .isInstanceOf(RuntimeException.class).hasStackTraceContaining("ajustements non definie");
+        assertThat(count("cash_allocations",r.tenant())).isZero();
+        assertThat(reversal(r.tenant(),r.tenant().adminToken(),r.obligation(),entries(r.tenant(),r.obligation()).get(1).path("id").asString()).status()).isEqualTo(201);
+        Raw restored=new Raw(r.tenant(),r.reception(),r.obligation(),r.actor(),UUID.randomUUID(),UUID.randomUUID(),Instant.now().truncatedTo(ChronoUnit.MICROS));
+        pair(restored,Map.of("journal",3L),Map.of());
+        Raw closed=raw();
+        UUID year=jdbc.sql("SELECT academic_year_id FROM obligations WHERE establishment_id=:tenant AND id=:id")
+                .param("tenant",closed.tenant().id()).param("id",closed.obligation()).query(UUID.class).single();
+        assertThat(patch(closed.tenant().path("/academic-years/"+year),closed.tenant().adminToken(),Map.of("status","CLOSED")).status()).isEqualTo(200);
+        assertThatThrownBy(()->pair(closed,Map.of(),Map.of())).isInstanceOf(RuntimeException.class).hasStackTraceContaining("Annee non ouverte");
+        unchanged(closed);
     }
 }

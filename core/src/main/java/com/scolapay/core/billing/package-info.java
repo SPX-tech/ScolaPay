@@ -1,6 +1,7 @@
 /**
  * Facturation scolaire : périodes de facturation, catalogue des frais et ses versions. Constate ce
- * qui est dû, jamais ce qui est encaissé. Aucun tarif ne crée de dette par lui-même.
+ * qui est dû et les règlements justifiés via son API publique ; payments reste propriétaire de la
+ * réception physique déclarée. Aucun tarif ne crée de dette par lui-même.
  */
 @org.springframework.modulith.ApplicationModule(
         displayName = "Facturation",

@@ -15,7 +15,11 @@ class CashAllocationRepository {
             String currency, long amountMinor, long issuedMinor, long netBilledMinor, long settledBeforeMinor,
             long dueBeforeMinor, long journalSizeBefore, Instant allocatedAt, UUID allocatedBy) {}
 
-    private static final String SELECT = "SELECT * FROM cash_allocations WHERE establishment_id=:tenant";
+    private static final String SELECT = """
+            SELECT id,reception_id,obligation_id,settlement_entry_id,idempotency_key,reference,currency,amount_minor,
+                   issued_minor,net_billed_minor,settled_before_minor,due_before_minor,journal_size_before,allocated_at,allocated_by
+            FROM cash_allocations WHERE establishment_id=:tenant
+            """;
     private final JdbcClient jdbc;
     CashAllocationRepository(JdbcClient jdbc) { this.jdbc = jdbc; }
 

@@ -1,6 +1,6 @@
 # Mission 004 : encaissements espèces et affectations
 
-**Lot 1 terminé**, #30 fusionnée au commit `2bb5922aef4bf141525a13b9d1c67a815c9d8925`. **Lot 2 autorisé**, première PR intermédiaire de [déclarations d'espèces non affectées](../payments-cash-receptions.md) en revue. Aucun `SETTLEMENT` n'est activé et le lot 2 n'est pas terminé. La Mission 003 reste techniquement clôturée.
+**Lot 1 terminé**, #30 intégrée. **Lot 2 en cours** : #31 fusionnée au commit `6a2fdaa` pour les réceptions ; [première chaîne de règlement d'une obligation](../payments-cash-settlements.md) en revue, désactivée par défaut. La restitution reste fermée et le lot 2 n'est pas terminé. La Mission 003 reste techniquement clôturée.
 
 La restitution en V1 des excédents jamais affectés et les orientations A01 à A04 reçues au démarrage du lot 2 sont validées. Les autres propositions de permissions détaillées, de statuts et de procédures ci-dessous ne constituent pas des arbitrages acquis.
 
@@ -70,10 +70,10 @@ Les orientations A01 à A04 ci-dessous ont été validées par le propriétaire 
 | A02 | Orientation validée, application requise avant règlement | Paiements sur les échéances impayées les plus anciennes, remises sur les échéances non couvertes les plus éloignées, échéancier initial immuable. Définir encore les cas de correction et d'arriérés concernés par A06/A07 |
 | A03 | Secours manuel autorisé, procédure à réaliser | Références uniques, justificatifs, rapprochement et contrôle indépendant à la reprise. Définir supports, responsables et limites. Aucun système de paiement hors ligne complet n'est autorisé |
 | A04 | Contrôle quotidien requis avant pilote | Rapprochement des espèces physiques par caissier, écarts constatés et validation indépendante. Architecture prévue dès la première PR, réalisation obligatoire avant pilote, sans imposer sa livraison dans cette tranche intermédiaire |
-| A05 | Identification du remettant et bénéficiaire de restitution | Proposer un payeur sans compte, identité déclarée minimale et preuve du lien avec la réception. Le contenu obligatoire et le traitement d'un mandataire restent à valider |
+| A05 | Validation limitée reçue, reste ouvert avant pilote/restitution | Pour cette tranche, affecter une réception existante sans identité de remettant est autorisé, sans désigner de payeur/redevable/bénéficiaire. Identité, mandat et lien au bénéficiaire restent à décider avant pilote et restitution |
 | A06 | Dates métier, arriérés et années clôturées | Horodatage serveur immuable. Autorisation d'une date de réception distincte, antidatage et encaissement d'arriérés à décider. Les exigences de validation des ajustements d'année clôturée restent acquises |
 | A07 | Rectifications et refus post-paiement | Définir les erreurs corrigeables, la seconde validation, le remplacement d'affectations et le traitement d'une correction de montant qui contredit des mouvements déjà confirmés. Valider le refus V1 des réductions créant un excédent et de l'annulation administrative avec règlement actif |
-| A08 | Statuts, justificatifs et capacité | Valider les noms et cas mixtes de 0028, les informations imprimables, les références internes, les bornes des paniers et les premières consultations nécessaires |
+| A08 | Statuts techniques de cette tranche validés, autres points ouverts | OPEN, PARTIALLY_SETTLED, SETTLED et SETTLED_WITH_ADJUSTMENTS validés, montants séparés et statuts historiques sans paiement conservés. Informations imprimables/fiscales, futurs justificatifs et bornes des paniers restent ouverts |
 
 Les seuils de 25 % et 100 000 XAF des ajustements ne sont pas transposés automatiquement aux restitutions. Leur double validation est déjà exigée par V05 quel que soit le montant. Une école à une seule personne habilitée ne peut pas auto-approuver une restitution.
 
@@ -158,4 +158,4 @@ Les propositions ont été confrontées aux ports `CurrentActor`, `Establishment
 
 Le lot documentaire vérifie la cohérence des références, la distinction entre état réel et cible et le périmètre du diff. Les futurs invariants seront prouvés par la vraie API, des transactions concurrentes et du SQL direct sur PostgreSQL jetable dans GitHub Actions.
 
-Le lot 1 est terminé. Le propriétaire a autorisé le développement du lot 2 et des PR intermédiaires n'activant pas de règlement incomplet. La première PR conserve toutes les espèces non affectées et l'interdiction SQL de `SETTLEMENT`. La Mission 003 reste clôturée, Families fermé et les fournisseurs désactivés. Aucun frontend, déploiement, import réel ou migration persistante n'est autorisé.
+Le lot 1 est terminé. #31 a intégré la première PR de réceptions non affectées. La présente chaîne autorise techniquement un règlement seulement depuis une réception existante et avec toutes les gardes de [0029](../decisions/0029-premier-reglement-especes.md), sous activation de test explicite. Le lot 2 reste incomplet tant que ses autres exigences, dont la restitution limitée, ne sont pas opérationnelles. La Mission 003 reste clôturée, Families fermé et les fournisseurs désactivés. Aucun frontend, déploiement, import réel ou migration persistante n'est autorisé.
