@@ -22,4 +22,6 @@ Le propriétaire autorise le développement du lot 2 et des PR intermédiaires s
 - [x] Vérifier les régressions de facturation sélectionnées et la modularité sur PostgreSQL jetable dans les campagnes ciblées ci-dessus.
 - La PR en brouillon consigne la CI complète, les contrôles de sa tête exacte, les derniers cas de refus et les limites restantes. Ses résultats dynamiques restent dans le bilan de PR pour ne pas les attribuer à un autre SHA.
 
+La tête `3f472c1` a révélé un défaut réel : le test de clé verrouillée obtenait 500 au lieu de 409, seul échec sur 489 tests dans [43094845040](https://github.com/SPX-tech/ScolaPay/actions/runs/43094845040). Le SQLSTATE `55P03` était laissé non classé par JDBC. La correction est limitée à sa traduction dans `payments`, sans transformer les autres erreurs SQL en saturation. L'incident indépendant d'upload d'artefacts est conservé dans le bilan de PR.
+
 La prochaine PR fonctionnelle autorisant `SETTLEMENT` devra relier réception, affectation, preuve et journal dans une même transaction et prouver toutes les garanties de 0028. Les restitutions et rectifications restent fermées tant que leurs règles et preuves ne sont pas complètes.

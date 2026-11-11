@@ -228,6 +228,7 @@ class CashReceptionTest extends BillingScenarioTest {
             Response busy = record(tenant, tenant.adminToken(), blockedKey.get(), "25000", "0");
             assertThat(busy.status()).as(busy.raw()).isEqualTo(409);
             assertThat(busy.code()).isEqualTo("CASH_RECEPTION_BUSY");
+            assertThat(busy.raw()).doesNotContain("55P03", "SQLException", "INSERT", "25000");
         });
         assertThat(receptions(tenant)).isZero();
         assertThat(record(tenant, tenant.adminToken(), blockedKey.get(), "25000", "0").status()).isEqualTo(201);
@@ -285,6 +286,7 @@ class CashReceptionTest extends BillingScenarioTest {
         try {
             Response failed = record(tenant, tenant.adminToken(), key, "25000", "0");
             assertThat(failed.status()).as(failed.raw()).isEqualTo(409);
+            assertThat(failed.code()).isEqualTo("CASH_RECEPTION_CONFLICT");
             assertThat(failed.raw()).doesNotContain("INSERT", "cash_receptions", "SQLException", "25000");
             assertThat(receptions(tenant)).isZero();
             assertThat(audits(tenant)).isZero();

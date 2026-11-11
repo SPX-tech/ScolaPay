@@ -41,6 +41,8 @@ La réponse ne contient ni clé d'idempotence, contact, nom de remettant, motif 
 
 Une insertion atomique `ON CONFLICT` revendique la clé `(establishment_id, idempotency_key)`. La réception et son audit sont validés dans la même transaction. Une concurrence sur la clé attend de façon bornée, puis relit le résultat ou donne un conflit transitoire. Il n'existe ni cache local d'idempotence ni expiration des clés financières.
 
+Le dépassement du délai de verrouillage PostgreSQL `55P03` donne `409 CASH_RECEPTION_BUSY`, y compris quand JDBC le laisse non classé. Le client conserve la même clé pour reprendre. Les autres erreurs SQL ne sont pas assimilées à cette saturation. Le test de verrou maintenu vérifie le refus borné, l'absence d'effet partiel puis un rejeu réussi.
+
 Après résultat HTTP inconnu, relire par clé ou rejouer la même intention avant tout nouveau geste physique. Une clé différente ne permet pas au logiciel de constater qu'il s'agit des mêmes billets : le contrôle physique et la procédure de secours restent nécessaires. Cette étape ne revendique aucune remise physique exactement une fois.
 
 Le serveur n'effectue aucune communication externe ni écriture dans le journal de facturation. Aucun événement secondaire n'est nécessaire à cette étape ; un futur consommateur devra suivre l'outbox durable sans décider de la confirmation monétaire après commit.

@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.TransientDataAccessException;
+import org.springframework.jdbc.UncategorizedSQLException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,6 +76,12 @@ class CashReceptionService {
         } catch (DataIntegrityViolationException conflict) {
             // Aucun détail PostgreSQL, susceptible de contenir des données financières, n'est journalisé.
             throw ApiException.conflict("CASH_RECEPTION_CONFLICT", "La déclaration n'a pas pu être enregistrée.");
+        } catch (UncategorizedSQLException failure) {
+            // Le traducteur JDBC peut laisser 55P03 non classé : c'est bien un refus de verrou, pas une erreur interne.
+            if ("55P03".equals(failure.getSQLException().getSQLState())) {
+                throw ApiException.conflict("CASH_RECEPTION_BUSY", "Traitement en cours. Rejouez la même déclaration.");
+            }
+            throw failure;
         }
     }
 
