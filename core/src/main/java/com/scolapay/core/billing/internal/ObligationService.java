@@ -62,12 +62,19 @@ public class ObligationService {
      */
     public enum ObligationStatus {
         OPEN,
+        PARTIALLY_SETTLED,
+        SETTLED,
+        SETTLED_WITH_ADJUSTMENTS,
         CANCELLED,
         WAIVED,
         CORRECTED,
         ADJUSTED_TO_ZERO;
 
         static ObligationStatus of(Obligation obligation) {
+            if (obligation.settledMinor() > 0) {
+                if (obligation.dueMinor() > 0) return PARTIALLY_SETTLED;
+                return obligation.discounted() || obligation.corrected() ? SETTLED_WITH_ADJUSTMENTS : SETTLED;
+            }
             if (obligation.dueMinor() > 0) {
                 return OPEN;
             }

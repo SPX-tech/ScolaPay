@@ -91,6 +91,9 @@ class ObligationController {
             String currency,
             String issuedAmountMinor,
             String dueMinor,
+            String adjustmentsMinor,
+            String netBilledMinor,
+            String settledMinor,
             ObligationService.ObligationStatus status,
             String source,
             Instant issuedAt) {
@@ -101,6 +104,8 @@ class ObligationController {
                     obligation.feeDefinitionId(), obligation.billingPeriodId(), obligation.catalogVersionId(),
                     obligation.reference(), obligation.feeCode(), obligation.label(), obligation.category(), obligation.currency(),
                     String.valueOf(obligation.issuedAmountMinor()), String.valueOf(obligation.dueMinor()),
+                    String.valueOf(obligation.adjustmentsMinor()), String.valueOf(obligation.issuedAmountMinor() + obligation.adjustmentsMinor()),
+                    String.valueOf(obligation.settledMinor()),
                     ObligationService.ObligationStatus.of(obligation), obligation.source(), obligation.issuedAt());
         }
     }
@@ -134,11 +139,13 @@ class ObligationController {
     record DetailView(
             ObligationView obligation, List<InstallmentView> installments, List<EntryView> entries, List<ReviewDecisionView> reviewDecisions, boolean reasonsVisible) {}
 
-    record BalanceView(String currency, String issuedMinor, String dueMinor, LocalDate nextDueOn) {
+    record BalanceView(String currency, String issuedMinor, String dueMinor, LocalDate nextDueOn,
+            String adjustmentsMinor, String netBilledMinor, String settledMinor) {
 
         static BalanceView of(Balance balance) {
             return new BalanceView(
-                    balance.currency(), String.valueOf(balance.issuedMinor()), String.valueOf(balance.dueMinor()), balance.nextDueOn());
+                    balance.currency(), String.valueOf(balance.issuedMinor()), String.valueOf(balance.dueMinor()), balance.nextDueOn(),
+                    String.valueOf(balance.adjustmentsMinor()), String.valueOf(balance.issuedMinor() + balance.adjustmentsMinor()), String.valueOf(balance.settledMinor()));
         }
     }
 

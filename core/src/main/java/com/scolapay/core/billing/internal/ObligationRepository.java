@@ -33,6 +33,8 @@ public class ObligationRepository {
             String currency,
             long issuedAmountMinor,
             long dueMinor,
+            long adjustmentsMinor,
+            long settledMinor,
             boolean cancelled,
             boolean discounted,
             boolean corrected,
@@ -68,7 +70,7 @@ public class ObligationRepository {
         }
     }
 
-    public record Balance(String currency, long issuedMinor, long dueMinor, LocalDate nextDueOn) {}
+    public record Balance(String currency, long issuedMinor, long dueMinor, LocalDate nextDueOn, long adjustmentsMinor, long settledMinor) {}
 
     public record Run(
             UUID id, UUID academicYearId, UUID academicUnitId, UUID catalogVersionId, int obligationsCreated, long totalMinor, Instant confirmedAt) {}
@@ -77,6 +79,8 @@ public class ObligationRepository {
             SELECT o.id, o.academic_year_id, o.student_record_id, o.enrollment_id, o.fee_definition_id, d.billing_period_id,
                    o.catalog_version_id, o.reference, o.fee_code, o.label, o.category, o.currency, o.issued_amount_minor,
                    (SELECT COALESCE(sum(e.amount_minor), 0) FROM obligation_entries e WHERE e.obligation_id = o.id) AS due_minor,
+                   (SELECT COALESCE(sum(e.amount_minor), 0) FROM obligation_entries e WHERE e.obligation_id = o.id AND e.kind NOT IN ('ISSUED','SETTLEMENT')) AS adjustments_minor,
+                   (SELECT -COALESCE(sum(e.amount_minor), 0) FROM obligation_entries e WHERE e.obligation_id = o.id AND e.kind = 'SETTLEMENT') AS settled_minor,
                    EXISTS (
                      SELECT 1 FROM obligation_entries e WHERE e.obligation_id = o.id AND e.kind = 'CANCELLATION'
                        AND NOT EXISTS (SELECT 1 FROM obligation_entries r WHERE r.reverses_entry_id = e.id)) AS cancelled,
@@ -301,14 +305,25 @@ public class ObligationRepository {
                 SELECT o.currency,
                        CAST(sum(o.issued_amount_minor) AS bigint) AS issued_minor,
                        CAST(sum(b.due_minor) AS bigint) AS due_minor,
+                       CAST(sum(b.adjustments_minor) AS bigint) AS adjustments_minor,
+                       CAST(sum(b.settled_minor) AS bigint) AS settled_minor,
                        min(n.next_due) AS next_due_on
                 FROM obligations o
                 JOIN LATERAL (
-                  SELECT COALESCE(sum(e.amount_minor), 0) AS due_minor FROM obligation_entries e WHERE e.obligation_id = o.id
+                  SELECT COALESCE(sum(e.amount_minor), 0) AS due_minor,
+                         COALESCE(sum(e.amount_minor) FILTER (WHERE e.kind NOT IN ('ISSUED','SETTLEMENT')),0) AS adjustments_minor,
+                         -COALESCE(sum(e.amount_minor) FILTER (WHERE e.kind='SETTLEMENT'),0) AS settled_minor
+                  FROM obligation_entries e WHERE e.obligation_id = o.id
                 ) b ON true
                 LEFT JOIN LATERAL (
-                  SELECT min(i.due_on) AS next_due FROM obligation_installments i
-                  WHERE i.obligation_id = o.id AND i.due_on >= :today AND b.due_minor > 0
+                  SELECT min(i.due_on) AS next_due FROM (
+                    SELECT due_on,amount_minor,sum(amount_minor) OVER (ORDER BY due_on,seq) AS cumulative
+                    FROM obligation_installments WHERE obligation_id=o.id
+                  ) i
+                  WHERE i.due_on >= :today AND b.due_minor > 0 AND (
+                    EXISTS (SELECT 1 FROM obligation_entries e WHERE e.obligation_id=o.id AND e.kind IN ('CORRECTION','CANCELLATION')
+                      AND NOT EXISTS (SELECT 1 FROM obligation_entries r WHERE r.reverses_entry_id=e.id))
+                    OR LEAST(i.cumulative,o.issued_amount_minor+b.adjustments_minor) > GREATEST(i.cumulative-i.amount_minor,b.settled_minor))
                 ) n ON true
                 WHERE o.establishment_id = :establishmentId AND o.student_record_id = :studentId
                 GROUP BY o.currency
@@ -321,7 +336,7 @@ public class ObligationRepository {
                         rs.getString("currency"),
                         rs.getLong("issued_minor"),
                         rs.getLong("due_minor"),
-                        rs.getObject("next_due_on", LocalDate.class)))
+                        rs.getObject("next_due_on", LocalDate.class), rs.getLong("adjustments_minor"), rs.getLong("settled_minor")))
                 .list();
     }
 
@@ -341,6 +356,8 @@ public class ObligationRepository {
                 rs.getString("currency"),
                 rs.getLong("issued_amount_minor"),
                 rs.getLong("due_minor"),
+                rs.getLong("adjustments_minor"),
+                rs.getLong("settled_minor"),
                 rs.getBoolean("cancelled"),
                 rs.getBoolean("discounted"),
                 rs.getBoolean("corrected"),

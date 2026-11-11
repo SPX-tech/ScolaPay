@@ -112,6 +112,9 @@ public class AdjustmentService {
         }
 
         List<Entry> entries = obligations.entries(establishmentId, obligationId);
+        if (obligation.settledMinor() > 0 && !"DISCOUNT".equals(kind)) {
+            throw ApiException.conflict("PAID_ADJUSTMENT_POLICY_UNDEFINED", "Cette opération après règlement reste indisponible.");
+        }
         Entry reversed = reversedEntryId == null ? null : reversibleEntry(establishmentId, entries, reversedEntryId);
         if ("CANCELLATION".equals(kind)) {
             requireDue(obligation);
@@ -174,7 +177,7 @@ public class AdjustmentService {
     private static long activeAdjustmentsMinor(List<Entry> entries) {
         Set<UUID> reversed = entries.stream().map(Entry::reversesEntryId).filter(Objects::nonNull).collect(Collectors.toSet());
         return entries.stream()
-                .filter(entry -> !"ISSUED".equals(entry.kind()) && !"REVERSAL".equals(entry.kind()) && !reversed.contains(entry.id()))
+                .filter(entry -> !"ISSUED".equals(entry.kind()) && !"REVERSAL".equals(entry.kind()) && !"SETTLEMENT".equals(entry.kind()) && !reversed.contains(entry.id()))
                 .mapToLong(entry -> Math.abs(entry.amountMinor()))
                 .sum();
     }
@@ -262,7 +265,7 @@ public class AdjustmentService {
                 .filter(candidate -> candidate.id().equals(entryId))
                 .findFirst()
                 .orElseThrow(() -> ApiException.notFound("ENTRY_NOT_FOUND", "Écriture introuvable pour cette obligation."));
-        if ("ISSUED".equals(entry.kind()) || "REVERSAL".equals(entry.kind())) {
+        if ("ISSUED".equals(entry.kind()) || "REVERSAL".equals(entry.kind()) || "SETTLEMENT".equals(entry.kind())) {
             throw ApiException.invalid("ENTRY_NOT_REVERSIBLE", "Cette écriture ne se contrepasse pas.");
         }
         if (adjustments.alreadyReversed(establishmentId, entryId)) {
