@@ -9,9 +9,11 @@ import java.time.Instant;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@ConditionalOnProperty(prefix="scolapay.payments",name="cash-allocations-enabled",havingValue="true")
 @RequestMapping("/api/v2/establishments/{establishmentId}")
 class CashAllocationController {
     record Command(@NotNull UUID idempotencyKey,@NotNull UUID obligationId,
@@ -34,8 +36,4 @@ class CashAllocationController {
                 Long.parseLong(command.amountMinor()),command.expectedJournalSize());
         return ResponseEntity.status(result.created()?HttpStatus.CREATED:HttpStatus.OK).body(Proof.of(result.allocation()));
     }
-    @GetMapping("/payments/allocations/{id}")
-    Proof find(@PathVariable UUID establishmentId,@PathVariable UUID id) { return Proof.of(service.find(establishmentId,id)); }
-    @GetMapping("/payments/allocations/by-key/{key}")
-    Proof byKey(@PathVariable UUID establishmentId,@PathVariable UUID key) { return Proof.of(service.byKey(establishmentId,key)); }
 }
