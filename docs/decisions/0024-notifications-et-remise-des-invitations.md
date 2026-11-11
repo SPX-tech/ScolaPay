@@ -70,8 +70,8 @@ Les résultats exacts et le guide de résolution sont dans [le guide des notific
 
 ## Intégration avec les travaux parallèles
 
-#26 est intégrée dans `main` et #27 reprend ce commit par fusion. Le [protocole d'intégration](../integration-notifications-billing.md) décrit les tests conjoints et les contrôles du redémarrage. Les résultats du commit d'intégration sont consignés dans #27, qui reste en brouillon. Aucune configuration réelle de Resend n'est autorisée à ce stade.
+#26 puis #27 sont intégrées dans `main` aux commits `0164876` et `212b6d3`. Le [protocole d'intégration](../integration-notifications-billing.md) décrit les tests conjoints et les contrôles du redémarrage. Les résultats avant et après fusion figurent dans #27. La remise reste désactivée par défaut.
 
-La migration `V7_1` évite `V7__billing_parties.sql` de #26. Aucun déploiement n'a lieu : les deux branches devront être intégrées et validées ensemble sur une base vierge avant toute future migration persistante. Si une base a déjà appliqué 7.1 avant d'intégrer 7, Flyway refusera la migration manquante par défaut : ne pas activer `outOfOrder` pour masquer ce problème, organiser une migration relue.
+La validation de #27 a appliqué `V7__billing_parties.sql` puis `V7_1__notification_delivery.sql` sur une base jetable et vérifié l'historique après redémarrage. Si une base a appliqué 7.1 avant 7, il faut un diagnostic et un plan de migration relu. Une future migration persistante relève d'une autorisation distincte et conserve l'ordre des versions.
 
 Les recouvrements de tests avec #26 utilisent les helpers du canal de test. Les assertions existantes sont conservées et les nouveaux contrôles couvrent la confidentialité des invitations familiales, ainsi que la gestion d'une personne financière par un administrateur invité via la file. Le détail des personnes et de leurs droits reste à la Mission 003.

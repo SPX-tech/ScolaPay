@@ -1,12 +1,12 @@
 # Intégration des notifications avec la Mission 003
 
-Le propriétaire a validé le développement du socle de notifications le 2026-11-10. La [PR #26](https://github.com/SPX-tech/ScolaPay/pull/26) est intégrée dans `main` au commit `016487634e02f1af1d6f1447596e2c2f7a536f1f`. La branche de la [PR #27](https://github.com/SPX-tech/ScolaPay/pull/27) reprend ce commit par fusion et reste en brouillon pour la revue de l'intégration.
+Le propriétaire a validé le développement du socle de notifications le 2026-11-10. La [PR #26](https://github.com/SPX-tech/ScolaPay/pull/26) a été intégrée au commit `016487634e02f1af1d6f1447596e2c2f7a536f1f`, puis la [PR #27](https://github.com/SPX-tech/ScolaPay/pull/27) au commit `212b6d3f6c3206b527fff5e17d83638a0882e637`. Les contrôles sur `main` après chacune de ces fusions sont verts.
 
 Le protocole d'intégration et le principe de politique des canaux ci-dessous sont également validés par le propriétaire. La mise en œuvre de cette politique est explicitement différée : aucun développement supplémentaire n'est engagé à ce stade.
 
 ## Ordre d'intégration et migrations
 
-`V7__billing_parties.sql` appartient à #26 et `V7_1__notification_delivery.sql` à #27. Leur contenu est conservé. La PR #28 sera actualisée séparément après l'intégration de #27, dans l'ordre **V7 → V7_1 → V7_2**.
+`V7__billing_parties.sql` appartient à #26 et `V7_1__notification_delivery.sql` à #27. Leur contenu est conservé. La branche de #28 reprend ce `main` et ajoute V7_2 à la [validation des trois chantiers](auth-abuse-protection.md#intégration-avec-le-lot-6-et-les-notifications).
 
 1. Attendre la fusion autorisée de #26 dans `main`. Ne pas intégrer sa branche de travail dans #27 pendant son développement.
 2. Récupérer `main` et remettre la branche de #27 à jour à partir de cet état intégré. Conserver le travail financier de #26 et résoudre les recouvrements des helpers de tests, notamment `IntegrationTest`, `FoundationJourneyTest` et `GoLiveTest`. Les jetons restent lus dans la boîte de test, jamais dans les réponses HTTP.
@@ -16,7 +16,7 @@ Le protocole d'intégration et le principe de politique des canaux ci-dessous so
 
 Le contrôle des migrations s'appuie sur la [validation Flyway des noms, types et sommes de contrôle](https://github.com/flyway/flyway/blob/flyway-12.11.0/documentation/Reference/Commands/Validate.md), sans modifier un historique pour le faire passer.
 
-**Tant que ces étapes ne sont pas satisfaites, ne pas exécuter le JAR de #27 contre une base persistante.** Ne pas y appliquer 7.1 seule, ne pas renuméroter les migrations et ne pas activer `outOfOrder`, réparer l'historique ou lancer un reset pour masquer un mauvais ordre. Une base persistante déjà dans cet état nécessiterait un diagnostic et un plan de correction relu ; les essais d'intégration restent sur des bases jetables.
+Les essais d'intégration restent sur bases jetables. Une mise en service sur base persistante nécessite une autorisation distincte et l'application des migrations dans l'ordre. Une base ayant appliqué 7.1 avant 7 nécessiterait un diagnostic et un plan de correction relu. Les migrations intégrées et l'historique Flyway sont conservés.
 
 Les validations avant intégration restent associées à leurs propres commits. La PR #27 consigne les exécutions ciblées, la CI complète et les contrôles Containers du commit réunissant les deux chantiers.
 
@@ -26,7 +26,7 @@ Le lot 6 conserve les handlers d'invitation des tiers et étudiants qui applique
 
 Les helpers communs acceptent toujours les invitations via l'API. Ils lisent le jeton dans la boîte du classpath de test à partir de l'identifiant d'invitation. Les assertions de confidentialité vérifient le corps HTTP, y compris pour les invitations d'un tiers et d'un étudiant. Le test de remise par la file vérifie aussi qu'un premier administrateur peut créer puis relire une personne financière et que la route familiale reste fermée.
 
-`NotificationRecoveryTest` démarre une JVM sur une base PostgreSQL vierge avec les migrations de production. Il vérifie les huit versions de V1 à V7_1 et les sommes de contrôle enregistrées. Après un arrêt brutal, la seconde JVM reprend le même événement durable sur la même base. L'historique Flyway doit être identique, rangs et dates d'installation compris, puis `validate()` compare les migrations appliquées aux scripts. Les tests utilisent un fournisseur local de test. La CI complète exerce les vues et corrections du lot 6, les contrôles du portail, la modularité et le démarrage du JAR.
+`NotificationRecoveryTest` démarre une JVM sur une base PostgreSQL vierge avec les migrations de production. Lors de la validation de #27, il a vérifié les huit versions de V1 à V7_1 et les sommes de contrôle enregistrées. Après un arrêt brutal, la seconde JVM reprend le même événement durable sur la même base. L'historique Flyway doit être identique, rangs et dates d'installation compris, puis `validate()` compare les migrations appliquées aux scripts. Les tests utilisent un fournisseur local de test. La CI complète exerce les vues et corrections du lot 6, les contrôles du portail, la modularité et le démarrage du JAR.
 
 ## Politique des canaux Families
 

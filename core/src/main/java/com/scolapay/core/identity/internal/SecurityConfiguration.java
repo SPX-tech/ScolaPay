@@ -30,6 +30,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 
 @Configuration(proxyBeanMethods = false)
 class SecurityConfiguration {
@@ -42,7 +43,10 @@ class SecurityConfiguration {
             HttpSecurity http,
             JwtDecoder decoder,
             AccountRepository accounts,
-            ProblemSecurityHandlers problems)
+            ProblemSecurityHandlers problems,
+            AuthAbuseSettings abuse,
+            ClientOrigin origins,
+            PublicAuthRateStore counters)
             throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
@@ -50,6 +54,7 @@ class SecurityConfiguration {
                 .httpBasic(basic -> basic.disable())
                 .logout(logout -> logout.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(new PublicAuthFilter(abuse, origins, counters), BearerTokenAuthenticationFilter.class)
                 .authorizeHttpRequests(requests -> requests
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v2/auth/login", "/api/v2/invitations/accept").permitAll()

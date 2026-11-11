@@ -22,6 +22,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import tools.jackson.databind.json.JsonMapper;
 
 class NotificationRecoveryTest {
     String url;
@@ -64,12 +65,15 @@ class NotificationRecoveryTest {
     void unArretEntreCommitEtListenerReprendLeVraiEvenementSansPerte() throws Exception {
         assertThat(jdbc.sql("SELECT to_regclass('public.flyway_schema_history') IS NULL")
                 .query(Boolean.class).single()).isTrue();
-        Instance first = start("avant-listener", "--probe.drop-dispatch=true");
+        String originCapacity = "--scolapay.auth-abuse.invitations.origin.capacity=1";
+        String originPeriod = "--scolapay.auth-abuse.invitations.origin.period=PT1H";
+        Instance first = start("avant-listener", "--probe.drop-dispatch=true", originCapacity, originPeriod);
         List<Map<String, Object>> installed = migrationHistory();
         assertThat(installed).extracting(row -> row.get("version"))
-                .containsExactly("1", "2", "3", "4", "5", "6", "7", "7.1");
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "7.1", "7.2");
         assertThat(installed.get(6)).containsEntry("script", "V7__billing_parties.sql");
         assertThat(installed.get(7)).containsEntry("script", "V7_1__notification_delivery.sql");
+        assertThat(installed.get(8)).containsEntry("script", "V7_2__auth_abuse_protection.sql");
         assertThat(installed).allSatisfy(row -> {
             assertThat(row).containsEntry("success", true);
             assertThat(row.get("checksum")).isInstanceOf(Integer.class);
@@ -77,8 +81,9 @@ class NotificationRecoveryTest {
         UUID invitation = issue(first.api());
         assertThat(state(invitation)).isEqualTo("QUEUED");
         assertThat(jdbc.sql("SELECT count(*) FROM event_publication").query(Long.class).single()).isEqualTo(1);
+        assertThat(first.api().accept("invitation-de-test-inconnue").status()).isEqualTo(404);
         first.kill();
-        start("reprise-listener");
+        Instance restarted = start("reprise-listener", originCapacity, originPeriod);
         await(() -> state(invitation).equals("SUBMITTED"));
         assertThat(migrationHistory()).isEqualTo(installed);
         Flyway.configure()
@@ -87,6 +92,32 @@ class NotificationRecoveryTest {
                 .load().validate();
         assertThat(receipts).hasSize(1);
         assertThat(calls.get()).isEqualTo(1);
+        verifyAcceptanceAfterRestart(restarted.api(), invitation);
+    }
+
+    private void verifyAcceptanceAfterRestart(TestApi api, UUID invitation) {
+        var message = JsonMapper.builder().build().readTree(bodies.get("notification/" + invitation));
+        String contact = message.path("to").get(0).asString();
+        String token = message.path("text").asString().split("Jeton : ")[1].split("\\s")[0];
+        TestApi.Reply refused = api.accept(token);
+        assertThat(refused.status()).isEqualTo(429);
+        assertThat(refused.code()).isEqualTo("AUTH_RATE_LIMITED");
+        assertThat(refused.raw()).doesNotContain(token, contact, IntegrationTest.PASSWORD);
+        assertThat(jdbc.sql("SELECT accepted_at IS NULL FROM invitations WHERE id=:id")
+                .param("id", invitation).query(Boolean.class).single()).isTrue();
+        assertThat(jdbc.sql("SELECT count(*) FROM account_identifiers WHERE value=:contact")
+                .param("contact", contact).query(Long.class).single()).isZero();
+
+        // Simule la recharge sur cette base jetable, sans attendre une heure.
+        jdbc.sql("UPDATE auth_abuse_buckets SET tat=clock_timestamp()-interval '1 hour'").update();
+        assertThat(api.accept(token).status()).isEqualTo(200);
+        String admin = api.login(contact, IntegrationTest.PASSWORD);
+        UUID school = jdbc.sql("SELECT establishment_id FROM invitations WHERE id=:id")
+                .param("id", invitation).query(UUID.class).single();
+        TestApi.Reply party = api.post("/api/v2/establishments/" + school + "/billing/parties", admin,
+                Map.of("kind", "PERSON", "displayName", "Personne de test"));
+        assertThat(party.status()).as(party.raw()).isEqualTo(201);
+        assertThat(api.get("/api/v2/me/billing/obligations", admin).status()).isEqualTo(404);
     }
 
     @Test

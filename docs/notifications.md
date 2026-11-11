@@ -2,7 +2,7 @@
 
 Le module `core/notifications` prépare une remise technique réutilisable. Aucun envoi réel, déploiement ou ouverture de Families n'est effectué par ce chantier. Décision : [0024](decisions/0024-notifications-et-remise-des-invitations.md).
 
-Le développement a été validé par le propriétaire. La branche de #27 reprend `main` après #26 et reste en brouillon pour la revue. Le [protocole d'intégration](integration-notifications-billing.md) décrit les vérifications sur PostgreSQL vierge. Aucune configuration réelle de Resend n'est autorisée à ce stade. La section suivante reste une référence technique.
+Le développement a été validé par le propriétaire et #27 est intégrée dans `main` au commit `212b6d3`. Le [protocole d'intégration](integration-notifications-billing.md) décrit les vérifications sur PostgreSQL vierge. La remise reste désactivée par défaut. La configuration réelle de Resend relève d'une mise en service distincte.
 
 ## Configurer l'e-mail
 

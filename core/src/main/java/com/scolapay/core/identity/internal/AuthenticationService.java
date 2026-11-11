@@ -57,10 +57,15 @@ public class AuthenticationService {
     /**
      * Renvoie vide au lieu de lever une exception : le compteur d'échecs doit être validé.
      * Identifiant inconnu, mot de passe faux, compte verrouillé ou désactivé sont
-     * indiscernables pour l'appelant, y compris en temps de réponse.
+     * traités par la même réponse. Le hash leurre limite les écarts de coût sans
+     * garantir un temps constant ; les mots de passe trop longs sont refusés avant BCrypt.
      */
     @Transactional
     public Optional<IssuedToken> login(String rawIdentifier, String password) {
+        // La limite vaut aussi à la vérification : BCrypt pourrait accepter un suffixe tronqué.
+        if (!withinPasswordLimit(password)) {
+            return Optional.empty();
+        }
         Identifier identifier;
         try {
             identifier = Identifier.parse(rawIdentifier);
@@ -116,7 +121,7 @@ public class AuthenticationService {
     public void changePassword(UUID accountId, String currentPassword, String newPassword) {
         AccountRepository.Account account = accounts.find(accountId)
                 .orElseThrow(() -> ApiException.unauthorized("AUTHENTICATION_REQUIRED", "Authentification requise."));
-        if (!passwordEncoder.matches(currentPassword, account.passwordHash())) {
+        if (!withinPasswordLimit(currentPassword) || !passwordEncoder.matches(currentPassword, account.passwordHash())) {
             throw ApiException.forbidden("INVALID_CURRENT_PASSWORD", "Le mot de passe actuel est incorrect.");
         }
         validateNewPassword(newPassword);
@@ -134,5 +139,9 @@ public class AuthenticationService {
                     "Le mot de passe doit contenir au moins " + MIN_PASSWORD_LENGTH + " caractères et au plus "
                             + MAX_PASSWORD_BYTES + " octets.");
         }
+    }
+
+    private static boolean withinPasswordLimit(String password) {
+        return password != null && password.getBytes(StandardCharsets.UTF_8).length <= MAX_PASSWORD_BYTES;
     }
 }

@@ -1,0 +1,39 @@
+name: Auth abuse protection
+
+on:
+  push:
+    branches: ['feat/auth-abuse-protection']
+    paths: ['core/**', '.github/workflows/auth-abuse.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auth-abuse-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  auth-abuse:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: core
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-java@v6.2.0
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: core/pom.xml
+      - name: Vérifier les quotas, les invitations et le lot 6 sur PostgreSQL réel
+        run: ./mvnw --batch-mode --no-transfer-progress -Dtest='AuthAbuse*Test,NotificationRecoveryTest,NotificationDeliveryTest,NotificationConfidentialityTest,NotificationConfigurationTest,GoLiveTest,SecurityHardeningTest,FoundationJourneyTest,FamilyAccessTest,FamilyBillingViewTest,Lot6FinalizationRegressionTest,PartyCorrectionTest,ModularityTest' test
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: auth-abuse-test-reports
+          path: |
+            core/target/surefire-reports/
+            core/target/notification-probe/

@@ -35,11 +35,17 @@ Sans ces variables, l'application refuse de démarrer. Il n'existe aucun identif
 
 Le portail des familles est fermé par défaut : `/me/students` n'existe pas et les invitations familiales sont refusées avec le code `PORTAL_CLOSED`. `SCOLAPAY_PORTAL_ENABLED=true` ne l'ouvre que si toutes les [conditions de mise en service](../docs/decisions/0017-controles-de-mise-en-service.md) sont remplies, sinon l'application refuse de démarrer. Il n'existe aucune option de contournement.
 
+## Protection des API publiques d'authentification
+
+Connexion et acceptation d'invitations ont des quotas partagés dans PostgreSQL, un corps plafonné à 8 Kio et des bornes locales de calcul. Les refus répondent `429 AUTH_RATE_LIMITED` avec `Retry-After`, ou 503 si la protection ou un créneau local est indisponible. Le verrouillage des comptes et les JWT révocables sont conservés.
+
+Les adresses transférées sont ignorées par défaut. Un reverse proxy exige un mode explicite et ses CIDR de confiance. Le forwarding automatique Spring/Tomcat reste désactivé. Configuration, valeurs de départ pour les IP partagées, essais et limites figurent dans [le guide](../docs/auth-abuse-protection.md) et la décision [0025](../docs/decisions/0025-protection-authentification-publique.md). L'ordre des migrations est V7 → V7_1 → V7_2. Les validations de #28 utilisent PostgreSQL jetable.
+
 ## Notifications et invitations
 
 Les invitations sont remises au contact par une file chiffrée et ne renvoient plus de jeton dans le JSON. La remise est désactivée par défaut : sans configuration, leur création répond `409 INVITATION_CHANNEL_UNAVAILABLE`. Le transport e-mail Resend est optionnel, sans SMS. Le portail reste fermé et un e-mail seul ne satisfait pas ses conditions d'ouverture. Configuration, états, reprises et limites dans [le guide des notifications](../docs/notifications.md), décision [0024](../docs/decisions/0024-notifications-et-remise-des-invitations.md).
 
-En mode désactivé, l'opérateur peut se connecter mais la création du premier établissement est refusée et entièrement annulée, puisque son administrateur doit être invité dans la même transaction. Les parcours de test et de démonstration sans fournisseur passent par les fixtures de `src/test/` sur base jetable, sans exposition des jetons dans le JSON ou les journaux. Aucun mode de démonstration n'est inclus dans le JAR. L'intégration attend #26 ; la [règle de canaux Families et le protocole de validation](../docs/integration-notifications-billing.md) sont documentés, sans activation ni configuration réelle de Resend.
+En mode désactivé, l'opérateur peut se connecter et le refus de remise annule toute création d'établissement, puisque son administrateur doit être invité dans la même transaction. Les parcours de test et de démonstration sans fournisseur passent par les fixtures de `src/test/` sur base jetable, sans exposition des jetons dans le JSON ou les journaux. #27 est intégrée dans `main`. La [politique de canaux Families](../docs/integration-notifications-billing.md#politique-des-canaux-families) est validée, avec mise en œuvre différée avant toute ouverture.
 
 ## Parcours de base
 

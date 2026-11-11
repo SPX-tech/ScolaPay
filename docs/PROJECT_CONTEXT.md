@@ -2,7 +2,7 @@
 
 Référence stratégique et technique du projet, lisible sans l'historique des conversations. En cas de désaccord entre ce document et le code, **le code prime** : corriger le document.
 
-**Dernière mise à jour : 2026-11-10.** Le statut des fonctionnalités décrit le code du dépôt. **Aucune instance de ScolaPay n'est en service** : « implémenté » ne signifie pas « déployé ».
+**Dernière mise à jour : 2026-11-11.** Le statut des fonctionnalités décrit le code du dépôt. **Aucune instance de ScolaPay n'est en service** : « implémenté » ne signifie pas « déployé ».
 
 ## État du projet en bref
 
@@ -40,7 +40,8 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Identité globale | Vérifié | Compte unique, e-mail ou téléphone, connexion, verrouillage après 5 échecs, jetons révocables | `identity`, `SecurityHardeningTest` |
 | Invitations | Vérifié, transport e-mail optionnel | Usage unique, contact lié, jeton retiré du JSON et remis via une file chiffrée. Sans canal disponible, création refusée | `identity`, `NotificationConfidentialityTest`, `NotificationDeliveryTest` |
 | Notifications | Vérifié en CI, aucun envoi réel | File chiffrée, listener durable, worker hors transaction, baux, reprises bornées et suivi autorisé. Resend désactivé par défaut. Aucun SMS ni preuve de réception en boîte | `notifications`, `NotificationRecoveryTest`, [0024](decisions/0024-notifications-et-remise-des-invitations.md) |
-| Intégration des notifications | #27 en brouillon sur `main` après #26 | Tests conjoints sur PostgreSQL vierge, V7 avant V7_1 et contrôle du redémarrage. Principe des canaux accepté, mise en œuvre différée avant Families. Aucun fournisseur réel autorisé | [Protocole et décision de canaux](integration-notifications-billing.md), [résultats de #27](https://github.com/SPX-tech/ScolaPay/pull/27) |
+| Intégration des notifications | #27 intégrée dans `main` au commit `212b6d3` | PostgreSQL vierge, V7 avant V7_1 et contrôle du redémarrage. Principe des canaux accepté, mise en œuvre différée avant Families | [Protocole et décision de canaux](integration-notifications-billing.md), [résultats de #27](https://github.com/SPX-tech/ScolaPay/pull/27) |
+| Protection des API publiques d'authentification | Développement et ADR acceptés, #28 en brouillon | Quotas PostgreSQL partagés, concurrence et corps bornés, proxy explicite. La branche reprend `main` après #26 et #27 | `AuthAbuseHttpTest`, `AuthAbuseProxyTest`, [0025](decisions/0025-protection-authentification-publique.md), [résultats de #28](https://github.com/SPX-tech/ScolaPay/pull/28) |
 | Établissements | Vérifié | Création par un opérateur, type, fuseau, devise, pays, suspension | `establishment` |
 | Personnel et permissions | Vérifié | Adhésion par établissement, rôles multiples, dernier administrateur protégé | `establishment`, `TenantIsolationTest` |
 | Isolation entre établissements | Vérifié | Barrière d'adhésion, 404 aux non-membres, clés composites en base | `TenantIsolationTest`, `DatabaseGuardsTest` |
@@ -156,7 +157,8 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 - **0022**, acceptée : remise, correction et annulation distinctes, seconde personne au-delà de 25 % ou 100 000 XAF en cumul brut, rôle directeur, motifs masqués aux caissiers dans l'API, réexamen déduit de la réalité.
 - **0021**, acceptée : une obligation par dossier et par charge, sans la version du catalogue dans la clé, dû et statut déduits du journal, règlement impossible sans le module de paiement.
 
-- **0024**, socle et protocole validés par le propriétaire : file chiffrée, remise des invitations et reprises externes bornées. #27 est actualisée après #26 et reste en brouillon. Le principe des canaux Families explicitement autorisés est accepté ; sa mise en œuvre et ses tests sont différés avant toute ouverture, selon le modèle d'accès final.
+- **0024**, socle intégré par #27 : file chiffrée, remise des invitations et reprises externes bornées. Le principe des canaux Families explicitement autorisés est accepté. Sa mise en œuvre et ses tests sont différés avant toute ouverture, selon le modèle d'accès final.
+- **0025**, acceptée par le propriétaire : protection des routes publiques d'authentification par PostgreSQL, quotas bornés et politique explicite d'origine. #28 reprend `main` après #26 et #27. Contention et collisions restent à mesurer avant montée en charge.
 
 ## Priorités actuelles
 
@@ -173,7 +175,8 @@ Dans `core/`, les limites connues sont listées dans [0010](decisions/0010-ident
 | Réassociation des personnes financières | Le compte et le type sont immuables ; leur changement nécessiterait un parcours sensible distinct, jamais une correction de nom ou un doublon | [0023](decisions/0023-personnes-liees-et-vues.md#compte-associé-et-identité-financière) |
 | Règles juridiques non confirmées | L'âge légal enregistré pour le Tchad est provisoire. L'application refuse d'ouvrir le portail tant qu'il n'est pas confirmé | [0013](decisions/0013-majorite-et-autorisations-familiales.md#limites-et-conditions), [0017](decisions/0017-controles-de-mise-en-service.md) |
 | Dégradation silencieuse d'Android | Plus vérifié à chaque PR : accepté tant qu'il est hors feuille de route | [0014](decisions/0014-android-hors-feuille-de-route.md) |
-| Pas de limitation de débit par adresse | Le verrouillage par compte permet de gêner un compte connu | `core`, `identity` |
+| Verrouillage ciblé et saturation résiduels | La limitation borne le coût mais un attaquant distribué peut encore verrouiller un compte ou gêner le trafic légitime. Quotas approximatifs par compartiments, défenses réseau et récupération à compléter | [Guide anti-abus](auth-abuse-protection.md), [0025](decisions/0025-protection-authentification-publique.md) |
+| Contention et collisions des quotas | Mesurer les admissions SQL, attentes de verrous et refus supplémentaires sur cohortes synthétiques avant exploitation à grande échelle. Aucune capacité à grande échelle ni nécessité de Redis n'est démontrée à ce stade | [Suivi avant montée en charge](auth-abuse-protection.md#mesures-avant-montée-en-charge) |
 | Écoles à un seul utilisateur | Une opération sensible exige une seconde personne habilitée, sans auto-approbation. Sujet ouvert pour les pilotes | [0022](decisions/0022-ajustements-et-reexamen.md#questions-ouvertes) |
 | Performance du réexamen non mesurée | À mesurer avant tout lancement auprès d'établissements importants | [0022](decisions/0022-ajustements-et-reexamen.md#limites) |
 | Volume d'émission non mesuré | Le plafond de 5 000 inscriptions par lot est testé, pas la durée d'une telle transaction | [Journal](mission-003-validation.md#limites-restantes) |
@@ -225,7 +228,7 @@ La CI GitHub (`.github/workflows/ci.yml`) est la source de preuve : `core` avec 
 
 Le poste de développement (8 Go) est réservé aux éditions légères. Les commandes locales figurent dans le [README](../README.md).
 
-La CI de `main` après #26 a validé 390 tests Java. Le socle de notifications a été validé séparément avec 369 tests avant intégration. Les résultats conjoints et leur SHA sont consignés dans [#27](https://github.com/SPX-tech/ScolaPay/pull/27). Le scénario de reprise vérifie l'ordre V7 puis V7_1, la validation des sommes de contrôle et l'absence de rejeu au redémarrage.
+La CI de `main` a validé 390 tests Java après #26 et 431 après #27. Les 360 tests du socle anti-abus ont été exécutés avant son intégration. Les résultats des trois chantiers réunis sont consignés dans [#28](https://github.com/SPX-tech/ScolaPay/pull/28). Le scénario de reprise couvre l'ordre V7 → V7_1 → V7_2, les sommes de contrôle et l'historique Flyway au redémarrage. Il vérifie aussi le quota d'acceptation sur une invitation remise par la file, puis les droits financiers de l'administrateur invité.
 
 Les 15 mutations ciblées de la [finalisation du lot 6](lot6-finalization.md#validation) ont été détectées avant fusion, avec un contrôle sain de 390 tests. Les preuves historiques restent distinctes : 23 mutations à la [Mission 002](mission-002-validation.md), 224 sur les lots 1 à 5 de la [Mission 003](mission-003-validation.md), puis 176 sur la version initiale du lot 6. Pour le backend NestJS et le web : 190 tests unitaires, 35 E2E et 47 tests Playwright ; la compilation et le lancement Android relèvent de la [Mission 001](mission-001-validation.md#résultats-finaux).
 
