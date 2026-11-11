@@ -30,7 +30,7 @@ Une décision mérite une entrée ici lorsqu'elle est coûteuse à inverser ou q
 | [0022](0022-ajustements-et-reexamen.md) | Remises, corrections, annulations et réexamen | Acceptée | En place, sans aucun encaissement |
 | [0023](0023-personnes-liees-et-vues.md) | Personnes liées à une obligation et vues par rôle | Périmètre du lot 6 validé, questions métier ouvertes | Intégré dans `main` par #26, portail fermé, aucun encaissement |
 | [0024](0024-notifications-et-remise-des-invitations.md) | Notifications et remise sécurisée des invitations | Socle, protocole et principe des canaux acceptés | Intégré dans `main` par #27, remise désactivée par défaut et politique à implémenter avant Families |
-| [0025](0025-protection-authentification-publique.md) | Protection des API publiques d'authentification | Acceptée, développement validé | #28 actualisée après #26 et #27, en brouillon. Contention et collisions à mesurer avant montée en charge |
+| [0025](0025-protection-authentification-publique.md) | Protection des API publiques d'authentification | Acceptée, développement et intégration validés | Intégrée par #28 dans `main` au commit `7eb7ddb`. Contention et collisions à mesurer avant montée en charge |
 
 ## Statuts
 

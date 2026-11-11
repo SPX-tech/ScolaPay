@@ -1,6 +1,6 @@
 # 0025 : protection des API publiques d'authentification
 
-- **Statut** : Acceptée par le propriétaire le 2026-11-10. #28 reprend `main` après les fusions de #26 et #27 et reste en brouillon pour revue d'intégration.
+- **Statut** : Acceptée par le propriétaire le 2026-11-10. Développement et intégration validés, puis fusion par #28 au commit `7eb7ddb` le 2026-11-11.
 - **Date** : 2026-11-10
 - **Décideur** : propriétaire du projet, validation du développement et de l'ADR dans la revue de la PR #28
 - **Complète** : [0010](0010-identite-et-acces.md), sans remplacer le verrouillage des comptes, les contrôles d'invitation ou les JWT révocables
@@ -71,6 +71,6 @@ Les suites `AuthAbuse*Test` utilisent un vrai serveur HTTP et un vrai PostgreSQL
 
 `V7_2__auth_abuse_protection.sql` crée la table technique des quotas. V7, V7_1 et V7_2 sont conservées et appliquées dans cet ordre pour la validation sur PostgreSQL vierge. Le scénario de reprise vérifie l'historique et les sommes de contrôle Flyway au redémarrage. Les essais restent sur bases jetables, avec le transport de test et Families fermé pour ce scénario.
 
-La PR #28 contient le merge de `main` au commit `212b6d3` et reste en brouillon. Les preuves de validation conjointe et leur SHA figurent dans la [PR #28](https://github.com/SPX-tech/ScolaPay/pull/28). Les 360 tests du socle restent une preuve distincte. L'autorisation de fusion et une éventuelle mise en service relèvent de décisions séparées.
+La PR #28 est fusionnée après #26 et #27. La CI sur `main` au commit `7eb7ddb` a validé 461 tests Java, le démarrage du JAR et Containers. Les preuves figurent dans la [PR #28](https://github.com/SPX-tech/ScolaPay/pull/28). Les 360 tests du socle restent une preuve distincte. La contention PostgreSQL, les collisions et les protections réseau restent à mesurer ou valider selon le guide avant les mises en service concernées.
 
 Configuration et limites : [guide d'exploitation](../auth-abuse-protection.md).

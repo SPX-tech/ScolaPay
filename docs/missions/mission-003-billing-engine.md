@@ -1,6 +1,6 @@
 # Mission 003 : ScolaPay Billing Engine
 
-**Statut : cadrage validé par le propriétaire, construction autorisée lot par lot.** L'état de chaque lot est tenu à jour ci-dessous. Aucun déploiement ni paiement réel.
+**Périmètre livré techniquement terminé, clôture proposée dans #29.** Les lots 1 à 6 sont intégrés. Le lot 7 a validé 195 mutations sur 195 avec trois contrôles sains et une CI complète de 461 tests Java sur le code consolidé après #26, #27 et #28. Les preuves et leurs SHA figurent dans le [journal de validation](../mission-003-validation.md).
 
 ## Objectif
 
@@ -79,8 +79,8 @@ Chaque lot est une PR verte, indépendante, et met à jour `PROJECT_CONTEXT.md`.
 | 3 | Module `billing` : catalogue de frais, identité stable des charges, applicabilité, périodes de facturation, publication et versions, voir [0020](../decisions/0020-catalogue-de-frais-et-periodes.md) | Lot 2 | **Terminé** |
 | 4 | Obligations, échéances et journal, émission sans double facturation, élèves déjà inscrits, distinction des [documents](../decisions/0019-nature-des-documents-et-numerotation.md), voir [0021](../decisions/0021-obligations-et-journal.md) | Lots 1 et 3 | **Terminé** |
 | 5 | Remises, corrections, annulations, confirmation par une seconde personne, réexamen, voir [0022](../decisions/0022-ajustements-et-reexamen.md) | Lot 4 | **Terminé** |
-| 6 | Personnes physiques et morales, rôles, vues par rôle, retrait de `financial_contributor`, voir [0023](../decisions/0023-personnes-liees-et-vues.md) | Lot 4 | **Terminé, en revue** |
-| 7 | Campagne de mutations et clôture | Tous | À faire |
+| 6 | Personnes physiques et morales, rôles, vues par rôle, retrait de `financial_contributor`, voir [0023](../decisions/0023-personnes-liees-et-vues.md) | Lot 4 | **Terminé, intégré par #26** |
+| 7 | Consolidation, campagne finale et bilan de clôture | Tous | **Validation technique terminée, clôture en revue dans #29** |
 
 ## Décisions du propriétaire
 
@@ -94,6 +94,8 @@ Confirmées le 2026-11-06, et intégrées à [0015](../decisions/0015-modele-de-
 6. **Retrait** : aucune suppression automatique, réexamen, et ajustement autorisé, justifié et tracé.
 
 Tout changement structurant ou question juridique non tranchée est remonté au propriétaire.
+
+Les questions de [0023](../decisions/0023-personnes-liees-et-vues.md#décisions-ouvertes-pour-le-propriétaire) restent ouvertes après la clôture technique du périmètre livré. La réassociation d'un compte, plusieurs redevables et une éventuelle vue de l'étudiant sans rôle nécessiteraient des décisions et des évolutions distinctes. Les limites d'exploitation sont conservées dans le journal.
 
 ## Risques
 

@@ -2,7 +2,7 @@
 
 Décision : [0025](decisions/0025-protection-authentification-publique.md). Le périmètre est limité à la connexion et à l'acceptation d'invitations de `core/`. Le portail reste fermé par défaut. Les responsabilités financières, les notifications et les clients ne changent pas.
 
-Le développement et l'ADR 0025 sont acceptés par le propriétaire. #28 reste en brouillon jusqu'à la stabilisation et la validation de #26 puis #27. Cette acceptation n'autorise ni la fusion ni le déploiement de #28.
+Le développement et l'ADR 0025 sont acceptés par le propriétaire. #28 est intégrée dans `main` après #26 et #27, au commit `7eb7ddb`, avec 461 tests Java verts après fusion. Le guide conserve les limites de contention, de collisions et de protection réseau à valider avant les mises en service concernées.
 
 ## Seuils de départ
 

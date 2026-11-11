@@ -21,7 +21,8 @@ Une campagne n'atteste que le commit qu'elle a testé. Ces défauts sont choisis
 | 3 | Catalogue de frais, identité stable des charges | 178 | 52 sur 52 | 3 sur 3 | [#23](https://github.com/SPX-tech/ScolaPay/pull/23), fusionnée |
 | 4 | Obligations, échéanciers, journal, émission | 236 | 46 sur 46 | 3 sur 3 | [#24](https://github.com/SPX-tech/ScolaPay/pull/24), fusionnée |
 | 5 | Remises, corrections, annulations, réexamen | 330 | 124 sur 124, dont 41 repris à l'identique du lot 4 | 3 sur 3 | [#25](https://github.com/SPX-tech/ScolaPay/pull/25), fusionnée |
-| 6, finalisation | Personnes et rôles explicites, vues confidentielles cohérentes, corrections tracées | 390 | 15 sur 15 ciblés sur la reprise ; campagne historique distincte | 1 sur 1 | [#26](https://github.com/SPX-tech/ScolaPay/pull/26), revue finale |
+| 6, finalisation | Personnes et rôles explicites, vues confidentielles cohérentes, corrections tracées | 390 | 15 sur 15 ciblés sur la reprise ; campagne historique distincte | 1 sur 1 | [#26](https://github.com/SPX-tech/ScolaPay/pull/26), fusionnée |
+| 7 | Consolidation sur le code intégré, catalogue, obligations, ajustements et vues | 461 en CI, 276 pour les mutations | 195 sur 195 | 3 sur 3 | [#29](https://github.com/SPX-tech/ScolaPay/pull/29), brouillon pour revue de clôture |
 
 ## Lot 4 en détail
 
@@ -118,7 +119,71 @@ Toutes les validations ont tourné sur GitHub Actions. Ni le poste de développe
 
 La [finalisation](lot6-finalization.md) détaille la provenance des documents locaux, la vérification pré-service de V7, le contrat de correction et la réassociation de compte exclue. L'ADR [0023](decisions/0023-personnes-liees-et-vues.md#décisions-ouvertes-pour-le-propriétaire) distingue les exigences validées des arbitrages métier encore ouverts. Le portail reste fermé ; aucun règlement n'est simulé.
 
-Les contrôles du commit final publié sont référencés dans #26. La validation des trois chantiers réunis, avec **V7 → V7_1 → V7_2**, reste à faire lors de leur intégration autorisée.
+Les contrôles du commit final publié sont référencés dans #26. #27 puis #28 ont été fusionnées par merge commit. La CI de `main` sur `7eb7ddb6c268b8ca503c1b6518decaa5397fb88d` a validé 461 tests Java et Containers. Le scénario de reprise applique **V7 → V7_1 → V7_2** sur base vierge, conserve le même historique après arrêt brutal et valide les sommes de contrôle. Les résultats sont référencés dans #28.
+
+## Lot 7 et code consolidé
+
+La [PR #29](https://github.com/SPX-tech/ScolaPay/pull/29) part de `7eb7ddb`. Le moteur, ses migrations et ses tests métier sont conservés. Les changements portent sur la campagne, la qualification des preuves et les statuts documentaires.
+
+### Couverture des invariants
+
+| Invariant | Garanties relues et scénarios exercés | Mutations représentatives |
+| --- | --- | --- |
+| Exactitude du dû | Somme du journal, soldes, signes, statuts distincts à dû nul, montant négatif refusé | `due-from-issued-amount`, `balance-from-issued-amount`, `db-negative-open`, `status-mix-shown-as-waiver` |
+| Échéanciers et catalogue | Montants entiers, somme exacte, dates ordonnées, charge stable et ligne applicable la plus proche | `catalog-installment-total-unchecked`, `catalog-installment-order-unchecked`, `catalog-charge-identity-mutable`, `catalog-nearest-unit-loses-priority` |
+| Intégrité et immutabilité | Obligation complète au commit, journal sans modification ni troncature, tarif publié protégé | `db-complete-open`, `db-entries-mutable`, `db-entries-truncate`, `catalog-published-item-mutable` |
+| Idempotence | Identité stable dossier/charge, trois voies d'émission concurrentes, rejeu d'opération et audit | `key-includes-catalog-version`, `key-includes-enrollment`, `entry-replay-gone`, `request-replay-gone` |
+| Concurrence | Verrou d'obligation dans le service et en base, dix écritures, confirmation simultanée | `no-obligation-lock`, `db-entries-no-lock`, `no-lock-on-designation` |
+| Double validation | Cumul brut, pourcentage et seuil XAF, seconde personne distincte, demande et journal figés | `threshold-net-instead-of-gross`, `self-approval-open`, `db-zero-without-second-person`, `db-approved-stale` |
+| Isolation | Requêtes contextualisées, permissions, clés étrangères composites et matrice HTTP multi-établissement | `find-across-tenants`, `db-enrollment-fk-simple`, `db-party-other-establishment`, `view-any-account` |
+| Confidentialité | Projections par rôle, motifs protégés, éligibilité avant pagination et instantanés cohérents | `responsible-shown-as-debtor`, `pagination-without-link`, `family-list-without-snapshot`, `correction-history-visible-to-cashier` |
+| Identité financière | Révision, journal de correction immuable, audit atomique et compte associé immuable | `correction-ignores-revision`, `correction-without-audit`, `correction-account-mutable` |
+| Absence d'encaissement fictif | Types SQL et statuts du service, routes réelles sans règlement | `db-settlement-allowed`, `status-mix-shown-as-waiver`, tests `aucunStatutNiEcritureNeSimuleUnReglement` et `aucuneRouteNeModifieNiNeRegleUneObligation` |
+
+### Scénarios historiques retenus
+
+Les 176 motifs du lot 6 et les 15 de sa finalisation s'appliquent au code intégré. La campagne finale conserve 175 des premiers et les 15 derniers. `db-party-mutable` cible exactement la même garde que `correction-without-trace`. Seul ce dernier est retenu avec son test requis. Cinq mutants complètent la couverture du catalogue, soit 195 mutants et trois contrôles.
+
+Les redéfinitions de V6 dans `lot5.mjs` restent nécessaires. Les variantes originales `status-always-open` et `db-reason-optional` de V5 sont remplacées par les statuts et motifs distincts introduits au lot 5. Les variantes `db-negative-open`, `db-entries-no-lock` et `db-settlement-allowed` ciblent la fonction ou contrainte effective de V6. Réintroduire leurs anciennes étapes V5 donnerait un défaut neutralisé par la migration suivante.
+
+Les suites financières, de catalogue, d'isolation et de modularité sont sélectionnées pour les mutants et leurs contrôles. La CI complète sur le même code couvre aussi les notifications, l'anti-abus et les contrôles de mise en service. Le rapport affiche séparément les nombres de tests de ces deux périmètres.
+
+### Qualification des preuves
+
+La revue de l'outillage a trouvé qu'un résultat absent ou dupliqué pouvait passer inaperçu dans la conclusion. Le rapport compare son inventaire au plan de campagne. Une erreur de test sans échec d'assertion ne vaut pas détection. Un test requis doit avoir échoué par assertion, et un contrôle du code intact refuse tout test ignoré. Une compilation échouée reste toujours `NE_COMPILE_PAS`.
+
+La revue suivante de #29 a identifié deux défauts supplémentaires. Le rapport acceptait indifféremment `VERT` et `DETECTE` pour chaque résultat. Le workflow pouvait masquer l'échec du générateur avec son pipeline et acceptait l'absence de conclusion négative. La correction exige `DETECTE` pour chaque mutant et `VERT` pour chaque contrôle. La génération utilise Bash avec propagation des erreurs, puis la conclusion positive exacte est obligatoire.
+
+### Résultats de consolidation
+
+Les preuves suivantes portent sur `1278ca717dbc374b6376904d94a1edf713b216c8`, dérivé du `main` intégré `7eb7ddb`. Les sources du moteur, les tests métier, les migrations et les dépendances sont identiques à cette base.
+
+| Vérification | Résultat | Preuve |
+| --- | --- | --- |
+| Campagne finale sur PostgreSQL jetable | 195 mutants détectés sur 195, inventaire complet et trois contrôles sains de 276 tests | [Campagne finale](https://github.com/SPX-tech/ScolaPay/actions/runs/42988964544) |
+| Tests de qualification du rapport | Cinq tests réussis dans le plan de campagne | [Plan de campagne](https://github.com/SPX-tech/ScolaPay/actions/runs/42988964544) |
+| Suite Java complète, compilation, démarrage et surface publique du JAR | 461 tests, zéro échec, erreur ou test ignoré | [CI complète](https://github.com/SPX-tech/ScolaPay/actions/runs/42988964481) |
+| Images et vérification de la pile historique | Vert | [Containers](https://github.com/SPX-tech/ScolaPay/actions/runs/42988964500) |
+| Régressions du rapport et du workflow avant correction | Six échecs attendus parmi 13 tests, dont les statuts inversés, rapports sans conclusion positive et générateurs en erreur | [Régressions avant correction](https://github.com/SPX-tech/ScolaPay/actions/runs/43026340130) |
+| Requalification des 198 artefacts JSON originaux par l'outillage `2bf81a8` | 13 tests d'outillage verts, 195 mutants `DETECTE` et trois contrôles `VERT` de 276 tests | [Requalification corrigée](https://github.com/SPX-tech/ScolaPay/actions/runs/43026773053) |
+
+Le rapport final confirme notamment `size-limit-ignored` détecté par `IssuanceLimitTest.unLotTropGrandEstRefuseEtSeDecoupeParUnite`. Aucun mutant ne reste survivant, inapplicable, non compilable ou sans assertion de détection.
+
+La requalification télécharge les résultats bruts du run `42988964544`, vérifie son commit source `1278ca717dbc374b6376904d94a1edf713b216c8`, puis applique le rapport corrigé. L'artefact conserve séparément le SHA des tests financiers d'origine et celui de l'outillage de requalification. L'inventaire contient exactement les 195 mutants et les trois contrôles attendus. Les artefacts disponibles permettent cette vérification sans relancer la campagne financière.
+
+Les commits ultérieurs de clôture documentaire conservent le code et les campagnes testés. Les contrôles de la tête finale et son SHA figurent dans #29.
+
+La [première campagne](https://github.com/SPX-tech/ScolaPay/actions/runs/42983559011), sur `629feb3`, est non concluante avec 194 détections sur 195 et trois contrôles verts de 275 tests. Le survivant `size-limit-ignored` a révélé l'omission d'`IssuanceLimitTest` dans la sélection de campagne. Ce test existant passe dans la suite complète de 461 tests. La sélection corrigée l'inclut et le mutant exige désormais l'échec de son assertion. Les preuves de cette première exécution sont conservées.
+
+### Portée du bilan
+
+| Catégorie | Traitement pour la clôture |
+| --- | --- |
+| Défaut bloquant | Aucun défaut bloquant du moteur mis en évidence par la revue et les validations finales. L'omission du test de plafond dans la première sélection est corrigée et la campagne complète est concluante |
+| Limites conservées | Volumes et latences des grands lots non mesurés, erreurs possibles au délai de verrou, supervision et purge d'archives encore à cadrer, contention et collisions des quotas à mesurer. Ces preuves fonctionnelles ne donnent aucune capacité d'exploitation chiffrée |
+| Décisions et évolutions futures | Questions juridiques, accès de l'étudiant sans rôle, détail du responsable, pluralité de redevables, réassociation de compte, parcours d'une école à un seul utilisateur, politique des canaux Families et encaissement réel relèvent de décisions ou chantiers distincts |
+
+**Verdict de la revue technique du lot 7. Le périmètre livré de la Mission 003 peut être déclaré techniquement terminé.** La clôture formelle est soumise au propriétaire dans #29, conservée en brouillon. Les exigences juridiques, les autorisations familiales et les contrôles de mise en service gardent leur portée. Les expérimentations utilisent des données et bases jetables, avec les transports de test existants.
 
 ## Limites restantes
 

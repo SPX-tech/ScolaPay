@@ -34,6 +34,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 
   if (target === '--list') {
     console.log(JSON.stringify([...ids, ...controls]));
+  } else if (target === '--test-selector') {
+    console.log(campaign.testSelector ?? '');
   } else if (target === '--check-all') {
     campaign.mutations.forEach((mutation) => applySteps(mutation, false));
     console.log(`${ids.length} défauts applicables, ${controls.length} exécutions de contrôle`);

@@ -22,8 +22,11 @@ jobs:
     outputs:
       ids: ${{ steps.plan.outputs.ids }}
       campaign: ${{ steps.plan.outputs.campaign }}
+      tests: ${{ steps.plan.outputs.tests }}
     steps:
       - uses: actions/checkout@v7.0.1
+      - name: Vérifier la qualification et la complétude des rapports
+        run: node --test .github/mutation/*.test.mjs
       - id: plan
         name: Vérifier que chaque défaut s'applique, sans rien lancer d'autre
         run: |
@@ -31,6 +34,7 @@ jobs:
           echo "campaign=$campaign" >> "$GITHUB_OUTPUT"
           node .github/mutation/apply.mjs "$campaign" --check-all
           echo "ids=$(node .github/mutation/apply.mjs "$campaign" --list)" >> "$GITHUB_OUTPUT"
+          echo "tests=$(node .github/mutation/apply.mjs "$campaign" --test-selector)" >> "$GITHUB_OUTPUT"
 
   run:
     needs: plan
@@ -65,7 +69,14 @@ jobs:
         if: steps.compile.outcome == 'success'
         continue-on-error: true
         working-directory: core
-        run: ./mvnw --batch-mode --no-transfer-progress verify
+        env:
+          MUTATION_TESTS: ${{ needs.plan.outputs.tests }}
+        run: |
+          if [ -n "$MUTATION_TESTS" ]; then
+            ./mvnw --batch-mode --no-transfer-progress "-Dtest=$MUTATION_TESTS" verify
+          else
+            ./mvnw --batch-mode --no-transfer-progress verify
+          fi
       - name: Qualifier le résultat
         if: always()
         env:
@@ -94,13 +105,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'result-*' --dir results
       - name: Établir le rapport
+        shell: bash
         env:
           COMMIT: ${{ github.sha }}
-        run: node .github/mutation/report.mjs results | tee report.md >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          node .github/mutation/report.mjs results "${{ needs.plan.outputs.campaign }}" > report.md
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7.0.2
         if: always()
         with:
           name: campaign-report
           path: report.md
       - name: Échouer si la campagne n'est pas concluante
-        run: '! grep -q "^Conclusion : NON CONCLUANTE" report.md'
+        run: |
+          grep -Fxq 'Conclusion : CONCLUANTE' report.md
