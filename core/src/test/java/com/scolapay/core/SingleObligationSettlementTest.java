@@ -188,6 +188,9 @@ class SingleObligationSettlementTest extends CashSettlementScenario {
         assertThat(balance.status()).as(balance.raw()).isEqualTo(200);
         assertThat(balance.body().get(0).path("nextDueOn").asString()).isEqualTo("2099-01-15");
         assertThat(balance.body().get(0).path("settledMinor").asString()).isEqualTo("50000");
+        Response cumulative=discount(t,t.adminToken(),o,6000);
+        assertThat(cumulative.status()).as(cumulative.raw()).isEqualTo(202);
+        assertThat(position(t,o).path("dueMinor").asString()).isEqualTo("30000");
     }
 
     @Test
