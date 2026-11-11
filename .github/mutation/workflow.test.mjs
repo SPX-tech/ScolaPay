@@ -24,6 +24,7 @@ function step(name) {
   } else if (command.startsWith("'") && command.endsWith("'")) {
     command = command.slice(1, -1).replace(/''/g, "'");
   }
+  command = command.replaceAll('${{ needs.plan.outputs.campaign }}', 'sample');
   const options = block.includes('        shell: bash\n') ? ['-e', '-o', 'pipefail'] : ['-e'];
   return { command, options };
 }
