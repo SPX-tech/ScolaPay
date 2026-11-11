@@ -113,7 +113,6 @@ jobs:
           cat report.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7.0.2
         if: always()
-        if: always()
         with:
           name: campaign-report
           path: report.md
