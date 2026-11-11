@@ -299,6 +299,11 @@ public class ObligationRepository {
                 .list();
     }
 
+    public long journalSize(UUID establishmentId, UUID obligationId) {
+        return jdbc.sql("SELECT count(*) FROM obligation_entries WHERE establishment_id=:tenant AND obligation_id=:id")
+                .param("tenant", establishmentId).param("id", obligationId).query(Long.class).single();
+    }
+
     /** Par devise : deux devises ne s'additionnent jamais. */
     public List<Balance> balances(UUID establishmentId, UUID studentId, LocalDate today) {
         return jdbc.sql("""

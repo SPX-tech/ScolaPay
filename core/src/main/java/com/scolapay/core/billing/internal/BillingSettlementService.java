@@ -56,7 +56,7 @@ class BillingSettlementService implements BillingSettlements {
                 : obligation.dueMinor() == 0 ? "NOTHING_DUE" : null;
         return new Position(obligation.id(), obligation.currency(), obligation.issuedAmountMinor(), obligation.adjustmentsMinor(),
                 Math.addExact(obligation.issuedAmountMinor(), obligation.adjustmentsMinor()), obligation.settledMinor(), obligation.dueMinor(),
-                obligations.entries(establishmentId, obligationId).size(), ObligationService.ObligationStatus.of(obligation).name(), supported,
+                obligations.journalSize(establishmentId, obligationId), ObligationService.ObligationStatus.of(obligation).name(), supported,
                 blocked == null, blocked, supported ? InstallmentCoverage.calculate(obligations.installments(establishmentId, obligationId),
                         obligation.issuedAmountMinor() + obligation.adjustmentsMinor(), obligation.settledMinor()) : List.of());
     }
