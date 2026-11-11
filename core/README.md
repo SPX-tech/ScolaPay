@@ -96,7 +96,7 @@ Les corrections de personnes conservent l'identité et le compte. Une révision 
 
 ## Déclarations d'espèces
 
-Les [déclarations d'espèces de `payments`](../docs/payments-cash-receptions.md) constituent une première étape intermédiaire du lot 2. `SCOLAPAY_CASH_RECEPTIONS_ENABLED=false` par défaut ; les lectures autorisées restent disponibles après désactivation. V8 ajoute les constats immuables et leur audit obligatoire sans modifier les migrations existantes. Aucun `SETTLEMENT`, affectation, restitution, crédit libre ou justificatif fiscal n'est disponible. Le premier règlement attend la chaîne complète et les garanties de 0028.
+Les [déclarations d'espèces](../docs/payments-cash-receptions.md), intégrées par #31, servent à la [première chaîne de règlement](../docs/payments-cash-settlements.md). `SCOLAPAY_CASH_RECEPTIONS_ENABLED=false` et `SCOLAPAY_CASH_ALLOCATIONS_ENABLED=false` par défaut ; les lectures de preuve autorisées survivent à la désactivation. V9 ajoute l'affectation et son journal lié, sans réécrire V1 à V8. Les écritures exigent `READ COMMITTED`, les lectures composites gardent leurs instantanés cohérents. Restitution, rectification, crédit libre et document fiscal restent indisponibles ; le lot 2 demeure ouvert et aucun pilote n'est prêt.
 
 ## Ajouter un module
 

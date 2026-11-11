@@ -34,8 +34,10 @@ class CashReceptionController {
         static View of(Reception reception) {
             return new View(reception.id(), reception.reference(), reception.currency(),
                     Long.toString(reception.amountReceivedMinor()), Long.toString(reception.changeGivenMinor()),
-                    Long.toString(reception.amountRetainedMinor()), Long.toString(reception.amountRetainedMinor()),
-                    "0", "UNALLOCATED", "INTERNAL_CASH_DECLARATION", reception.recordedAt(),
+                    Long.toString(reception.amountRetainedMinor()), Long.toString(reception.amountRetainedMinor() - reception.allocatedMinor()),
+                    Long.toString(reception.allocatedMinor()), reception.allocatedMinor() == 0 ? "UNALLOCATED"
+                            : reception.allocatedMinor() == reception.amountRetainedMinor() ? "ALLOCATED" : "PARTIALLY_ALLOCATED",
+                    "INTERNAL_CASH_DECLARATION", reception.recordedAt(),
                     reception.recordedByAccountId(), reception.businessDate(), reception.timezone());
         }
     }

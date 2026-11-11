@@ -1,18 +1,18 @@
 # 0028 : projections des règlements et préservation des ajustements
 
-- **Statut** : Proposée pour revue du lot 1. Les invariants hérités de la Mission 003 restent acquis. Les noms de statuts, les projections et les restrictions V1 ci-dessous restent à valider en A02, A07 et A08.
+- **Statut** : Invariants M003 acquis et orientations A01 à A04 arbitrées. Codes techniques et restrictions conservatrices de l'implémentation en revue ; A05 à A08 restent ouverts.
 - **Date** : 2026-11-11
 - **Décideur** : propriétaire du projet pour les invariants existants, arbitrages de Mission 004 encore attendus.
-- **Implémentation** : aucune modification de `billing`.
+- **Implémentation** : première chaîne en revue, projections et couverture A02 pour les cas pris en charge. Voir [0029](0029-premier-reglement-especes.md). Aucune activation réelle.
 - **Complète** : [0012](0012-convention-monetaire.md), [0015](0015-modele-de-facturation.md), [0021](0021-obligations-et-journal.md), [0022](0022-ajustements-et-reexamen.md), [0023](0023-personnes-liees-et-vues.md), [0026](0026-contrats-encaissements-especes.md) et [0027](0027-restitution-excedents-jamais-affectes.md).
 
 ## Contexte vérifié
 
-Le journal actuel ne permet aucun règlement. V6 interdit les types autres que `ISSUED`, `DISCOUNT`, `CORRECTION`, `CANCELLATION` et `REVERSAL`. Son trigger interdit un dû négatif et impose une seconde personne pour une écriture non initiale qui éteint le dû.
+Au terme de M003, V6 refusait les règlements et imposait une seconde personne pour un ajustement éteignant le dû. V9 étend les gardes aux règlements prouvés sans supprimer les protections d'ajustement. Le contexte initial ci-dessous explique les adaptations réalisées ; les détails actuels sont dans 0029.
 
-`AdjustmentService.activeAdjustmentsMinor` prend les écritures autres que `ISSUED` et `REVERSAL`. Une insertion naïve de `SETTLEMENT` le ferait entrer dans le cumul sensible. La contrepassation générique refuse aujourd'hui `ISSUED` et `REVERSAL`, mais ne connaît pas encore le futur règlement.
+Le cumul sensible de `AdjustmentService.activeAdjustmentsMinor` ne distinguait initialement que `ISSUED` et `REVERSAL`. Il exclut maintenant aussi `SETTLEMENT`. La contrepassation générique interdit les règlements ; après paiement, les chemins non définis de correction, annulation et contrepassation restent fermés.
 
-`FamilyBillingService` calcule le total des ajustements du responsable par différence entre dû et montant émis et classe les écritures non initiales dans son historique d'ajustements. Ces calculs devront être spécialisés dès l'introduction des paiements.
+`FamilyBillingService` calculait les ajustements par différence entre dû et montant émis. Il utilise désormais le total des seuls ajustements et filtre les règlements individuels de l'historique familial. Les champs autorisés et les barrières d'accès restent préservés.
 
 Ce sont des points d'intégration du nouveau domaine. Les comportements existants du périmètre sans encaissement restent validés.
 
@@ -34,7 +34,9 @@ Dans la proposition V1, B, P et R sont positifs ou nuls. P ne dépasse pas B. Un
 
 Les montants reçus, monnaie rendue et restitutions sont des projections de réception distinctes selon 0027. La somme P de cette obligation n'est pas le montant total reçu d'une réception multi-obligations.
 
-## Statuts proposés
+## Statuts techniques de l'implémentation, proposés pour revue
+
+Ces codes sont implémentés et testés pour distinguer les effets financiers. Ils ne constituent pas un arbitrage métier A08 ; leur usage opérationnel reste à décider.
 
 | Condition | État interne proposé | Sens |
 | --- | --- | --- |
@@ -88,7 +90,7 @@ Le lot 2 doit posséder ses tests PostgreSQL directs, de concurrence, d'ajusteme
 
 ## Échéances et confidentialité
 
-L'échéancier d'origine reste immuable. A02 doit définir la priorité d'affectation et l'impact des ajustements sur la couverture des échéances. Le contrat doit garantir que la somme des détails d'affectation correspond à l'affectation d'obligation. La prochaine échéance ne peut pas ignorer les règlements déjà affectés.
+L'échéancier d'origine reste immuable. A02 couvre les échéances impayées les plus anciennes et réduit par remise les échéances non couvertes les plus éloignées. La couverture dérivée conserve les totaux. Les corrections actives n'ont pas de ventilation inventée et bloquent le règlement. La prochaine échéance ne présente pas comme impayé un montant déjà couvert ou totalement remis.
 
 Les projections ci-dessus sont les projections internes pour personnel autorisé. Les surfaces familiales gardent leur politique typée de 0023. Un contributeur conserve sa vue minimale. Les motifs restent masqués au caissier selon les droits existants.
 
@@ -96,6 +98,6 @@ Les nouvelles écritures de paiement ne sont pas copiées brutes dans les vues d
 
 ## Critères et arbitrages
 
-Les garanties ci-dessus sont requises dès le premier lot activant les paiements, selon A01, A02, A07 et A08 approuvés. La [matrice de portée par lot](../missions/mission-004-cash-collections.md#portée-des-scénarios-par-lot) distingue les cas sur une obligation des variantes multi-obligations, multi-élèves et des rectifications ultérieures. S17 impose dès le socle le refus d'une rectification non autorisée ; le parcours fonctionnel complet doit être prouvé lorsqu'A07 en autorise l'introduction. Les validations sont exécutées dans GitHub Actions sur PostgreSQL jetable, en conservant les preuves de la Mission 003.
+Les garanties ci-dessus sont requises dès le premier lot activant les paiements. Les orientations A01 à A04 sont arbitrées ; les choix relevant d'A05 à A08 restent ouverts et les parcours qui en dépendent restent fermés tant que leurs règles et contrôles sont incomplets. La [matrice de portée par lot](../missions/mission-004-cash-collections.md#portée-des-scénarios-par-lot) distingue les cas sur une obligation des variantes multi-obligations, multi-élèves et des rectifications ultérieures. S17 impose dès le socle le refus d'une rectification non autorisée ; le parcours fonctionnel complet doit être prouvé lorsqu'A07 en autorise l'introduction. Les validations sont exécutées dans GitHub Actions sur PostgreSQL jetable, en conservant les preuves de la Mission 003.
 
-Le lot documentaire n'étend aucun enum, aucune route ou contrainte. Les propositions de statuts et restrictions restent soumises au propriétaire.
+Le lot 1 documentaire n'étendait aucun enum, route ou contrainte. La tranche actuelle utilise des codes techniques et ne collecte pas l'identité du remettant ; ces constats d'implémentation ne valent pas validation du propriétaire sur A05 ou A08. Aucun arbitrage d'identité, de restitution, de correction ou de justificatif n'est considéré comme résolu par la présence de ce code ou ses tests.

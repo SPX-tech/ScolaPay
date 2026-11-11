@@ -2,7 +2,7 @@
 
 Référence stratégique et technique du projet, lisible sans l'historique des conversations. En cas de désaccord entre ce document et le code, **le code prime** : corriger le document.
 
-**Dernière mise à jour : 2026-11-11.** Le statut des fonctionnalités décrit le code du dépôt. **Aucune instance de ScolaPay n'est en service** : « implémenté » ne signifie pas « déployé ».
+**Dernière mise à jour : 2026-11-12.** Le statut des fonctionnalités décrit le code du dépôt. **Aucune instance de ScolaPay n'est en service** : « implémenté » ne signifie pas « déployé ».
 
 ## État du projet en bref
 
@@ -14,7 +14,7 @@ Référence stratégique et technique du projet, lisible sans l'historique des c
 | Mission 002 (fondation Java) | **Finalisée** : identités, établissements, inscriptions et liens familiaux dans `core/`. Testée en CI, jamais déployée |
 | Facturation, paiements, portail familles | **Facturation Java intégrée jusqu'au lot 6.** Aucun encaissement réel ni portail web construit |
 | Mission 003 (moteur de facturation) | **Techniquement clôturée pour le périmètre livré**, #29 fusionnée au commit `9f54029`. [Cadrage](missions/mission-003-billing-engine.md) et [bilan de validation](mission-003-validation.md) |
-| Mission 004 (encaissements espèces) | **Lot 1 terminé**, #30 fusionnée au commit `2bb5922`. **Lot 2 autorisé, première PR intermédiaire en revue** : déclarations d'espèces non affectées, sans `SETTLEMENT`. Orientations A01 à A04 validées, A05 à A08 partiellement ouverts. [Cadrage](missions/mission-004-cash-collections.md) |
+| Mission 004 (encaissements espèces) | **Lot 1 terminé**, #30 intégrée. #31 fusionnée au commit `6a2fdaa` : réceptions durables. **Lot 2 en cours, première chaîne de règlement en revue**, désactivée par défaut. Orientations A01 à A04 arbitrées ; A05 à A08 ouverts. Absence d'identité du remettant et codes de statut décrivent des limites techniques, sans validation métier attribuée au propriétaire. [Cadrage](missions/mission-004-cash-collections.md) |
 | Android | **Hors de la feuille de route active**, code conservé comme référence ([0014](decisions/0014-android-hors-feuille-de-route.md)) |
 | Ordre de construction | Backend Java, puis interfaces web. L'APK viendra une fois les parcours métier et financiers stabilisés |
 
@@ -53,12 +53,13 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Frontière vers la facturation | Vérifié, utilisée par la facturation | `StudentDirectory`, événements `StudentEnrolled` et `EnrollmentEnded`, lien d'un compte à un dossier et accès académique du jour | `schooling` |
 | Catalogue académique | Vérifié | Programmes et niveaux par établissement, inscription sur un niveau. Sans semestres | `core/`, `AcademicCatalogTest`, [0018](decisions/0018-catalogue-academique.md) |
 | Catalogue de frais | Vérifié | Périodes de facturation, identité stable des charges, frais par unité académique, versions et publication immuables, aperçu d'impact | `core/`, `FeeCatalogTest`, [0020](decisions/0020-catalogue-de-frais-et-periodes.md) |
-| Obligations et dû | Vérifié | Émission par inscription confirmée, par lot après aperçu ou à l'unité, idempotente. Liste nominative de ce qui reste à facturer. Échéancier et journal immuables, dû calculé. **Aucun encaissement, aucune obligation ne peut être réglée** | `core/`, `ObligationTest`, [0021](decisions/0021-obligations-et-journal.md) |
+| Obligations et dû | M003 intégrée, extension M004 en revue | Émissions idempotentes, échéancier et journal immuables, dû calculé. L'extension lie tout `SETTLEMENT` à sa réception, affectation et preuve, sans simuler un encaissement par remise | `ObligationTest`, `SingleObligationSettlementTest`, [0021](decisions/0021-obligations-et-journal.md), [0029](decisions/0029-premier-reglement-especes.md) |
 | Remises, corrections, annulations, réexamen | Vérifié | Écritures distinctes et motivées, seconde personne pour les opérations sensibles, écarts de tarif et retraits signalés pour décision. **Aucune n'est un encaissement** | `core/`, `AdjustmentTest`, `AdjustmentPolicyTest`, `ReasonConfidentialityTest`, `ObligationReviewTest`, [0022](decisions/0022-ajustements-et-reexamen.md) | [Cadrage](missions/mission-003-billing-engine.md), [0015](decisions/0015-modele-de-facturation.md) |
 | Outbox durable | Vérifié | Registre Spring Modulith, reprise après arrêt brutal et entre deux instances. **Utilisé par la facturation et la préparation des notifications** | `core/`, `OutboxReliabilityTest`, [0016](decisions/0016-outbox-durable.md) |
 | Contrôles de mise en service | Vérifié | Portail fermé par défaut, démarrage refusé si une condition manque. **Il ne peut pas être ouvert aujourd'hui** : règle du Tchad non confirmée, aucun canal SMS ; un e-mail seul ne suffit pas | `core/`, `GoLiveTest`, [0017](decisions/0017-controles-de-mise-en-service.md) |
 | Redevables, responsables, contributeurs | Vérifié, intégré dans `main`, portail fermé | Désignations explicites, vues typées, autorisations avant pagination, instantanés cohérents et confirmations NULL cohérentes. Corrections de nom/identifiant motivées et historisées ; compte et identité immuables | `BillingPartyTest`, `FamilyBillingViewTest`, `Lot6FinalizationRegressionTest`, `PartyCorrectionTest`, [0023](decisions/0023-personnes-liees-et-vues.md) |
-| Déclarations d'espèces | Première PR du lot 2, désactivées par défaut | `payments`, preuve interne et audit atomiques, idempotence PostgreSQL, lecture autorisée et V8 additive. Toutes les sommes restent non affectées. Aucun règlement, crédit utilisable, remboursement ou restitution | [Contrat et limites](payments-cash-receptions.md), `CashReceptionTest`, `CashReceptionRecoveryTest` |
+| Déclarations d'espèces | #31 intégrée, désactivées par défaut | Preuve physique déclarative et audit immuables. Leurs projections de couverture suivent maintenant les affectations confirmées, sans recréer les fonds | [Contrat et limites](payments-cash-receptions.md), `CashReceptionTest`, `CashReceptionRecoveryTest` |
+| Règlement espèces d'une obligation | Nouvelle PR en revue, désactivé par défaut | Port public `BillingSettlements`, transaction affectation-journal-preuve-audit, V9 additive, idempotence, couverture A02 et projections distinctes. Une source, son déclarant, une obligation d'année ouverte. Corrections non couvertes, restitution et rectification fermées | [Contrat et limites](payments-cash-settlements.md), `CashSettlementSqlTest`, `CashSettlementRecoveryTest` |
 | Paiements numériques et comptabilité | Évolutions futures | Aucun code Java | [0006](decisions/0006-backend-java-spring-boot.md), [0008](decisions/0008-go-services-paiement.md) |
 | Portail web des familles | Prévu | L'API `/api/v2/me/students` existe mais reste fermée par défaut, aucune interface | [0007](decisions/0007-portail-familles-avant-apk.md) |
 | Application Android des familles | Hors feuille de route active | Rien. L'application `android/` sert le personnel | [0014](decisions/0014-android-hors-feuille-de-route.md) |
@@ -165,7 +166,7 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 
 ## Priorités actuelles
 
-1. **Mission 004, encaissements espèces** : lot 1 terminé, lot 2 autorisé. La première PR prépare les [déclarations non affectées](payments-cash-receptions.md). Avant le premier `SETTLEMENT`, fournir toute la chaîne et les garanties du [cadrage](missions/mission-004-cash-collections.md). Pas de pilote avant le contrôle quotidien et la procédure de secours validés et réalisés ; A05 à A08 restent partiellement ouverts.
+1. **Mission 004, encaissements espèces** : lot 1 terminé, lot 2 en cours. Revoir la [première chaîne de règlement](payments-cash-settlements.md), ses preuves et limites. La restitution des excédents jamais affectés reste exigée pour terminer le lot 2. Pas de pilote avant le contrôle quotidien A04 et le secours A03 réalisés ; A05 à A08 restent ouverts, sans être tranchés par les choix techniques de cette tranche.
 2. **Mission 003 clôturée** : préserver les garanties et les limites du périmètre livré. Les futures interfaces Schools et Families restent à cadrer après les missions backend retenues.
 
 ## Risques connus
@@ -222,7 +223,7 @@ La [portée des scénarios par lot](missions/mission-004-cash-collections.md#por
 
 **Mission 004, lot 2 autorisé**
 
-Le lot 1 est terminé et fusionné par #30 au commit `2bb5922`. Les orientations A01 à A04 sont désormais validées, sans prétendre que toutes leurs modalités opérationnelles le sont. La première PR intermédiaire ajoute `payments` et V8 pour des constats d'espèces non affectées, fermés par défaut. Les ajustements et le journal de facturation ne sont pas modifiés ; `SETTLEMENT` reste interdit. Aucun pilote, restitution ou rectification n'est prêt. A05 à A08 restent partiellement ouverts, notamment avant de remettre des fonds ou d'enrichir les justificatifs.
+Le lot 1 est terminé par #30 et la fondation de réceptions intégrée par #31 au commit `6a2fdaa`. Les orientations A01 à A04 sont validées sans prétendre que leurs capacités opérationnelles sont réalisées. La tranche technique réutilise une réception existante sans collecter l'identité du remettant et utilise les codes de statut décrits dans 0028 ; ces constats ne valent pas arbitrage métier A05 ou A08. La nouvelle chaîne de règlement, ses projections A02 et ses gardes V9 sont en revue, toujours désactivées pour tout usage réel. A05 à A08 restent ouverts ; aucune restitution, rectification ou ouverture Families n'est prête. Voir [0029](decisions/0029-premier-reglement-especes.md), notamment le contrat SQL `READ COMMITTED` des écritures et les instantanés cohérents des lectures.
 
 **Ensuite, sans ordre arrêté**
 

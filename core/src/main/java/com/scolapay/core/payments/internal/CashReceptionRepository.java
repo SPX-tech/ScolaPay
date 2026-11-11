@@ -16,7 +16,7 @@ class CashReceptionRepository {
     record Reception(
             UUID id, String reference, UUID idempotencyKey, String currency,
             long amountReceivedMinor, long changeGivenMinor, Instant recordedAt,
-            UUID recordedByAccountId, LocalDate businessDate, String timezone) {
+            UUID recordedByAccountId, LocalDate businessDate, String timezone, long allocatedMinor) {
 
         long amountRetainedMinor() {
             return amountReceivedMinor - changeGivenMinor;
@@ -25,7 +25,9 @@ class CashReceptionRepository {
 
     private static final String SELECT = """
             SELECT id, reference, idempotency_key, currency, amount_received_minor, change_given_minor,
-                   recorded_at, recorded_by_account_id, business_date, timezone
+                   recorded_at, recorded_by_account_id, business_date, timezone,
+                   (SELECT COALESCE(sum(a.amount_minor),0) FROM cash_allocations a WHERE a.establishment_id=cash_receptions.establishment_id
+                     AND a.reception_id=cash_receptions.id) AS allocated_minor
             FROM cash_receptions WHERE establishment_id = :establishmentId
             """;
 
@@ -69,6 +71,11 @@ class CashReceptionRepository {
         return new Reception(Columns.uuid(rs, "id"), rs.getString("reference"), Columns.uuid(rs, "idempotency_key"),
                 rs.getString("currency"), rs.getLong("amount_received_minor"), rs.getLong("change_given_minor"),
                 Columns.instant(rs, "recorded_at"), Columns.uuid(rs, "recorded_by_account_id"),
-                rs.getObject("business_date", LocalDate.class), rs.getString("timezone"));
+                rs.getObject("business_date", LocalDate.class), rs.getString("timezone"), rs.getLong("allocated_minor"));
+    }
+
+    Optional<Reception> lock(UUID establishmentId, UUID id) {
+        return jdbc.sql(SELECT + " AND id=:id FOR UPDATE")
+                .param("establishmentId", establishmentId).param("id", id).query(CashReceptionRepository::reception).optional();
     }
 }

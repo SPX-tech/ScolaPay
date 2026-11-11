@@ -57,17 +57,24 @@ public class ObligationService {
     /**
      * Déduit du journal, jamais saisi. Un dû nul n'a pas toujours le même sens : annulée, abandonnée par
      * remise, ramenée à zéro par correction, ou par une combinaison des deux, qui ne prétend alors à aucune
-     * cause unique. Le détail reste au journal. SETTLED n'existe pas : seul le futur module de paiement
-     * pourra l'introduire, sur preuve d'un règlement confirmé.
+     * cause unique. Les états de règlement exigent des écritures liées à une réception et une preuve,
+     * et ne se déduisent jamais d'une remise ou d'une correction.
      */
     public enum ObligationStatus {
         OPEN,
+        PARTIALLY_SETTLED,
+        SETTLED,
+        SETTLED_WITH_ADJUSTMENTS,
         CANCELLED,
         WAIVED,
         CORRECTED,
         ADJUSTED_TO_ZERO;
 
         static ObligationStatus of(Obligation obligation) {
+            if (obligation.settledMinor() > 0) {
+                if (obligation.dueMinor() > 0) return PARTIALLY_SETTLED;
+                return obligation.discounted() || obligation.corrected() ? SETTLED_WITH_ADJUSTMENTS : SETTLED;
+            }
             if (obligation.dueMinor() > 0) {
                 return OPEN;
             }

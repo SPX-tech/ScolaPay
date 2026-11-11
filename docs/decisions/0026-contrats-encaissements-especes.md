@@ -2,14 +2,14 @@
 
 - **Statut** : Orientation métier acceptée, lot 1 revu et fusionné. Lot 2 autorisé ; les arbitrages métier encore ouverts ne sont pas implicitement acceptés.
 - **Date** : 2026-11-11
-- **Décideur** : propriétaire du projet. Orientations A01 à A04 validées lors du lancement du lot 2 ; A05 à A08 restent partiellement ouverts.
-- **Implémentation** : première PR intermédiaire de `payments` pour les [déclarations non affectées](../payments-cash-receptions.md). Aucun port d'écriture de `billing`, affectation, règlement ou restitution n'est activé.
+- **Décideur** : propriétaire du projet. Orientations A01 à A04 validées lors du lancement du lot 2 ; A05 à A08 restent ouverts.
+- **Implémentation** : réceptions intégrées par #31 ; port public `BillingSettlements` et [première chaîne d'affectation](../payments-cash-settlements.md) en revue, désactivée par défaut. Aucune restitution ni rectification disponible.
 - **Complète** : [0010](0010-identite-et-acces.md), [0012](0012-convention-monetaire.md), [0015](0015-modele-de-facturation.md), [0016](0016-outbox-durable.md), [0019](0019-nature-des-documents-et-numerotation.md), [0021](0021-obligations-et-journal.md) et [0022](0022-ajustements-et-reexamen.md).
 - **Remplace** : aucune décision passée. Prépare l'extension additive de la facturation pour les règlements confirmés.
 
 ## Contexte vérifié
 
-La Mission 003 est clôturée au commit `9f54029`. `billing` conserve ses services dans `internal` et n'expose pas encore de port public de règlement. V6 refuse `SETTLEMENT`, verrouille l'obligation et impose une seconde personne pour une écriture non initiale qui éteint le dû. Ces garanties sont correctes pour le périmètre existant.
+La Mission 003 est clôturée au commit `9f54029`. V6 refusait tout `SETTLEMENT`. V9 prépare l'extension via le port public `BillingSettlements`, avec réception et affectation prouvées, sans modifier les anciennes migrations. La seconde validation des ajustements qui éteignent le dû reste obligatoire. Les modalités de cette première chaîne sont explicites dans [0029](0029-premier-reglement-especes.md).
 
 `CurrentActor` détermine le compte connecté. `EstablishmentAccess` exige une adhésion et un établissement actifs, puis la permission. Le rôle d'opérateur ne donne aucun accès aux finances d'un établissement. `AuditTrail.record` impose une transaction existante. Les nouvelles opérations doivent suivre ces frontières.
 
@@ -33,7 +33,7 @@ La confirmation d'espèces repose sur l'attestation d'un acteur habilité. Le lo
 | `payments` | Demander, approuver puis confirmer une restitution | Contrat de 0027, dont la provenance jamais affectée et la remise physique |
 | `audit` | Tracer l'opération et ses décisions | Établissement, acteur serveur, action, cible et références techniques. Écriture dans la même transaction que le changement |
 
-Le [contrat intermédiaire](../payments-cash-receptions.md#permissions-et-confidentialité) décrit les permissions exécutables de déclaration et de lecture technique reçues en A01. Les capacités d'affectation, de demande et d'approbation de restitution, de remise physique et de rectification ne sont pas activées par cette PR. Leurs modalités doivent être définies avant activation.
+Le [contrat des réceptions](../payments-cash-receptions.md#permissions-et-confidentialité) et celui des [affectations](../payments-cash-settlements.md) décrivent les permissions exécutables. Aucune capacité de restitution, de remise physique ou de rectification n'est activée. Leurs modalités doivent être définies avant activation.
 
 Ce sont des API de modules internes. La future surface HTTP d'encaissement reste sous `/api/v2/establishments/{establishmentId}`, protégée par la barrière d'adhésion existante. Aucun point d'entrée HTTP libre n'autorise l'insertion d'un règlement dans le journal.
 
@@ -112,4 +112,4 @@ S01 à S23 constituent le référentiel de la Mission 004, réparti dans la [mat
 
 Les garanties fondamentales restent exigées dès le premier `SETTLEMENT`, notamment la provenance jamais affectée et le refus de toute compensation ou rectification qui les contournerait. Chaque nouvelle capacité reçoit ses preuves complètes avant activation. Les relations financières, budgets, acteurs distincts et sources sont testés par la vraie API, la concurrence et le SQL direct sur PostgreSQL jetable.
 
-Les orientations A01 à A04 sont validées, A05 à A08 restent partiellement ouverts. L'autorisation du lot 2 permet une première PR intermédiaire sans règlement. Le [contrat exécuté](../payments-cash-receptions.md) distingue ces déclarations des contrats cibles de cette ADR. Aucun `SETTLEMENT` ne peut être introduit avant les garanties complètes de 0028.
+Les orientations A01 à A04 sont validées ; A05 à A08 restent ouverts. Les choix conservateurs du [contrat technique](../payments-cash-settlements.md) décrivent les capacités construites et leurs limites, sans attribuer de validation métier au propriétaire. Aucun `SETTLEMENT` ne peut être introduit avant les garanties complètes de 0028 et aucune activation réelle n'est autorisée ici.

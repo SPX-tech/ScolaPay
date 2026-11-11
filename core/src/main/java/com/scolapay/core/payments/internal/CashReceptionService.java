@@ -58,7 +58,7 @@ class CashReceptionService {
         // PostgreSQL conserve les microsecondes : la réponse initiale doit être identique à sa relecture.
         Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
         Reception reception = new Reception(id, "CR-" + id, key, establishment.currency(), received, change,
-                now, actorId, now.atZone(ZoneId.of(establishment.timezone())).toLocalDate(), establishment.timezone());
+                now, actorId, now.atZone(ZoneId.of(establishment.timezone())).toLocalDate(), establishment.timezone(), 0);
         try {
             if (!repository.insert(establishmentId, reception)) {
                 Reception existing = repository.findByKey(establishmentId, key).orElseThrow();

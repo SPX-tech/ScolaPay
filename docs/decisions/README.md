@@ -31,9 +31,10 @@ Une décision mérite une entrée ici lorsqu'elle est coûteuse à inverser ou q
 | [0023](0023-personnes-liees-et-vues.md) | Personnes liées à une obligation et vues par rôle | Périmètre du lot 6 validé, questions métier ouvertes | Intégré dans `main` par #26, portail fermé, aucun encaissement |
 | [0024](0024-notifications-et-remise-des-invitations.md) | Notifications et remise sécurisée des invitations | Socle, protocole et principe des canaux acceptés | Intégré dans `main` par #27, remise désactivée par défaut et politique à implémenter avant Families |
 | [0025](0025-protection-authentification-publique.md) | Protection des API publiques d'authentification | Acceptée, développement et intégration validés | Intégrée par #28 dans `main` au commit `7eb7ddb`. Contention et collisions à mesurer avant montée en charge |
-| [0026](0026-contrats-encaissements-especes.md) | Contrats entre encaissement, facturation, identité et audit | Lot 1 terminé, lot 2 autorisé ; A05 à A08 partiellement ouverts | Première PR de `payments` : déclarations non affectées, sans règlement |
+| [0026](0026-contrats-encaissements-especes.md) | Contrats entre encaissement, facturation, identité et audit | Lot 1 terminé, lot 2 en cours ; orientations A01 à A04 arbitrées, A05 à A08 ouverts | Réceptions intégrées, port de règlement et chaîne atomique en revue |
 | [0027](0027-restitution-excedents-jamais-affectes.md) | Restitution des seuls excédents jamais affectés | Décision métier acceptée, provenance et états proposés | Restitution fermée ; bénéficiaire, remise et preuves à préciser |
-| [0028](0028-projections-reglements-et-ajustements.md) | Projections et garanties de facturation avec règlements | Proposée, invariants hérités acquis, orientation A02 reçue | Aucun `SETTLEMENT` ni changement des projections de facturation |
+| [0028](0028-projections-reglements-et-ajustements.md) | Projections et garanties de facturation avec règlements | Invariants M003 acquis, codes techniques proposés pour revue ; A05 à A08 ouverts | Projections distinctes et couverture A02 en revue, désactivées pour usage réel |
+| [0029](0029-premier-reglement-especes.md) | Première chaîne de règlement et intégrité SQL bilatérale | Implémentation technique en revue ; A05 à A08 restent à arbitrer | Réception existante, une obligation, transaction et preuve ; écritures READ COMMITTED |
 
 ## Statuts
 

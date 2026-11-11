@@ -150,10 +150,16 @@ public class FamilyBillingService {
             LocalDate nextDueOn = obligation.dueMinor() == 0
                     ? null
                     : installments.stream().map(InstallmentRow::dueOn).filter(dueOn -> !dueOn.isBefore(today)).min(LocalDate::compareTo).orElse(null);
+            if (!obligation.corrected() && !obligation.cancelled()) {
+                nextDueOn = InstallmentCoverage.calculate(installments, obligation.issuedAmountMinor() + obligation.adjustmentsMinor(), obligation.settledMinor())
+                        .stream().filter(term -> term.dueMinor() > 0 && !term.dueOn().isBefore(today))
+                        .map(com.scolapay.core.billing.BillingSettlements.Installment::dueOn).min(LocalDate::compareTo).orElse(null);
+            }
+            LocalDate projectedNextDue = nextDueOn;
             return switch (view) {
-                case CONTRIBUTOR -> contributor(obligation, name, nextDueOn, studentName);
-                case RESPONSIBLE -> responsible(establishmentId, obligation, name, studentName, label, nextDueOn, installments);
-                case DEBTOR -> debtor(establishmentId, obligation, name, studentName, label, nextDueOn, installments, roles);
+                case CONTRIBUTOR -> contributor(obligation, name, projectedNextDue, studentName);
+                case RESPONSIBLE -> responsible(establishmentId, obligation, name, studentName, label, projectedNextDue, installments);
+                case DEBTOR -> debtor(establishmentId, obligation, name, studentName, label, projectedNextDue, installments, roles);
             };
         });
     }
@@ -174,13 +180,14 @@ public class FamilyBillingService {
                 studentName,
                 label,
                 String.valueOf(obligation.issuedAmountMinor()),
-                String.valueOf(obligation.dueMinor() - obligation.issuedAmountMinor()),
+                String.valueOf(obligation.adjustmentsMinor()),
                 String.valueOf(obligation.dueMinor()),
                 // Le statut réel dirait s'il y a eu une remise ou une annulation.
                 obligation.dueMinor() > 0 ? "OPEN" : "NOTHING_DUE",
                 nextDueOn,
                 installmentViews(installments),
                 obligations.entries(establishmentId, obligation.id()).stream()
+                        .filter(entry -> !"SETTLEMENT".equals(entry.kind()))
                         .map(entry -> new HistoryView("ISSUED".equals(entry.kind()) ? "ISSUED" : "ADJUSTMENT", entry.recordedAt()))
                         .toList());
     }
@@ -213,7 +220,8 @@ public class FamilyBillingService {
                 nextDueOn,
                 debtorStatus,
                 installmentViews(installments),
-                obligations.entries(establishmentId, obligation.id()).stream().map(FamilyBillingService::debtorEntry).toList());
+                obligations.entries(establishmentId, obligation.id()).stream().filter(entry -> !"SETTLEMENT".equals(entry.kind()))
+                        .map(FamilyBillingService::debtorEntry).toList());
     }
 
     /** Le redevable lit le motif d'une bourse ou d'une remise, pas les notes internes d'une correction ou d'une annulation. */
