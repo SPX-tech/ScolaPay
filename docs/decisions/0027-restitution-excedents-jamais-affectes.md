@@ -88,6 +88,6 @@ Les preuves de réception et restitution sont conservées même après rejet, re
 
 ## Critères de sortie
 
-Le premier lot fonctionnel doit prouver S05 à S10, S15 à S20, S23 et les cas de compensation interdite du cadrage. Les tests doivent notamment essayer une demande auto-approuvée, deux réservations concurrentes, une confirmation répétée et la reconstitution du budget après une affectation contrepassée.
+Les preuves de restitution, dont le refus d'auto-approbation, deux réservations concurrentes et une confirmation répétée, sont requises dès le lot 2. Les cas de compensation, de rectification et de remplacement S09, S10, S17 et S23 suivent la [matrice de portée par lot](../missions/mission-004-cash-collections.md#portée-des-scénarios-par-lot) : refus des chemins non autorisés et de toute reconstitution du budget dès le socle, puis preuve complète de chaque parcours effectivement autorisé avant activation. Leurs variantes ultérieures ne sont pas des fonctionnalités imposées au premier lot.
 
 Cette décision métier est acquise. Le développement dépend encore de l'autorisation du lot 2 et des arbitrages de permissions, de secours, de contrôle physique et de bénéficiaire.

@@ -96,6 +96,6 @@ Les nouvelles écritures de paiement ne sont pas copiées brutes dans les vues d
 
 ## Critères et arbitrages
 
-S01 à S04, S11 à S19 et S21 à S22 doivent être couverts dès le premier lot activant les paiements, selon A01, A02, A07 et A08 approuvés. Les validations sont exécutées dans GitHub Actions sur PostgreSQL jetable, en conservant les preuves de la Mission 003.
+Les garanties ci-dessus sont requises dès le premier lot activant les paiements, selon A01, A02, A07 et A08 approuvés. La [matrice de portée par lot](../missions/mission-004-cash-collections.md#portée-des-scénarios-par-lot) distingue les cas sur une obligation des variantes multi-obligations, multi-élèves et des rectifications ultérieures. S17 impose dès le socle le refus d'une rectification non autorisée ; le parcours fonctionnel complet doit être prouvé lorsqu'A07 en autorise l'introduction. Les validations sont exécutées dans GitHub Actions sur PostgreSQL jetable, en conservant les preuves de la Mission 003.
 
 Le lot documentaire n'étend aucun enum, aucune route ou contrainte. Les propositions de statuts et restrictions restent soumises au propriétaire.

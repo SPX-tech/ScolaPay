@@ -108,6 +108,8 @@ Ces références sont internes et sans garantie de continuité fiscale. Le conte
 
 ## Vérification et questions ouvertes
 
-Le lot 2 doit couvrir les scénarios S01 à S23 du [cadrage](../missions/mission-004-cash-collections.md), selon les capacités alors activées. Les relations financières, budgets, acteurs distincts et sources sont testés par la vraie API, la concurrence et le SQL direct sur PostgreSQL jetable.
+S01 à S23 constituent le référentiel de la Mission 004, réparti dans la [matrice de portée par lot](../missions/mission-004-cash-collections.md#portée-des-scénarios-par-lot). Le lot 2 prouve le socle sur une obligation et le refus des parcours non autorisés. Les variantes multi-obligations relèvent du lot 3, les variantes multi-élèves du lot 4, les rectifications ultérieures autorisées du lot 5 et la consolidation du lot 6. Un scénario n'impose pas d'activer une capacité avant son lot ou avant arbitrage.
+
+Les garanties fondamentales restent exigées dès le premier `SETTLEMENT`, notamment la provenance jamais affectée et le refus de toute compensation ou rectification qui les contournerait. Chaque nouvelle capacité reçoit ses preuves complètes avant activation. Les relations financières, budgets, acteurs distincts et sources sont testés par la vraie API, la concurrence et le SQL direct sur PostgreSQL jetable.
 
 A01 à A08 précisent les permissions, échéances, secours, contrôle physique, identité du remettant, dates, rectifications et justificatifs. Cette ADR ne crée aucun contrat HTTP ou Java exécutable et ne vaut pas autorisation de développement.

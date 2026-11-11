@@ -11,6 +11,7 @@ Base `9f540291d2e9c2d0108e9a0249d2cfde69fe6a3e`. Branche `mission004/lot1-cash-c
 - [x] Préparer 0028 pour les projections, statuts et garanties de facturation dès le premier règlement.
 - [x] Distinguer V01 à V08 des arbitrages A01 à A08 et conserver les questions métier ou juridiques ouvertes.
 - [x] Vérifier les liens de fichiers, les registres V01 à V08, A01 à A08 et S01 à S23, et le caractère exclusivement documentaire du diff.
+- [x] Harmoniser la portée de S01 à S23 entre le cadrage et les ADR 0026 à 0028 : socle et refus dès le lot 2, puis preuves propres à chaque capacité avant activation.
 - La description de la PR en brouillon consigne le SHA publié, les contrôles et les décisions attendues avant le lot 2.
 
 ## Avant un développement du lot 2

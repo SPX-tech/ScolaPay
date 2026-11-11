@@ -105,6 +105,8 @@ La préparation technique peut être découpée sans activer de nouveaux règlem
 
 Les tests PostgreSQL directs, d'isolation, de double validation et de reprise sont des critères de chaque lot concerné. Le lot 6 complète ces preuves.
 
+La [portée des scénarios par lot](#portée-des-scénarios-par-lot) distingue le socle exigé dès le lot 2 des variantes propres aux capacités introduites ensuite. Elle ne modifie ni les décisions V01 à V08 ni les arbitrages A01 à A08.
+
 ## Scénarios critiques de référence
 
 Les montants ci-dessous sont exprimés en XAF. Les scénarios portant sur des choix A01 à A08 devront être approuvés avant leur implémentation.
@@ -134,6 +136,21 @@ Les montants ci-dessous sont exprimés en XAF. Les scénarios portant sur des ch
 | S21 | Tentative par une route générique d'ajustement de contrepasser un règlement | Refus. Les compensations de paiement passent par leur contrat dédié |
 | S22 | Dû nul par correction seule ou combinaison de corrections et remises, sans paiement | Statuts et montants hérités de la Mission 003 conservés |
 | S23 | Rectification, remplacement ou nouvelle référence technique d'une réception affectée | Provenance d'origine conservée, aucun nouveau budget jamais affecté des mêmes fonds |
+
+## Portée des scénarios par lot
+
+S01 à S23 forment le référentiel de la Mission 004. Ils ne prescrivent pas l'ouverture de toutes les capacités au lot 2. Le socle financier est exigé dès le premier `SETTLEMENT`, puis chaque nouveau parcours en prouve la préservation avant son activation.
+
+| Lot | Portée des preuves attendues |
+| --- | --- |
+| 2, socle sur une obligation | S01 à S08, S11 à S16 et S18 à S22 : paiements partiels, projections, ajustements et demandes périmées, restitution limitée, intégrité SQL, concurrence, droits, idempotence, atomicité et reprise. Dans S12, un paiement suffit à exercer la péremption ; la variante avec compensation attend l'autorisation de ce parcours. S20 suit la procédure de secours arbitrée, sans imposer une fonctionnalité hors ligne |
+| 2, refus des parcours non autorisés | Pour S09, S10, S17 et S23, vérifier le refus applicatif des compensations et rectifications non autorisées et les gardes de provenance, y compris par SQL direct, contre la reconstitution du budget jamais affecté. Ces refus ne nécessitent pas un parcours fonctionnel complet de rectification. Toute rectification qu'A07 autoriserait dès le lot 2 doit toutefois posséder immédiatement ses preuves complètes |
+| 3, plusieurs obligations d'un élève | Étendre S01, S02, S04, S05, S12, S14 à S16, S18 et S19 aux paniers multi-obligations : conservation des totaux, plan explicite, verrouillage ordonné, péremption d'une cible et refus atomique de tout le panier. Les garanties du socle sont réexercées sur ces variantes |
+| 4, plusieurs élèves | Étendre les variantes de panier du lot 3 à plusieurs élèves du même établissement et de la même devise. S15 couvre en particulier les cibles et lectures autorisées et la confidentialité du justificatif multi-élèves, sans créer de droit familial. Conserver les preuves de total, de concurrence et de reprise du panier |
+| 5, rectifications ultérieures | Exercer S17 et S23 sur les parcours de rectification ou de remplacement effectivement autorisés par A07, y compris les paniers. S09 et S10 dans leur forme avec compensation exécutée, ainsi que cette variante de S12, sont exigés dès qu'un tel parcours est autorisé ; s'il reste interdit en V1, conserver et tester le refus explicite. Aucun remboursement effectif n'est ajouté par ces scénarios |
+| 6, consolidation | Rejouer et compléter les scénarios des capacités réellement livrées, leurs combinaisons et les mutations pertinentes. Ce lot ne reporte aucune garantie fondamentale ni aucun test requis lors de l'introduction d'une capacité |
+
+Une preuve du lot 2 sur une obligation ne suffit donc pas à valider une extension multi-obligations, multi-élèves ou une nouvelle rectification. Réciproquement, le report de cette extension ne permet pas de différer ses garde-fous : tant que le parcours n'est pas autorisé, son refus et l'absence d'effet monétaire ou de fuite restent vérifiés. La répartition ci-dessus est un plan de validation proposé, sans arbitrage implicite d'A01 à A08.
 
 ## Vérification et limites du lot documentaire
 

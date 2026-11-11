@@ -218,6 +218,8 @@ Ce serait un nouveau déploiement, avec des secrets neufs :
 
 La Mission 003 est techniquement clôturée dans `main` au commit `9f54029`. Ses preuves et limites figurent dans le [journal](mission-003-validation.md). Le [cadrage de Mission 004](missions/mission-004-cash-collections.md) prépare les contrats entre `payments`, `billing`, `identity`, `establishment` et `audit`. Le lot 1 reste documentaire. Les décisions ouvertes de [0023](decisions/0023-personnes-liees-et-vues.md#décisions-ouvertes-pour-le-propriétaire) restent à arbitrer, ainsi que A01 à A08 du nouveau cadrage. La restitution ne peut pas réutiliser un montant ayant déjà été affecté, même après contrepassation.
 
+La [portée des scénarios par lot](missions/mission-004-cash-collections.md#portée-des-scénarios-par-lot) exige le socle et les refus de sécurité dès le premier `SETTLEMENT`. Les preuves des parcours multi-obligations, multi-élèves et des rectifications ultérieures suivent l'introduction de ces capacités, sans différer leurs garanties ni accepter implicitement les recommandations métier.
+
 **Ensuite, sans ordre arrêté**
 
 - Notifications : configurer et vérifier l'e-mail réel après revue, choisir un fournisseur SMS, raccorder la supervision et préciser la conservation. Le socle est construit, voir [le guide](notifications.md).
