@@ -61,7 +61,7 @@ class DigitalPaymentIntentTest extends BillingScenarioTest {
         Map<String,Object> valid=Map.of("obligationId",o,"idempotencyKey",UUID.randomUUID(),"currency","XAF","amountMinor","40000","expectedJournalSize",1);
         for(var changes:List.of(Map.<String,Object>of("amountMinor","0"),Map.<String,Object>of("amountMinor","-1"),Map.<String,Object>of("amountMinor","1.5"),
                 Map.<String,Object>of("amountMinor",40000.5),Map.<String,Object>of("amountMinor","1000000000000000"),Map.<String,Object>of("expectedJournalSize",0),
-                Map.<String,Object>of("expectedJournalSize",1.5),Map.<String,Object>of("paymentConfirmed",true),Map.<String,Object>of("state","SUCCESS"),
+                Map.<String,Object>of("expectedJournalSize",1.5),Map.<String,Object>of("expectedJournalSize","9".repeat(19)),Map.<String,Object>of("paymentConfirmed",true),Map.<String,Object>of("state","SUCCESS"),
                 Map.<String,Object>of("merchant_id",UUID.randomUUID()),Map.<String,Object>of("environment","live"))){
             var body=new HashMap<>(valid);body.putAll(changes);
             Response rejected=post(t.path("/payments/digital-intents"),t.adminToken(),body);assertThat(rejected.status()).as(changes+" "+rejected.raw()).isEqualTo(400);

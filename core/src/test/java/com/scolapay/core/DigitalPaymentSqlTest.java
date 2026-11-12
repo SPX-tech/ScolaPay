@@ -84,7 +84,7 @@ class DigitalPaymentSqlTest extends BillingScenarioTest {
         for(int i=0;i<2;i++)assertThatThrownBy(()->jdbc.sql("""
                 INSERT INTO obligation_entries(id,establishment_id,obligation_id,kind,amount_minor,idempotency_key,recorded_at,recorded_by,cash_allocation_id)
                 VALUES (:id,:tenant,:obligation,'SETTLEMENT',-40000,:key,now(),:actor,:intent)
-                """).param("id",UUID.randomUUID()).param("tenant",r.tenant().id()).param("obligation",r.obligation()).param("key","digital:"+r.id())
+                """).param("id",UUID.randomUUID()).param("tenant",r.tenant().id()).param("obligation",r.obligation()).param("key","cash:"+r.id())
                 .param("actor",r.actor()).param("intent",r.id()).update()).isInstanceOf(RuntimeException.class);
         assertThat(journalSize(r.obligation())).isEqualTo(1);assertThat(count(r)).isEqualTo(1);
         assertThat(get(r.tenant().path("/billing/obligations/"+r.obligation()+"/financial-position"),r.tenant().adminToken()).text("settledMinor")).isEqualTo("0");

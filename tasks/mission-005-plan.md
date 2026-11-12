@@ -12,16 +12,18 @@ Première tranche : préparation locale interne d'une intention pour une obligat
 
 - [x] Vérifier main et lire les contrats de billing, permissions, audit, outbox et contrôles Families.
 - [x] Examiner avant implémentation la documentation Kadryza versionnée, les DTO/handlers, scopes/env des clés, unicité marchand/référence/test, création, recherche par référence, pricing, webhooks HMAC/event_id, finalisation et rapprochement. Distinguer code, documentation parfois divergente et état d'exploitation non attesté.
-- [ ] Observer en CI l'échec fonctionnel des tests de préparation avant code de production.
-- [ ] Ajouter un port de préparation billing sans écriture de règlement ni permission cash ; conserver les règles financières existantes.
-- [ ] Ajouter V12 sans réécrire V1 à V11 : intention immuable, origine scolaire numérique distincte, instantané exact, audit et contrôles au commit, aucune preuve d'argent reçue.
+- [x] Observer en CI l'échec fonctionnel avant code : [43308450442](https://github.com/SPX-tech/ScolaPay/actions/runs/43308450442), deux assertions 201/404, zéro erreur ou ignoré ; [43310739257](https://github.com/SPX-tech/ScolaPay/actions/runs/43310739257), premier vert de deux tests.
+- [x] Ajouter un port de préparation billing sans écriture de règlement ni permission cash ; conserver les règles financières existantes.
+- [x] Ajouter V12 sans réécrire V1 à V11 : intention immuable, origine scolaire numérique distincte, instantané exact, audit et contrôles au commit, aucune preuve d'argent reçue.
 - [ ] Vérifier API réelles, permissions, montants, NULL/SQL direct, idempotence, concurrence avec le journal, transaction annulée, arrêt et reprises entre JVM.
 - [ ] Formaliser Mission 005, l'audit de compatibilité Kadryza et l'ADR ; actualiser la vision, le contexte, les statuts cash et les priorités.
 - **Livraison** : PR en brouillon, CI complète et Containers sur bases jetables, preuves exactes sur la tête finale. Pas de build/test lourd local ni de VPS.
 
+La campagne élargie [43313677393](https://github.com/SPX-tech/ScolaPay/actions/runs/43313677393) a exécuté 277 tests : une assertion échouée, zéro erreur ou ignoré. Le parseur JSON normalisait une version fractionnaire `1.5` vers le `long` 1. La nouvelle API valide désormais une forme entière positive bornée avant conversion, sans changer les montants ou les parcours cash. Le correctif doit repasser la campagne et la CI complète ; ce run échoué n'est pas présenté comme vert.
+
 ## Questions avant les tranches externes
 
-Compte Kadryza par établissement ou compte plateforme ; accès du payeur Families ; frais et principal scolaire ; paiement tardif après ajustement/autre règlement ; procédure d'issue inconnue ; test de Payment Session confirmée sans crédit réel ; preuve de versement à l'établissement. Aucune réponse n'est inventée et aucune session préparée n'est envoyée automatiquement lors d'une future activation.
+**Compte marchand par établissement : validé par le propriétaire.** Rattachements et secrets concrets restent non configurés. Questions restantes : accès du payeur Families ; frais et principal scolaire ; paiement tardif après ajustement/autre règlement ; procédure d'issue inconnue ; test de Payment Session confirmée sans crédit réel ; preuve de versement à l'établissement. Aucune réponse n'est inventée et aucune préparation n'est envoyée automatiquement lors d'une future activation.
 
 La préparation n'est pas une réservation du dû ou des fonds. Les intentions distinctes peuvent exister sans effet monétaire ; avant tout envoi, une sélection/revalidation explicite et la maîtrise des sessions encore incertaines seront requises. L'outbox ne garantit ni ordre ni exécution unique : future confirmation par inbox durable, unicité de l'opération financière et audit transactionnel. Aucun événement sans consommateur n'est présenté comme une livraison garantie.
 
