@@ -63,7 +63,8 @@ class CashSettlementRecoveryTest {
         Instance first=start(true,true,true); Fixture f=setup(first.api());
         UUID key=UUID.randomUUID(); var originalHistory=history();
         assertThat(originalHistory).extracting(row->row.get("version"))
-                .containsExactly("1","2","3","4","5","6","7","7.1","7.2","8","9");
+                .containsExactly("1","2","3","4","5","6","7","7.1","7.2","8","9","10");
+        assertThat(originalHistory.get(11)).containsEntry("script","V10__cash_excess_reservations.sql");
         try(var executor=Executors.newVirtualThreadPerTaskExecutor()) {
             var pending=executor.submit(()->first.api().post(path(f),f.school().adminToken(),command(f,key)));
             await(()->allocations(f)==1); first.kill();

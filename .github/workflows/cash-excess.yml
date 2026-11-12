@@ -24,10 +24,12 @@ jobs:
           cache: maven
           cache-dependency-path: core/pom.xml
       - name: Vérifier les excédents sur PostgreSQL jetable
-        run: ./mvnw --batch-mode --no-transfer-progress -Dtest=CashExcessReservationTest test
+        run: ./mvnw --batch-mode --no-transfer-progress '-Dtest=CashExcess*Test,SingleObligationSettlementTest,CashSettlement*Test,CashAllocationDisabledTest,InstallmentCoverageTest,CashReception*Test,Adjustment*Test,FamilyBillingViewTest,Lot6FinalizationRegressionTest,ModularityTest,StaffRoleTest,NotificationRecoveryTest' test
       - uses: actions/upload-artifact@v7.0.2
         if: always()
         with:
           name: cash-excess-test-reports
-          path: core/target/surefire-reports/
+          path: |
+            core/target/surefire-reports/
+            core/target/excess-probe/
           if-no-files-found: error

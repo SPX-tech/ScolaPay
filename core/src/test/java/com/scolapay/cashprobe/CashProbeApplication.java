@@ -23,12 +23,16 @@ public final class CashProbeApplication {
     static class ProbeConfiguration {
         @Bean
         FilterRegistrationBean<Filter> dropCommittedResponse(@Value("${probe.drop-cash-response:false}") boolean drop,
-                @Value("${probe.drop-allocation-response:false}") boolean dropAllocation) {
+                @Value("${probe.drop-allocation-response:false}") boolean dropAllocation,
+                @Value("${probe.drop-excess-request-response:false}") boolean dropExcess,
+                @Value("${probe.drop-excess-decision-response:false}") boolean dropDecision) {
             FilterRegistrationBean<Filter> registration = new FilterRegistrationBean<>();
             registration.setFilter((request, response, chain) -> {
                 var httpRequest = (jakarta.servlet.http.HttpServletRequest) request;
                 boolean target=(drop && httpRequest.getRequestURI().endsWith("/payments/cash-receptions"))
-                        || (dropAllocation && httpRequest.getRequestURI().endsWith("/allocations"));
+                        || (dropAllocation && httpRequest.getRequestURI().endsWith("/allocations"))
+                        || (dropExcess && httpRequest.getRequestURI().endsWith("/excess-requests"))
+                        || (dropDecision && httpRequest.getRequestURI().endsWith("/approval"));
                 if (!target || !"POST".equals(httpRequest.getMethod())) {
                     chain.doFilter(request, response);
                     return;
