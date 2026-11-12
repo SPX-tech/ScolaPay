@@ -1,12 +1,12 @@
 # 0029 : premier règlement espèces et intégrité entre modules
 
-- **Statut** : Tranche technique intégrée par #32 au commit `e49d802`, lot 2 encore ouvert. Parmi les arbitrages A01 à A08, seules les orientations A01 à A04 sont explicitement arbitrées. A05 à A08 restent ouverts.
+- **Statut** : Tranche technique intégrée par #32 au commit `e49d802`, lot 2 encore ouvert. A05 a depuis été validé explicitement, voir [0031](0031-identification-et-autorisation-de-restitution.md). A06 à A08 restent ouverts pour leurs autres modalités.
 - **Date** : 2026-11-11
 - **Références** : [0026](0026-contrats-encaissements-especes.md), [0027](0027-restitution-excedents-jamais-affectes.md), [0028](0028-projections-reglements-et-ajustements.md).
 
 ## Choix techniques et décisions métier encore ouvertes
 
-Le parcours technique réutilise une réception existante sans collecter l'identité du remettant et ne crée ni payeur, ni redevable, ni bénéficiaire. Cette limite de l'implémentation ne constitue pas une décision métier A05 ni une autorisation générale d'encaisser sans identification. La politique d'identité et de preuve reste à arbitrer avant un pilote ou une restitution.
+Le parcours initial #32 réutilisait une réception sans collecter l'identité du remettant ; cette limite ne constituait aucune validation d'A05. A05 est désormais explicitement accepté : les nouvelles réceptions exigent une identité suivant 0031 et les anciennes suivent une déclaration signée examinée indépendamment. Le port d'affectation ne crée toujours ni personne financière, ni droit familial, ni bénéficiaire implicite.
 
 Les codes `OPEN`, `PARTIALLY_SETTLED`, `SETTLED` et `SETTLED_WITH_ADJUSTMENTS` décrivent l'état technique calculé et testé, avec montants facturés, ajustés et réglés distincts et conservation des statuts historiques sans paiement. Leur présence dans le code ne vaut pas arbitrage métier A08. Leur usage opérationnel, les justificatifs, le contenu fiscal, les remboursements et les autres états restent à décider.
 
@@ -61,4 +61,4 @@ Les tests sont exécutés sur PostgreSQL jetable : API, montants, droits, concur
 
 Les campagnes de mutations M003 restent des preuves de leur périmètre historique. Certaines ciblent la définition V6 de la garde, remplacée ici par V9 : leur réutilisation pour M004 demandera de cibler la définition effective et de requalifier les scénarios. Aucun résultat historique de mutations n'est présenté comme une validation de cette nouvelle chaîne.
 
-A03 et A04 restent à réaliser avant pilote. A05 à A08 restent ouverts ; les limites techniques ci-dessus ne les résolvent pas. Aucun déploiement ni migration persistante n'est autorisé par cette ADR.
+A03 et A04 restent à réaliser avant pilote. A05 et les deux précisions métier de 0031 sont validés ; A06 à A08 restent ouverts pour leurs autres modalités. Aucun déploiement ni migration persistante n'est autorisé par cette ADR.

@@ -19,11 +19,16 @@ Corps de déclaration :
   "idempotencyKey": "4a853170-cdd9-4f43-a401-7a736a73aecb",
   "amountReceivedMinor": "12000",
   "changeGivenMinor": "2000",
-  "cashReceivedConfirmed": true
+  "cashReceivedConfirmed": true,
+  "remitter": {
+    "fullName": "Nom du remettant",
+    "identificationDetails": "Éléments minimaux de distinction",
+    "identityRecordedConfirmed": true
+  }
 }
 ```
 
-La devise est celle de l'établissement. L'auteur, l'horodatage, la date locale et le fuseau sont déterminés par le serveur. Aucun compte, élève, bénéficiaire, montant affecté, date antidatée ou statut ne peut être fourni. Les champs inconnus sont refusés. Le montant reçu est compris entre 1 et 999 999 999 999 999 unités minimales ; la monnaie rendue est positive ou nulle et strictement inférieure au montant reçu.
+La devise est celle de l'établissement. L'auteur, l'horodatage, la date locale et le fuseau sont déterminés par le serveur. Aucun compte, élève, bénéficiaire, montant affecté, date antidatée ou statut ne peut être fourni. Les champs inconnus sont refusés. Le montant reçu est compris entre 1 et 999 999 999 999 999 unités minimales ; la monnaie rendue est positive ou nulle et strictement inférieure au montant reçu. A05 impose désormais le [remettant identifié](payments-cash-identities.md) pour une nouvelle réception. Le rejeu exact d'une réception historique sans identité reste pris en charge ; il ne permet pas d'ajouter ou changer l'identité.
 
 La réponse conserve `id`, `reference`, `currency`, `amountReceivedMinor`, `changeGivenMinor`, `amountRetainedMinor`, `recordedAt`, `recordedByAccountId`, `businessDate` et `timezone`. Les champs courants `unallocatedMinor` et `settledMinor` suivent les affectations confirmées : initialement montant conservé et zéro, puis montant conservé moins affectations et cumul affecté. `allocationState` est dérivé : `UNALLOCATED`, `PARTIALLY_ALLOCATED` ou `ALLOCATED`. `proofNature` reste `INTERNAL_CASH_DECLARATION`. Les montants JSON sont des chaînes, suivant 0012.
 
@@ -37,7 +42,7 @@ Ces codes décrivent la couverture technique de la réception, distincte des cod
 
 Chaque requête vérifie l'adhésion active et l'établissement actif avec `EstablishmentAccess`. Un non-membre reçoit 404, un membre sans capacité 403. Les relectures par identifiant ou clé sont contextualisées par établissement. Un rejeu est lié au compte déclarant ; une clé reprise par un autre auteur ou avec d'autres montants donne `409 CASH_RECEPTION_KEY_CONFLICT`, sans renvoyer la preuve originale.
 
-La réponse ne contient ni clé d'idempotence, contact, nom de remettant, motif libre ou jeton. L'audit général contient uniquement la référence technique et les identifiants de rattachement. Le périmètre de lecture d'éventuelles données de payeur ou de justificatifs enrichis devra être revu avec A05 et A08. Aucun droit familial n'est créé.
+La réponse générale ne contient ni clé d'idempotence, contact, nom de remettant, motif libre ou jeton. L'audit général contient uniquement les références techniques et identifiants de rattachement. L'identité chiffrée suit une route privée et les permissions de 0031 ; les justificatifs finaux et autres modalités A08 restent distincts. Aucun droit familial n'est créé.
 
 ## Transaction et limites réelles
 
@@ -73,9 +78,9 @@ Avant tout pilote, réaliser notamment le contrôle quotidien par caissier, le r
 
 Les orientations A01 à A04 sont validées. La nouvelle chaîne applique A02 aux paiements et remises pris en charge, sans modifier l'échéancier initial. Les autres corrections ne reçoivent pas de ventilation inventée et empêchent le règlement.
 
-A05 à A08 restent partiellement ouverts : identité du remettant et bénéficiaire, mandat, dates métier et arriérés, rectifications, statuts et justificatifs finaux. La restitution des seuls excédents jamais affectés reste acquise, avec justification, second compte approbateur, remise physique confirmée et trace. Son parcours reste fermé tant que permissions détaillées, bénéficiaire et preuves ne sont pas suffisamment définis.
+A05 est validé. La [0031](decisions/0031-identification-et-autorisation-de-restitution.md) prépare l'identité à la réception, la déclaration signée des anciennes sources et la nouvelle autorisation nominative. Le justificatif papier signé pour la future remise est validé ; A06 à A08 restent ouverts pour les autres modalités. Aucune confirmation physique ou restitution comptabilisée n'est construite dans cette tranche.
 
-La [livraison de règlement](payments-cash-settlements.md), intégrée par #32, ajoute le port public de `billing` et la transaction affectation-preuve-journal-audit reliée à la réception confirmée. Les [réservations](payments-cash-excess.md) en revue préparent la restitution, sans autoriser le geste physique. Les activations restent fermées pour tout usage réel ; restitution effective et contrôle quotidien ne sont pas livrés par ces chaînes.
+La [livraison de règlement](payments-cash-settlements.md), intégrée par #32, ajoute le port public de `billing` et la transaction affectation-preuve-journal-audit. Les [réservations](payments-cash-excess.md), intégrées par #33, restent un examen technique ; la préparation nominative de 0031 ne construit aucune remise physique. Les activations restent fermées pour tout usage réel ; restitution effective et contrôle quotidien ne sont pas livrés par ces chaînes.
 
 ## Validation
 

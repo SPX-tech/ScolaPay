@@ -1,6 +1,6 @@
 # 0030 : réservations des excédents jamais affectés
 
-- **Statut** : proposition technique du lot 2, en revue. La restitution limitée est une exigence acquise de 0027 ; A05 à A08 restent ouverts.
+- **Statut** : tranche préparatoire validée et intégrée par #33 au commit `7b38965`. A05 a depuis été accepté et complété par [0031](0031-identification-et-autorisation-de-restitution.md) ; A06 à A08 restent ouverts pour leurs autres modalités.
 - **Date** : 2026-11-12
 - **Références** : [0027](0027-restitution-excedents-jamais-affectes.md), [0029](0029-premier-reglement-especes.md), [contrat HTTP](../payments-cash-excess.md).
 
@@ -8,7 +8,7 @@
 
 La tranche réserve une fraction jamais affectée d'une réception existante et conserve une demande motivée puis une décision indépendante. Elle n'effectue aucune remise physique et ne crée aucun mouvement de sortie. L'approbation est un examen du budget, avec la portée immuable `RESERVATION_ONLY_V1`, jamais une autorisation de remettre les espèces à une personne.
 
-L'identité du bénéficiaire, son mandat, les permissions de remise et les justificatifs définitifs ne sont pas définis. Aucun endpoint, état final ou paramètre de configuration ne permet donc de confirmer une restitution dans cette livraison. Ces absences ne résolvent pas A05 à A08. La cible V1 de 0027 et le lot 2 restent incomplets.
+La tranche #33 ne définissait pas l'identité du bénéficiaire ou la remise. A05 et les précisions sur la déclaration historique et le justificatif papier sont depuis validés en 0031 ; la préparation nominative les applique sans modifier les faits de cette ADR. Aucun endpoint ou paramètre ne confirme une restitution physique. La cible V1 de 0027 et le lot 2 restent incomplets, et les autres modalités d'A06 à A08 restent ouvertes.
 
 ## Provenance sans solde de crédit
 
@@ -49,13 +49,13 @@ Chaque famille de commande possède une clé UUID permanente par établissement.
 
 Le déclarant d'une réception peut demander une réservation avec le rôle caissier, comptable ou administrateur. Comptable, administrateur et directeur peuvent examiner le budget d'un autre compte. L'auteur seul retire sa demande encore sans décision ; l'auditeur reste en lecture seule. Les motifs sont visibles de leur auteur et des lecteurs habilités aux motifs (comptable, administrateur, directeur, auditeur). Un autre caissier ne les reçoit pas.
 
-Ces capacités sont celles de l'examen technique du budget et de la conservation de caisse dans cette tranche. Elles ne désignent ni bénéficiaire ni auteur du geste physique, ne créent aucun mandat et ne valent pas politique définitive d'A05 à A08. Aucun droit familial n'est ajouté.
+Ces capacités restent celles de l'examen technique du budget dans #33. Elles ne désignent ni bénéficiaire ni auteur du geste physique et ne créent aucun mandat. La nouvelle préparation nominative de 0031 applique A05 sans transformer ces décisions historiques. Aucun droit familial n'est ajouté.
 
 ## Arbitrages nécessaires avant remise effective
 
-1. **Bénéficiaire et mandat** : définir comment établir et conserver le lien entre la réception, le remettant et la personne recevant l'excédent. Recommandation à arbitrer : une identité vérifiée et une preuve explicite de mandat si elle diffère ; ni parenté ni connexion seules ne suffisent.
-2. **Habilitation de remise** : décider qui peut confirmer le geste physique et les incompatibilités entre demande, examen et remise. A01 exige deux comptes pour la demande et l'approbation ; aucune troisième personne n'est imposée ici.
-3. **Preuve et incident** : arrêter les justificatifs, leur confidentialité, leur conservation et le traitement d'une remise incertaine ou déconnectée. Recommandation à arbitrer : réserver les fonds tant que l'incident n'est pas résolu par un contrôle indépendant, sans libération par délai technique.
-4. **Transition de politique** : revalider les anciennes réservations techniques avec le bénéficiaire, les preuves et les permissions retenus. Aucune approbation V1 ne doit déclencher une remise à elle seule.
+1. **Bénéficiaire et mandat** : A05 est acquis ; 0031 construit le cas du remettant source. Le contrôle des droits ou mandats d'un tiers reste à préciser avant d'ouvrir ce cas, sans déduction de parenté ou de connexion.
+2. **Habilitation de remise** : le caissier habilité peut confirmer après approbation par un compte distinct du demandeur, sans troisième personne systématique. Le parcours physique reste à construire et vérifier.
+3. **Preuve et incident** : le justificatif papier signé bénéficiaire/caissier et conservé par l'établissement est validé. Le numérique signé et les incidents incertains restent à cadrer. Recommandation à arbitrer : résolution indépendante et documentée, aucun délai ne libérant le budget.
+4. **Transition de politique** : 0031 construit une autorisation nominative distincte après vérification de la source. Aucune approbation V1 seule ne vaut autorisation physique ; le contrôle final au moment de la remise reste obligatoire et non construit.
 
 Le secours manuel A03 et le contrôle physique quotidien A04 restent à réaliser avant pilote. La fonctionnalité est désactivée par défaut ; ni déploiement, migration persistante, fournisseur ni ouverture de Families n'est autorisé par cette ADR.

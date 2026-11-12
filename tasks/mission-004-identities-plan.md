@@ -12,12 +12,14 @@ Première PR : réception avec identité obligatoire et confidentielle, vérific
 
 ## Tâches et critères
 
-- [ ] Observer en CI l'échec fonctionnel des contrats d'identité à la réception avant implémentation.
-- [ ] Ajouter V11 sans modifier V1 à V10 : identité obligatoire pour les nouvelles réceptions, anciennes sources conservées sans transformation silencieuse ; preuves, unicité et audit au commit.
-- [ ] Conserver les données privées chiffrées, les permissions par établissement, la liaison de l'idempotence au contenu et le refus d'une configuration absente.
-- [ ] Construire la vérification indépendante d'une ancienne source et l'autorisation nominative d'une réservation approuvée sans changer ses faits, son budget ou les décisions RESERVATION_ONLY_V1.
-- [ ] Vérifier API réelles, SQL direct/NULL, tentatives de réassociation, concurrence, rollback, reprises et confidentialité. Les tests historiques sont adaptés uniquement à l'identité désormais obligatoire ; leurs autres assertions sont conservées.
-- [ ] Actualiser ADR, contrats, contexte et cadrage : A05 accepté avec ses modalités validées, A06 à A08 ouverts, lot 2 ouvert et A03/A04 avant pilote.
+- [x] Observer en CI l'échec fonctionnel des contrats d'identité à la réception avant implémentation : [43228908511](https://github.com/SPX-tech/ScolaPay/actions/runs/43228908511), deux assertions échouées, zéro erreur et zéro ignoré. [43230117104](https://github.com/SPX-tech/ScolaPay/actions/runs/43230117104) : premier vert, deux tests.
+- [x] Ajouter V11 sans modifier V1 à V10 : identité obligatoire pour les nouvelles réceptions, anciennes sources conservées sans transformation silencieuse ; preuves, unicité et audit au commit.
+- [x] Conserver les données privées chiffrées, permissions par établissement, idempotence liée au contenu et refus des configurations absentes ou invalides.
+- [x] Construire la vérification indépendante d'une ancienne source et l'autorisation nominative sans changer ses faits, son budget ou les décisions RESERVATION_ONLY_V1. [43231694943](https://github.com/SPX-tech/ScolaPay/actions/runs/43231694943) : trois assertions 201/404, zéro erreur et zéro ignoré avant implémentation ; [43233437388](https://github.com/SPX-tech/ScolaPay/actions/runs/43233437388) : cinq tests verts.
+- [x] Vérifier API, SQL direct/NULL, réassociations interdites, concurrence, rollback, reprises et confidentialité : [43236097694](https://github.com/SPX-tech/ScolaPay/actions/runs/43236097694), **251 tests dont 40 nouveaux**, zéro échec, erreur ou test ignoré. Les assertions historiques restent conservées avec une identité valide en fixture.
+- [x] Actualiser ADR, contrats, contexte et cadrage : A05 accepté avec ses modalités validées, autres modalités d'A06 à A08 ouvertes, lot 2 ouvert et A03/A04 avant pilote.
 - **Livraison** : PR en brouillon, résultats de la tête finale dans sa description ; CI et Containers sur PostgreSQL jetable, aucun test lourd local ou VPS.
+
+La première campagne des nouveaux parcours ([43231189851](https://github.com/SPX-tech/ScolaPay/actions/runs/43231189851)) comportait deux assertions échouées et une erreur du test qui lisait un UUID dans une réponse 404. Le test a été corrigé pour vérifier d'abord le statut, puis la campagne RED propre 43231694943 a confirmé les trois fonctionnalités absentes. Cet incident n'est pas présenté comme une preuve fonctionnelle valide.
 
 Les invariants de provenance F/H/Q et toutes les migrations intégrées restent inchangés. L'autorisation nominative ne produit aucune restitution, sortie ou SETTLEMENT. Aucun déploiement, migration persistante, fournisseur, frontend, ouverture Families, fusion ou changement des protections de main.

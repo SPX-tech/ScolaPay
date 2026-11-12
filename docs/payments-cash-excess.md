@@ -1,6 +1,6 @@
 # Réservations d'excédents d'espèces jamais affectés
 
-Cette tranche du lot 2 prépare la [restitution limitée](decisions/0027-restitution-excedents-jamais-affectes.md). Elle conserve les demandes, leur budget et leur décision, **sans remise physique opérationnelle**. La [0030](decisions/0030-reservations-excedents-especes.md) décrit la restriction `RESERVATION_ONLY_V1`. A05 à A08 restent ouverts ; les conventions du code ne sont pas des décisions métier du propriétaire.
+Cette tranche, intégrée par #33 au commit `7b38965`, prépare la [restitution limitée](decisions/0027-restitution-excedents-jamais-affectes.md) sans remise physique opérationnelle. La [0030](decisions/0030-reservations-excedents-especes.md) décrit `RESERVATION_ONLY_V1`. A05 est depuis validé et la [0031](decisions/0031-identification-et-autorisation-de-restitution.md) ajoute une préparation nominative distincte ; les décisions historiques ne sont pas transformées. A06 à A08 restent ouverts pour leurs autres modalités.
 
 ## Capacités et activation
 

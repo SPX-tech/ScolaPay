@@ -2,8 +2,8 @@
 
 - **Statut** : Orientation métier acceptée, lot 1 revu et fusionné. Lot 2 autorisé ; les arbitrages métier encore ouverts ne sont pas implicitement acceptés.
 - **Date** : 2026-11-11
-- **Décideur** : propriétaire du projet. Orientations A01 à A04 validées lors du lancement du lot 2 ; A05 à A08 restent ouverts.
-- **Implémentation** : réceptions intégrées par #31 ; port public `BillingSettlements` et [première chaîne d'affectation](../payments-cash-settlements.md) intégrés par #32, désactivés par défaut. [Réservations](0030-reservations-excedents-especes.md) en revue, sans restitution effective ni rectification disponible.
+- **Décideur** : propriétaire du projet. Orientations A01 à A04 validées au lancement du lot 2, puis A05 et les précisions de [0031](0031-identification-et-autorisation-de-restitution.md). A06 à A08 restent ouverts pour leurs autres modalités.
+- **Implémentation** : réceptions #31, première chaîne d'affectation #32 et réservations #33 intégrées, désactivées par défaut. Identification et autorisation nominative en revue suivant 0031, sans restitution effective ni rectification disponible.
 - **Complète** : [0010](0010-identite-et-acces.md), [0012](0012-convention-monetaire.md), [0015](0015-modele-de-facturation.md), [0016](0016-outbox-durable.md), [0019](0019-nature-des-documents-et-numerotation.md), [0021](0021-obligations-et-journal.md) et [0022](0022-ajustements-et-reexamen.md).
 - **Remplace** : aucune décision passée. Prépare l'extension additive de la facturation pour les règlements confirmés.
 
@@ -66,7 +66,7 @@ Une réception ordinaire et ses affectations valides sont atomiques. Si le plan 
 
 Après résultat réseau ambigu, le client doit retrouver ou rejouer la même commande avant de déclarer une nouvelle réception. Un passage vers le parcours d'incident ne crée pas une seconde réception des mêmes fonds.
 
-Le payeur peut être sans compte, sous réserve d'A05. Son identité déclarée ne désigne aucun redevable, ne crée aucun rôle financier et n'ouvre aucun dossier académique. Une personne financière existante conserve son identité et les règles de correction de 0023.
+Le remettant doit être identifié et peut être sans compte, suivant A05 désormais validé et 0031. Son identité déclarée ne désigne aucun redevable, ne crée aucun rôle financier et n'ouvre aucun dossier académique. Une personne financière existante conserve son identité et les règles de correction de 0023.
 
 ## Conservation au commit
 
@@ -112,4 +112,4 @@ S01 à S23 constituent le référentiel de la Mission 004, réparti dans la [mat
 
 Les garanties fondamentales restent exigées dès le premier `SETTLEMENT`, notamment la provenance jamais affectée et le refus de toute compensation ou rectification qui les contournerait. Chaque nouvelle capacité reçoit ses preuves complètes avant activation. Les relations financières, budgets, acteurs distincts et sources sont testés par la vraie API, la concurrence et le SQL direct sur PostgreSQL jetable.
 
-Les orientations A01 à A04 sont validées ; A05 à A08 restent ouverts. Les choix conservateurs du [contrat technique](../payments-cash-settlements.md) décrivent les capacités construites et leurs limites, sans attribuer de validation métier au propriétaire. Aucun `SETTLEMENT` ne peut être introduit avant les garanties complètes de 0028 et aucune activation réelle n'est autorisée ici.
+Les orientations A01 à A04 et les principes A05 sont validés. Les précisions sur déclaration historique signée et justificatif papier sont consignées dans 0031 ; A06 à A08 restent ouverts sur leurs autres modalités. Les choix techniques ne valent pas arbitrages supplémentaires. Aucun `SETTLEMENT` ne peut être introduit avant les garanties complètes de 0028 et aucune activation réelle n'est autorisée ici.
