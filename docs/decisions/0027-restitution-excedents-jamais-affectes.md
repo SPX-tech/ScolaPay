@@ -3,7 +3,7 @@
 - **Statut** : Décision métier acceptée par le propriétaire lors de l'engagement du lot 1 de la Mission 004. Le modèle de provenance, les noms des états et les contrats proposés sont soumis à la revue documentaire.
 - **Date** : 2026-11-11
 - **Décideur** : propriétaire du projet
-- **Implémentation** : réservations et décisions budgétaires partielles en revue ([0030](0030-reservations-excedents-especes.md)). Aucune remise physique ni restitution effective opérationnelle ; la cible V1 reste à compléter.
+- **Implémentation** : réservations et décisions budgétaires intégrées par #33 ([0030](0030-reservations-excedents-especes.md)). Identification et autorisation nominative en revue suivant [0031](0031-identification-et-autorisation-de-restitution.md). Aucune remise physique ni restitution effective opérationnelle ; la cible V1 reste à compléter.
 - **Complète** : [0026](0026-contrats-encaissements-especes.md), [0019](0019-nature-des-documents-et-numerotation.md) et les invariants de la Mission 003.
 - **Remplace** : aucune décision de facturation.
 
@@ -54,7 +54,7 @@ Dans le troisième cas, une contrepassation libre laissant des fonds anciennemen
 
 ## Circuit proposé et points d'autorisation
 
-Les états ci-dessous sont des noms de contrat proposés. Les orientations A01 à A04 sont validées ; les permissions détaillées de remise, la preuve et les délais attendent encore leurs modalités et les arbitrages A05 à A08. `APPROVED_PENDING_HANDOVER` n'est pas l'état livré : l'examen technique limité produit `APPROVED_RESERVED`, de portée `RESERVATION_ONLY_V1`, sans autorisation de remise.
+Les états ci-dessous sont des noms de contrat proposés. A05 valide désormais les principes d'identité, le caissier habilité après seconde approbation sans troisième personne imposée et les modalités précisées en 0031. Le justificatif papier signé et la procédure historique signée sont validés ; les incidents, délais et autres modalités d'A06 à A08 restent à définir. `APPROVED_PENDING_HANDOVER` n'est pas l'état livré : l'examen technique V10 produit `APPROVED_RESERVED`, de portée `RESERVATION_ONLY_V1`, sans autorisation physique. La nouvelle autorisation nominative est un fait distinct.
 
 | État de la demande | Action | Effet |
 | --- | --- | --- |
@@ -92,4 +92,4 @@ Les preuves de réception et restitution sont conservées même après rejet, re
 
 Les preuves de restitution, dont le refus d'auto-approbation, deux réservations concurrentes et une confirmation répétée, sont requises dès le lot 2. Les cas de compensation, de rectification et de remplacement S09, S10, S17 et S23 suivent la [matrice de portée par lot](../missions/mission-004-cash-collections.md#portée-des-scénarios-par-lot) : refus des chemins non autorisés et de toute reconstitution du budget dès le socle, puis preuve complète de chaque parcours effectivement autorisé avant activation. Leurs variantes ultérieures ne sont pas des fonctionnalités imposées au premier lot.
 
-Cette décision métier est acquise. Le lot 2 est autorisé et les orientations A01 à A04 sont validées. La première PR de déclarations non affectées n'ouvre aucune restitution. Les modalités de remise, de bénéficiaire, de preuve et les arbitrages concernés d'A05 à A08 restent à préciser et vérifier avant d'activer ce parcours.
+Cette décision métier est acquise. A05 et les précisions de 0031 sont maintenant validés. La déclaration signée historique et le justificatif papier signé ne sont plus des hypothèses, mais leur présence dans le cadrage ne signifie pas qu'une sortie est implémentée. La tranche nominative reste sans confirmation physique. Les contrôles de droits des tiers, incidents, rectifications et autres modalités d'A06 à A08 restent à préciser ou construire avant les parcours concernés. Le lot 2 reste ouvert.

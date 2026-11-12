@@ -21,7 +21,7 @@ class SingleObligationSettlementTest extends CashSettlementScenario {
         Tenant tenant = school.tenant();
         UUID obligation = issuedObligation(school);
         Response reception = post(tenant.path("/payments/cash-receptions"), tenant.adminToken(), Map.of(
-                "idempotencyKey", UUID.randomUUID(), "amountReceivedMinor", "60000", "changeGivenMinor", "0", "cashReceivedConfirmed", true));
+                "idempotencyKey", UUID.randomUUID(), "amountReceivedMinor", "60000", "changeGivenMinor", "0", "cashReceivedConfirmed", true,"remitter",REMITTER));
         assertThat(reception.status()).as(reception.raw()).isEqualTo(201);
         Response allocation = post(tenant.path("/payments/cash-receptions/" + reception.id("id") + "/allocations"),
                 tenant.adminToken(), Map.of("idempotencyKey", UUID.randomUUID(), "obligationId", obligation,

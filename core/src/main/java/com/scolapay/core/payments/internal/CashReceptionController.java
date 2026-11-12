@@ -3,6 +3,8 @@ package com.scolapay.core.payments.internal;
 import com.scolapay.core.payments.internal.CashReceptionRepository.Reception;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Pattern;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -20,11 +22,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v2/establishments/{establishmentId}/payments/cash-receptions")
 class CashReceptionController {
 
+    record Remitter(@NotBlank @Size(max=160) String fullName,@NotBlank @Size(max=300) String identificationDetails,
+            @NotNull Boolean identityRecordedConfirmed) {}
     record Declaration(
             @NotNull UUID idempotencyKey,
             @NotNull @Pattern(regexp = "^[1-9][0-9]{0,14}$") String amountReceivedMinor,
             @NotNull @Pattern(regexp = "^(0|[1-9][0-9]{0,14})$") String changeGivenMinor,
-            @NotNull Boolean cashReceivedConfirmed) {}
+            @NotNull Boolean cashReceivedConfirmed,@Valid Remitter remitter) {}
 
     record View(
             UUID id, String reference, String currency, String amountReceivedMinor, String changeGivenMinor,
@@ -53,7 +57,7 @@ class CashReceptionController {
     @PostMapping
     ResponseEntity<View> record(@PathVariable UUID establishmentId, @Valid @RequestBody Declaration request) {
         var result = service.record(establishmentId, request.idempotencyKey(), Long.parseLong(request.amountReceivedMinor()),
-                Long.parseLong(request.changeGivenMinor()), request.cashReceivedConfirmed());
+                Long.parseLong(request.changeGivenMinor()), request.cashReceivedConfirmed(),request.remitter());
         return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK).body(View.of(result.reception()));
     }
 

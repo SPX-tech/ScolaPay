@@ -1,6 +1,6 @@
 # 0028 : projections des règlements et préservation des ajustements
 
-- **Statut** : Invariants M003 acquis et orientations A01 à A04 arbitrées. Tranche technique intégrée par #32, avec restrictions conservatrices ; A05 à A08 restent ouverts.
+- **Statut** : Invariants M003 acquis et orientations A01 à A05 arbitrées suivant leur périmètre explicite. Tranche de règlement intégrée par #32 ; A06 à A08 restent ouverts pour leurs autres modalités, voir [0031](0031-identification-et-autorisation-de-restitution.md).
 - **Date** : 2026-11-11
 - **Décideur** : propriétaire du projet pour les invariants existants, arbitrages de Mission 004 encore attendus.
 - **Implémentation** : première chaîne intégrée, projections et couverture A02 pour les cas pris en charge. Voir [0029](0029-premier-reglement-especes.md). Aucune activation réelle.
@@ -98,6 +98,6 @@ Les nouvelles écritures de paiement ne sont pas copiées brutes dans les vues d
 
 ## Critères et arbitrages
 
-Les garanties ci-dessus sont requises dès le premier lot activant les paiements. Les orientations A01 à A04 sont arbitrées ; les choix relevant d'A05 à A08 restent ouverts et les parcours qui en dépendent restent fermés tant que leurs règles et contrôles sont incomplets. La [matrice de portée par lot](../missions/mission-004-cash-collections.md#portée-des-scénarios-par-lot) distingue les cas sur une obligation des variantes multi-obligations, multi-élèves et des rectifications ultérieures. S17 impose dès le socle le refus d'une rectification non autorisée ; le parcours fonctionnel complet doit être prouvé lorsqu'A07 en autorise l'introduction. Les validations sont exécutées dans GitHub Actions sur PostgreSQL jetable, en conservant les preuves de la Mission 003.
+Les garanties ci-dessus sont requises dès le premier lot activant les paiements. A01 à A05 sont arbitrés suivant leurs décisions explicites ; A06 à A08 restent ouverts sur leurs autres modalités. Les parcours incomplets restent fermés. La [matrice de portée par lot](../missions/mission-004-cash-collections.md#portée-des-scénarios-par-lot) distingue le socle des variantes multi-obligations, multi-élèves et des rectifications. S17 exige le refus d'une rectification non autorisée ; son parcours complet doit être prouvé lorsqu'A07 en permet l'introduction. Les validations sont exécutées dans GitHub Actions sur PostgreSQL jetable, en conservant les preuves de la Mission 003.
 
-Le lot 1 documentaire n'étendait aucun enum, route ou contrainte. La tranche actuelle utilise des codes techniques et ne collecte pas l'identité du remettant ; ces constats d'implémentation ne valent pas validation du propriétaire sur A05 ou A08. Aucun arbitrage d'identité, de restitution, de correction ou de justificatif n'est considéré comme résolu par la présence de ce code ou ses tests.
+Le lot 1 documentaire n'étendait aucun enum, route ou contrainte. La tranche #32 utilisait des codes techniques sans collecter l'identité du remettant ; ce constat ne valait aucun arbitrage implicite. A05 est depuis explicitement validé et implémenté progressivement suivant 0031. Les codes financiers A08, les rectifications et les autres questions restent ouverts ; le code ne les décide pas.

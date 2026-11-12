@@ -2,7 +2,7 @@
 
 Cette livraison du lot 2 réutilise les [réceptions intégrées par #31](payments-cash-receptions.md). Une réception déclarée n'est pas une obligation réglée. Seule une affectation confirmée, liée à son `SETTLEMENT`, sa preuve et son audit, réduit le reste à payer.
 
-La tranche a été intégrée par #32 au commit `e49d802` et reste désactivée pour tout usage réel. La restitution effective des excédents jamais affectés n'est pas opérationnelle et le lot 2 n'est pas terminé. Les [réservations](payments-cash-excess.md) ne permettent aucune remise physique. Les orientations A01 à A04 sont arbitrées ; A05 à A08 restent ouverts. Les choix techniques conservateurs décrits ici ne constituent pas des décisions métier validées. Voir [0029](decisions/0029-premier-reglement-especes.md).
+La tranche a été intégrée par #32 au commit `e49d802` et reste désactivée pour tout usage réel. La restitution effective n'est pas opérationnelle et le lot 2 reste ouvert. Les réservations #33 et l'[autorisation nominative](payments-cash-identities.md) ne permettent aucune confirmation physique. A05 est désormais validé suivant 0031 ; A06 à A08 restent ouverts pour leurs autres modalités. Les codes techniques ne constituent pas des arbitrages supplémentaires. Voir [0029](decisions/0029-premier-reglement-especes.md).
 
 ## Parcours et contrat
 
@@ -19,7 +19,7 @@ La tranche a été intégrée par #32 au commit `e49d802` et reste désactivée 
 }
 ```
 
-La création répond 201 ; un rejeu identique répond 200 avec la même preuve historique. Toute réutilisation différente de clé donne 409. La commande ne contient ni auteur, devise choisie, payeur, bénéficiaire, date forcée ou montant de remise. Aucun rôle financier ni accès familial n'est créé. L'identité du remettant n'est pas collectée dans ce contrat technique ; cette limite ne vaut pas autorisation métier A05 d'encaisser sans identification.
+La création répond 201 ; un rejeu identique répond 200 avec la même preuve historique. Toute réutilisation différente de clé donne 409. La commande d'affectation ne contient ni auteur, devise choisie, payeur, bénéficiaire, date forcée ou montant de remise. Aucun rôle financier ni accès familial n'est créé. L'identité est collectée à la nouvelle réception selon A05 et 0031, pas redéfinie au moment d'affecter. Les anciennes sources restent liées à leur procédure historique.
 
 La réception source doit appartenir au compte déclarant habilité, dans le même établissement et la même devise. Une seule obligation par réception est autorisée dans cette tranche. Plusieurs affectations successives à cette obligation et plusieurs réceptions pour la régler sont possibles. Aucun montant n'est affecté automatiquement à une autre charge.
 

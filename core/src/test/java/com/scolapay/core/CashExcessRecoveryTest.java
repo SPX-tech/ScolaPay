@@ -33,7 +33,7 @@ class CashExcessRecoveryTest {
     }
     UUID reception(TestApi api,TestApi.School school) {
         var response=api.post(school.path("/payments/cash-receptions"),school.adminToken(),Map.of("idempotencyKey",UUID.randomUUID(),
-                "amountReceivedMinor","20000","changeGivenMinor","0","cashReceivedConfirmed",true));
+                "amountReceivedMinor","20000","changeGivenMinor","0","cashReceivedConfirmed",true,"remitter",IntegrationTest.REMITTER));
         assertThat(response.status()).as(response.raw()).isEqualTo(201);return response.id("id");
     }
     Map<String,Object> request(UUID key){return Map.of("idempotencyKey",key,"amountMinor","15000","reason","Réservation technique");}
@@ -56,7 +56,7 @@ class CashExcessRecoveryTest {
         }
         var installed=history();
         assertThat(installed).extracting(row->row.get("version"))
-                .containsExactly("1","2","3","4","5","6","7","7.1","7.2","8","9","10");
+                .containsExactly("1","2","3","4","5","6","7","7.1","7.2","8","9","10","11");
         assertThat(installed).allSatisfy(row->{assertThat(row.get("checksum")).isNotNull();assertThat(row.get("success")).isEqualTo(true);});
         final String writePath=path,writer=actor;final Map<String,Object> command=body;
         String table=approval?"cash_excess_decisions":"cash_excess_requests";

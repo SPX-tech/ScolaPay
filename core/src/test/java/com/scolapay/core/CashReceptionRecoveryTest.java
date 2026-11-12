@@ -40,7 +40,8 @@ class CashReceptionRecoveryTest {
         Instance first = start(true, true);
         List<Map<String, Object>> installed = history();
         assertThat(installed).extracting(row -> row.get("version"))
-                .containsExactly("1", "2", "3", "4", "5", "6", "7", "7.1", "7.2", "8", "9", "10");
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "7.1", "7.2", "8", "9", "10", "11");
+        assertThat(installed.get(12)).containsEntry("script", "V11__remitter_identity_and_restitution_authorization.sql");
         assertThat(installed.get(9)).containsEntry("script", "V8__cash_receptions.sql");
         assertThat(installed.get(10)).containsEntry("script", "V9__single_obligation_cash_settlement.sql");
         assertThat(installed.get(11)).containsEntry("script", "V10__cash_excess_reservations.sql");
@@ -51,7 +52,7 @@ class CashReceptionRecoveryTest {
         TestApi.School school = first.api().newSchool();
         UUID key = UUID.randomUUID();
         Map<String, Object> body = Map.of("idempotencyKey", key, "amountReceivedMinor", "25000",
-                "changeGivenMinor", "0", "cashReceivedConfirmed", true);
+                "changeGivenMinor", "0", "cashReceivedConfirmed", true,"remitter",IntegrationTest.REMITTER);
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var pending = executor.submit(() -> first.api().post(school.path("/payments/cash-receptions"), school.adminToken(), body));
             await(() -> count("cash_receptions", school.id()) == 1);
@@ -86,7 +87,7 @@ class CashReceptionRecoveryTest {
         Instance second = start(true, false);
         TestApi.School school = first.api().newSchool();
         Map<String, Object> body = Map.of("idempotencyKey", UUID.randomUUID(), "amountReceivedMinor", "25000",
-                "changeGivenMinor", "0", "cashReceivedConfirmed", true);
+                "changeGivenMinor", "0", "cashReceivedConfirmed", true,"remitter",IntegrationTest.REMITTER);
         CountDownLatch barrier = new CountDownLatch(1);
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var a = executor.submit(() -> { barrier.await(); return first.api().post(school.path("/payments/cash-receptions"), school.adminToken(), body); });

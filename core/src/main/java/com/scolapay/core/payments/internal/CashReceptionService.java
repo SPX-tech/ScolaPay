@@ -29,19 +29,21 @@ class CashReceptionService {
     private final AuditTrail audit;
     private final CashProperties properties;
     private final Clock clock;
+    private final CashIdentityService identities;
 
     CashReceptionService(CashReceptionRepository repository, EstablishmentAccess access,
-            Establishments establishments, AuditTrail audit, CashProperties properties, Clock clock) {
+            Establishments establishments, AuditTrail audit, CashProperties properties, Clock clock,CashIdentityService identities) {
         this.repository = repository;
         this.access = access;
         this.establishments = establishments;
         this.audit = audit;
         this.properties = properties;
         this.clock = clock;
+        this.identities = identities;
     }
 
     @Transactional(timeout = 10)
-    public Recorded record(UUID establishmentId, UUID key, long received, long change, boolean confirmed) {
+    public Recorded record(UUID establishmentId, UUID key, long received, long change, boolean confirmed,CashReceptionController.Remitter remitter) {
         UUID actorId = access.require(establishmentId, Permission.CASH_RECEPTIONS_RECORD);
         if (!properties.cashReceptionsEnabled()) {
             throw ApiException.notFound("CASH_RECEPTIONS_DISABLED", "La déclaration d'espèces est désactivée.");
@@ -66,8 +68,10 @@ class CashReceptionService {
                         || existing.amountReceivedMinor() != received || existing.changeGivenMinor() != change) {
                     throw ApiException.conflict("CASH_RECEPTION_KEY_CONFLICT", "Cette clé désigne une autre déclaration.");
                 }
+                identities.verifyReplay(establishmentId,existing.id(),remitter);
                 return new Recorded(existing, false);
             }
+            identities.recordAtReception(establishmentId,reception,remitter);
             audit.record(establishmentId, actorId, "payments.cash.received", "cash_reception", id,
                     Map.of("reference", reception.reference()));
             return new Recorded(reception, true);
