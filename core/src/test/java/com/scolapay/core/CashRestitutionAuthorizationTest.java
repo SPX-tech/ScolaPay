@@ -36,7 +36,9 @@ class CashRestitutionAuthorizationTest extends CashExcessScenario {
     }
     @Test void leDemandeurNePeutPasSAutoAutoriserEtUneRepriseNeCreePasDAutorisationSupplementaire(){
         Tenant t=newTenant();UUID source=receive(t,t.adminToken(),20000);String reviewer=newStaff(t,"DIRECTOR");
-        UUID request=approved(t,source,reviewer),verification=verify(t,request,UUID.randomUUID()).id("id"),key=UUID.randomUUID();
+        UUID request=approved(t,source,reviewer);Response verified=verify(t,request,UUID.randomUUID());
+        assertThat(verified.status()).as(verified.raw()).isEqualTo(201);
+        UUID verification=verified.id("id"),key=UUID.randomUUID();
         assertThat(authorize(t,t.adminToken(),request,verification,UUID.randomUUID()).status()).isEqualTo(403);
         Response first=authorize(t,reviewer,request,verification,key);assertThat(first.status()).as(first.raw()).isEqualTo(201);
         assertThat(authorize(t,reviewer,request,verification,key).body()).isEqualTo(first.body());
