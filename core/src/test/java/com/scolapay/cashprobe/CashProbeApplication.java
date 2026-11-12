@@ -26,7 +26,8 @@ public final class CashProbeApplication {
                 @Value("${probe.drop-allocation-response:false}") boolean dropAllocation,
                 @Value("${probe.drop-excess-request-response:false}") boolean dropExcess,
                 @Value("${probe.drop-excess-decision-response:false}") boolean dropDecision,
-                @Value("${probe.drop-identity-suffix:}") String identitySuffix) {
+                @Value("${probe.drop-identity-suffix:}") String identitySuffix,
+                @Value("${probe.drop-digital-response:false}") boolean dropDigital) {
             FilterRegistrationBean<Filter> registration = new FilterRegistrationBean<>();
             registration.setFilter((request, response, chain) -> {
                 var httpRequest = (jakarta.servlet.http.HttpServletRequest) request;
@@ -34,7 +35,8 @@ public final class CashProbeApplication {
                         || (dropAllocation && httpRequest.getRequestURI().endsWith("/allocations"))
                         || (dropExcess && httpRequest.getRequestURI().endsWith("/excess-requests"))
                         || (dropDecision && httpRequest.getRequestURI().endsWith("/approval"))
-                        || (!identitySuffix.isEmpty() && httpRequest.getRequestURI().endsWith(identitySuffix));
+                        || (!identitySuffix.isEmpty() && httpRequest.getRequestURI().endsWith(identitySuffix))
+                        || (dropDigital && httpRequest.getRequestURI().endsWith("/payments/digital-intents"));
                 if (!target || !"POST".equals(httpRequest.getMethod())) {
                     chain.doFilter(request, response);
                     return;

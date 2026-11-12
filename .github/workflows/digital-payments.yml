@@ -24,10 +24,12 @@ jobs:
           cache: maven
           cache-dependency-path: core/pom.xml
       - name: Vérifier les intentions sur PostgreSQL jetable
-        run: ./mvnw --batch-mode --no-transfer-progress -Dtest=DigitalPaymentIntentTest test
+        run: ./mvnw --batch-mode --no-transfer-progress '-Dtest=Digital*Test,Cash*Test,SingleObligationSettlementTest,InstallmentCoverageTest,Adjustment*Test,FamilyBillingViewTest,Lot6FinalizationRegressionTest,ModularityTest,StaffRoleTest,NotificationRecoveryTest' test
       - uses: actions/upload-artifact@v7.0.2
         if: always()
         with:
           name: digital-payment-test-reports
-          path: core/target/surefire-reports/
+          path: |
+            core/target/surefire-reports/
+            core/target/digital-probe/
           if-no-files-found: error
