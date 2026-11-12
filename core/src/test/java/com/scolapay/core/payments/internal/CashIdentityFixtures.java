@@ -10,15 +10,21 @@ public final class CashIdentityFixtures {
     public static final Map<String,Object> REMITTER=Map.of("fullName","Remettant de test",
             "identificationDetails","Référence minimale de test","identityRecordedConfirmed",true);
     private CashIdentityFixtures() {}
+    public static String encrypt(UUID tenant,UUID id,String domain,String clear){
+        return new CashIdentityCipher(new CashProperties(true,false,false,false,KEY)).encrypt(tenant,id,domain,clear);
+    }
     public static void identifyRaw(JdbcClient jdbc,UUID tenant,UUID source,UUID actor){
-        CashIdentityCipher cipher=new CashIdentityCipher(new CashProperties(true,false,false,false,KEY));
-        String payload=cipher.encrypt(tenant,source,"remitter","{\"fullName\":\"Remettant SQL\",\"identificationDetails\":\"Contrôle minimal\"}");
+        identifyRaw(jdbc,tenant,source,actor,true);
+    }
+    public static void identifyRaw(JdbcClient jdbc,UUID tenant,UUID source,UUID actor,boolean audited){
+        String payload=encrypt(tenant,source,"remitter","{\"fullName\":\"Remettant SQL\",\"identificationDetails\":\"Contrôle minimal\"}");
         jdbc.sql("""
                 INSERT INTO cash_remitter_identifications(id,establishment_id,origin,encrypted_payload,idempotency_key,reference,
                   statement_reference,statement_signed_confirmed,recorded_at,recorded_by)
                 SELECT id,establishment_id,'AT_RECEPTION',:payload,idempotency_key,'CI-'||id::text,NULL,false,recorded_at,recorded_by_account_id
                 FROM cash_receptions WHERE establishment_id=:tenant AND id=:id
                 """).param("payload",payload).param("tenant",tenant).param("id",source).update();
+        if(!audited)return;
         jdbc.sql("""
                 INSERT INTO audit_events(id,occurred_at,establishment_id,actor_account_id,action,target_type,target_id,details)
                 VALUES (:event,now(),:tenant,:actor,'payments.remitter.recorded','cash_remitter_identification',:id,

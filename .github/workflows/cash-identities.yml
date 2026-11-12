@@ -24,7 +24,7 @@ jobs:
           cache: maven
           cache-dependency-path: core/pom.xml
       - name: Vérifier les identités sur PostgreSQL jetable
-        run: ./mvnw --batch-mode --no-transfer-progress '-Dtest=CashIdentity*Test,CashLegacyIdentityTest,CashRestitutionAuthorizationTest' test
+        run: ./mvnw --batch-mode --no-transfer-progress '-Dtest=Cash*Test,SingleObligationSettlementTest,InstallmentCoverageTest,Adjustment*Test,FamilyBillingViewTest,Lot6FinalizationRegressionTest,ModularityTest,StaffRoleTest,NotificationRecoveryTest' test
       - uses: actions/upload-artifact@v7.0.2
         if: always()
         with:
