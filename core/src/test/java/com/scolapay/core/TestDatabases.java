@@ -14,6 +14,8 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 final class TestDatabases {
 
     static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:18.6-alpine");
+    // Les contextes Spring conservés et les JVM de reprise partagent les 100 connexions du PostgreSQL jetable.
+    static final int MAX_TEST_POOL_SIZE = 4;
 
     static {
         POSTGRES.start();
@@ -42,6 +44,8 @@ final class TestDatabases {
                 "--spring.datasource.url=" + url,
                 "--spring.datasource.username=" + POSTGRES.getUsername(),
                 "--spring.datasource.password=" + POSTGRES.getPassword(),
+                "--spring.datasource.hikari.maximum-pool-size=" + MAX_TEST_POOL_SIZE,
+                "--spring.datasource.hikari.minimum-idle=0",
                 "--scolapay.security.jwt-secret=" + IntegrationTest.JWT_SECRET,
                 "--scolapay.payments.identity-encryption-key=" + com.scolapay.core.payments.internal.CashIdentityFixtures.KEY,
                 "--scolapay.bootstrap.operator-contact=" + IntegrationTest.OPERATOR_CONTACT,

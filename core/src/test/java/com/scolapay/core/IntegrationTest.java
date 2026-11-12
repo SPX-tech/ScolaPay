@@ -58,6 +58,8 @@ abstract class IntegrationTest {
         registry.add("spring.datasource.url", TestDatabases.POSTGRES::getJdbcUrl);
         registry.add("spring.datasource.username", TestDatabases.POSTGRES::getUsername);
         registry.add("spring.datasource.password", TestDatabases.POSTGRES::getPassword);
+        registry.add("spring.datasource.hikari.maximum-pool-size", () -> TestDatabases.MAX_TEST_POOL_SIZE);
+        registry.add("spring.datasource.hikari.minimum-idle", () -> 0);
         registry.add("spring.flyway.locations", () -> "classpath:db/migration,classpath:db/test-migration");
         registry.add("scolapay.portal.enabled", () -> "true");
         registry.add("scolapay.payments.identity-encryption-key", () -> com.scolapay.core.payments.internal.CashIdentityFixtures.KEY);
