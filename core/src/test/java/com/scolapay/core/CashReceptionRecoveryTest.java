@@ -40,8 +40,9 @@ class CashReceptionRecoveryTest {
         Instance first = start(true, true);
         List<Map<String, Object>> installed = history();
         assertThat(installed).extracting(row -> row.get("version"))
-                .containsExactly("1", "2", "3", "4", "5", "6", "7", "7.1", "7.2", "8", "9", "10", "11");
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "7.1", "7.2", "8", "9", "10", "11", "12");
         assertThat(installed.get(12)).containsEntry("script", "V11__remitter_identity_and_restitution_authorization.sql");
+        assertThat(installed.get(13)).containsEntry("script", "V12__digital_payment_preparations.sql");
         assertThat(installed.get(9)).containsEntry("script", "V8__cash_receptions.sql");
         assertThat(installed.get(10)).containsEntry("script", "V9__single_obligation_cash_settlement.sql");
         assertThat(installed.get(11)).containsEntry("script", "V10__cash_excess_reservations.sql");

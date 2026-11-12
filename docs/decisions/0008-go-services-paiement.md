@@ -7,11 +7,13 @@
 
 ## Contexte
 
-Les paiements numériques sont aujourd'hui du code NestJS derrière l'interface `PaymentProvider` (`backend/src/modules/payment/`). Aucun prestataire réel n'est actif et le connecteur Kadryza est un squelette. **Aucun code Go n'existe dans le dépôt à cette date.**
+Lors de cette décision du 6 novembre, les paiements numériques se limitaient au code NestJS derrière `PaymentProvider`. Aucun prestataire réel n'était actif et le connecteur Kadryza était un squelette. Aucun code Go ScolaPay n'existe dans ce dépôt.
 
 ## Décision
 
 Go reste une technologie envisagée pour de futurs services financiers spécialisés, notamment les intégrations avec les prestataires de paiement. Son introduction n'est pas prévue immédiatement.
+
+**Précision de Mission 005, 12 novembre :** intégrer l'API Kadryza existante dans le cœur Java, pas construire un nouveau backend ou réimplémenter ses opérateurs. Le Go déjà utilisé par Kadryza reste chez le fournisseur ; il ne justifie aucun service Go ScolaPay. Voir [0032](0032-intentions-numeriques-et-integration-kadryza.md).
 
 ## Conséquences
 

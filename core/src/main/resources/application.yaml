@@ -77,6 +77,8 @@ scolapay:
     sensitive-adjustment-percent: 25
     sensitive-adjustment-xaf: 100000
   payments:
+    digital:
+      intents-enabled: ${SCOLAPAY_DIGITAL_PAYMENT_INTENTS_ENABLED:false}
     cash-receptions-enabled: ${SCOLAPAY_CASH_RECEPTIONS_ENABLED:false}
     cash-allocations-enabled: ${SCOLAPAY_CASH_ALLOCATIONS_ENABLED:false}
     cash-excess-reservations-enabled: ${SCOLAPAY_CASH_EXCESS_RESERVATIONS_ENABLED:false}

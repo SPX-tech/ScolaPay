@@ -1,6 +1,6 @@
 # 0031 : identité du remettant et autorisation nominative de restitution
 
-- **Statut** : principes A05 et deux précisions métier acceptés par le propriétaire ; architecture de cette tranche proposée à la revue. A06 à A08 restent ouverts sur leurs autres modalités.
+- **Statut** : tranche préparatoire acceptée et intégrée par #34 au commit `0bb790f`, principes A05 et deux précisions métier validés. Les compléments cash sont suspendus au profit de Mission 005. A06 à A08 restent ouverts sur leurs autres modalités.
 - **Date** : 2026-11-12
 - **Références** : [0027](0027-restitution-excedents-jamais-affectes.md), [0029](0029-premier-reglement-especes.md), [0030](0030-reservations-excedents-especes.md).
 

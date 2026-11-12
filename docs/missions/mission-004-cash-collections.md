@@ -1,6 +1,8 @@
 # Mission 004 : encaissements espèces et affectations
 
-**Lot 1 terminé**, #30 intégrée. **Lot 2 en cours** : réceptions #31 (`6a2fdaa`), premier règlement #32 (`e49d802`) et réservations #33 (`7b38965`) intégrés. [Identification et autorisation nominative](../payments-cash-identities.md) en revue, sans confirmation physique. Toutes les capacités financières restent désactivées par défaut. Le lot 2 reste ouvert et la Mission 003 techniquement clôturée.
+**Compléments suspendus au profit de la [Mission 005 numérique](mission-005-digital-school-payments.md), sans clôture du lot 2 ni suppression de ses fondations.** Lot 1 terminé ; réceptions #31 (`6a2fdaa`), premier règlement #32 (`e49d802`), réservations #33 (`7b38965`) et identification/autorisation nominative #34 (`0bb790f`) intégrés. Aucune confirmation physique ou restitution effective n'est opérationnelle. Les capacités restent désactivées par défaut et la Mission 003 techniquement clôturée.
+
+Le cash est désormais secondaire et facultatif. A03, A04 et les règles restantes gardent leur portée pour un futur pilote espèces ; suspendre cette mission ne les valide pas et ne les implémente pas. Les garanties propres à un futur pilote numérique restent à définir dans Mission 005, sans autoriser d'exploitation actuelle.
 
 La restitution en V1, les orientations A01 à A04 et désormais A05 sont validées. La procédure historique de déclaration signée examinée indépendamment et le justificatif papier signé pour la future remise sont aussi validés, suivant [0031](../decisions/0031-identification-et-autorisation-de-restitution.md). Les autres modalités d'A06 à A08 ne sont pas implicitement arbitrées.
 

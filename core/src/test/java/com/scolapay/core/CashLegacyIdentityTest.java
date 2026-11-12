@@ -26,7 +26,8 @@ class CashLegacyIdentityTest extends CashIdentityProbeScenario {
         assertThat(replay.text("unallocatedMinor")).isEqualTo("20000");
         assertThat(before).containsAllEntriesOf(legacyReceipt).containsEntry("identification_policy","LEGACY_UNIDENTIFIED");
         assertThat(history().subList(0,legacyHistory.size())).isEqualTo(legacyHistory);
-        assertThat(history().getLast()).containsEntry("script","V11__remitter_identity_and_restitution_authorization.sql");
+        assertThat(history().get(legacyHistory.size())).containsEntry("script","V11__remitter_identity_and_restitution_authorization.sql");
+        assertThat(history().getLast()).containsEntry("script","V12__digital_payment_preparations.sql");
     }
     @Test void lesAnciennesApprobationsExigentUneNouvelleAutorisationApresVerificationDeLaSource() throws Exception{
         Legacy l=legacy();Instance current=start(null,"",true);String root=l.school().path("/payments"),actor=l.school().adminToken();

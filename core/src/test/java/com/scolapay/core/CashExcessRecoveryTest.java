@@ -56,7 +56,7 @@ class CashExcessRecoveryTest {
         }
         var installed=history();
         assertThat(installed).extracting(row->row.get("version"))
-                .containsExactly("1","2","3","4","5","6","7","7.1","7.2","8","9","10","11");
+                .containsExactly("1","2","3","4","5","6","7","7.1","7.2","8","9","10","11","12");
         assertThat(installed).allSatisfy(row->{assertThat(row.get("checksum")).isNotNull();assertThat(row.get("success")).isEqualTo(true);});
         final String writePath=path,writer=actor;final Map<String,Object> command=body;
         String table=approval?"cash_excess_decisions":"cash_excess_requests";

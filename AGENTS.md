@@ -2,7 +2,7 @@
 
 Lire [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) avant de travailler : vision, état réel, décisions, priorités et risques y sont centralisés. Vérifier ce qu'il affirme dans le code quand un choix en dépend.
 
-**Priorité actuelle : le cœur métier et financier Java (`core/`), à commencer par le [moteur de facturation](docs/missions/mission-003-billing-engine.md).** Les interfaces web viendront ensuite.
+**Priorité actuelle : [Mission 005, paiements scolaires numériques et intégration de l'API Kadryza existante](docs/missions/mission-005-digital-school-payments.md), dans le cœur Java `core/`.** La Mission 003 reste clôturée. Les compléments cash de Mission 004 sont suspendus, leurs fondations intégrées restent protégées. Aucun nouveau backend de paiement ou service Go par défaut. Les interfaces web viendront ensuite ; Families reste fermé.
 
 Hors de la feuille de route active, à ne pas proposer ni entreprendre sans demande explicite :
 

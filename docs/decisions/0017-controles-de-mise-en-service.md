@@ -23,7 +23,7 @@ Conditions initiales :
 | Condition | Vérifiée par |
 | --- | --- |
 | Toute règle juridique enregistrée est confirmée | `legally_confirmed`, sur toutes les règles et pas seulement les pays des établissements actuels : sinon, un établissement créé après le démarrage échapperait au contrôle |
-| Les invitations ont un canal de remise réel | Présence d'une implémentation de `InvitationDelivery`. **Il n'en existe aucune** : le jeton est rendu au personnel qui l'a émis |
+| Les invitations ont un canal de remise réel | Socle `InvitationDelivery`/notifications intégré par #27 : jetons retirés des réponses, e-mail configurable et aucun SMS. Le code exige encore e-mail et téléphone simultanément ; le principe accepté des canaux explicitement autorisés reste à implémenter et tester avant Families, sans affaiblir les exigences juridiques |
 | Secrets et base de production, HTTPS | **Pas encore de condition**, à préciser à l'approche de la mise en service |
 | Traitement fiscal validé, voir [0019](0019-nature-des-documents-et-numerotation.md) | **Pas encore de condition**, à ajouter avant toute exploitation réelle |
 
