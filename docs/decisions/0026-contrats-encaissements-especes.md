@@ -3,7 +3,7 @@
 - **Statut** : Orientation métier acceptée, lot 1 revu et fusionné. Lot 2 autorisé ; les arbitrages métier encore ouverts ne sont pas implicitement acceptés.
 - **Date** : 2026-11-11
 - **Décideur** : propriétaire du projet. Orientations A01 à A04 validées lors du lancement du lot 2 ; A05 à A08 restent ouverts.
-- **Implémentation** : réceptions intégrées par #31 ; port public `BillingSettlements` et [première chaîne d'affectation](../payments-cash-settlements.md) en revue, désactivée par défaut. Aucune restitution ni rectification disponible.
+- **Implémentation** : réceptions intégrées par #31 ; port public `BillingSettlements` et [première chaîne d'affectation](../payments-cash-settlements.md) intégrés par #32, désactivés par défaut. [Réservations](0030-reservations-excedents-especes.md) en revue, sans restitution effective ni rectification disponible.
 - **Complète** : [0010](0010-identite-et-acces.md), [0012](0012-convention-monetaire.md), [0015](0015-modele-de-facturation.md), [0016](0016-outbox-durable.md), [0019](0019-nature-des-documents-et-numerotation.md), [0021](0021-obligations-et-journal.md) et [0022](0022-ajustements-et-reexamen.md).
 - **Remplace** : aucune décision passée. Prépare l'extension additive de la facturation pour les règlements confirmés.
 

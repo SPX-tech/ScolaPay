@@ -1,9 +1,9 @@
 # 0028 : projections des règlements et préservation des ajustements
 
-- **Statut** : Invariants M003 acquis et orientations A01 à A04 arbitrées. Codes techniques et restrictions conservatrices de l'implémentation en revue ; A05 à A08 restent ouverts.
+- **Statut** : Invariants M003 acquis et orientations A01 à A04 arbitrées. Tranche technique intégrée par #32, avec restrictions conservatrices ; A05 à A08 restent ouverts.
 - **Date** : 2026-11-11
 - **Décideur** : propriétaire du projet pour les invariants existants, arbitrages de Mission 004 encore attendus.
-- **Implémentation** : première chaîne en revue, projections et couverture A02 pour les cas pris en charge. Voir [0029](0029-premier-reglement-especes.md). Aucune activation réelle.
+- **Implémentation** : première chaîne intégrée, projections et couverture A02 pour les cas pris en charge. Voir [0029](0029-premier-reglement-especes.md). Aucune activation réelle.
 - **Complète** : [0012](0012-convention-monetaire.md), [0015](0015-modele-de-facturation.md), [0021](0021-obligations-et-journal.md), [0022](0022-ajustements-et-reexamen.md), [0023](0023-personnes-liees-et-vues.md), [0026](0026-contrats-encaissements-especes.md) et [0027](0027-restitution-excedents-jamais-affectes.md).
 
 ## Contexte vérifié

@@ -2,7 +2,7 @@
 
 Cette livraison du lot 2 réutilise les [réceptions intégrées par #31](payments-cash-receptions.md). Une réception déclarée n'est pas une obligation réglée. Seule une affectation confirmée, liée à son `SETTLEMENT`, sa preuve et son audit, réduit le reste à payer.
 
-La tranche reste désactivée pour tout usage réel. La restitution des excédents jamais affectés n'est pas opérationnelle et le lot 2 n'est pas terminé. Les orientations A01 à A04 sont arbitrées ; A05 à A08 restent ouverts. Les choix techniques conservateurs décrits ici ne constituent pas des décisions métier validées. Voir [0029](decisions/0029-premier-reglement-especes.md).
+La tranche a été intégrée par #32 au commit `e49d802` et reste désactivée pour tout usage réel. La restitution effective des excédents jamais affectés n'est pas opérationnelle et le lot 2 n'est pas terminé. Les [réservations](payments-cash-excess.md) ne permettent aucune remise physique. Les orientations A01 à A04 sont arbitrées ; A05 à A08 restent ouverts. Les choix techniques conservateurs décrits ici ne constituent pas des décisions métier validées. Voir [0029](decisions/0029-premier-reglement-especes.md).
 
 ## Parcours et contrat
 
@@ -41,7 +41,7 @@ Les codes techniques implémentés et proposés pour revue sont `OPEN`, `PARTIAL
 
 La preuve contient réception, obligation et écriture liées, montant et devise, auteur serveur, date, version et snapshots initial/net facturé/règlements/reste avant et après. Ces snapshots ne changent pas lorsqu'une autre opération est effectuée ensuite. Les soldes courants sont recalculés depuis le journal.
 
-Les lectures de réception montrent désormais le cumul confirmé et les espèces encore non affectées. Leurs identifiants, référence, auteur, horodatage, reçu et monnaie rendue d'origine restent immuables. Les champs de couverture sont courants : un rejeu de déclaration ne doit pas être interprété comme une nouvelle réception ou une restauration des fonds déjà affectés.
+Les lectures de réception montrent le cumul confirmé et les espèces encore non affectées. V10 ajoute `historicalAllocatedMinor`, `reservedMinor` et `availableForAllocationMinor` : une réservation réduit le disponible sans sortie physique. Le non-affecté inclut les réservations et ne doit donc pas être utilisé comme budget libre. Leurs identifiants, référence, auteur, horodatage, reçu et monnaie rendue d'origine restent immuables. Les champs de couverture sont courants : un rejeu de déclaration ne doit pas être interprété comme une nouvelle réception ou une restauration des fonds déjà affectés.
 
 Une réponse perdue après commit impose une relecture par clé ou le rejeu de la même intention. Ni arrêt brutal ni seconde instance ne doivent recréer la réception, l'affectation ou son règlement. Une nouvelle clé ne prouve pas un nouveau geste physique : A03/A04 restent indispensables avant usage réel.
 

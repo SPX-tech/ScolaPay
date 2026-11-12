@@ -52,7 +52,7 @@ class CashAllocationService {
             if (!cash.currency().equals(target.currency())) throw ApiException.invalid("CURRENCY_MISMATCH","Les devises sont incompatibles.");
             if (target.journalSize()!=expectedJournal) throw ApiException.conflict("ALLOCATION_OUTDATED","Le journal a changé. Relisez la situation avant de confirmer.");
             if (amount>target.dueMinor()) throw ApiException.invalid("AMOUNT_EXCEEDS_DUE","Le montant dépasse le reste à payer.");
-            if (amount>cash.amountRetainedMinor()-cash.allocatedMinor()) throw ApiException.invalid("AMOUNT_EXCEEDS_RECEPTION","Le montant dépasse les espèces non affectées.");
+            if (amount>cash.availableForAllocationMinor()) throw ApiException.invalid("AMOUNT_EXCEEDS_RECEPTION","Le montant dépasse les espèces disponibles non réservées.");
             UUID id=UUID.randomUUID();
             Allocation allocation=new Allocation(id,reception,obligation,UUID.randomUUID(),key,"CA-"+id,cash.currency(),amount,
                     target.issuedMinor(),target.netBilledMinor(),target.settledMinor(),target.dueMinor(),target.journalSize(),

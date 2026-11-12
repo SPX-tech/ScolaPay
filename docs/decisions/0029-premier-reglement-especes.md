@@ -1,6 +1,6 @@
 # 0029 : premier règlement espèces et intégrité entre modules
 
-- **Statut** : Implémentation technique proposée à la revue du lot 2. Parmi les arbitrages A01 à A08, seules les orientations A01 à A04 sont explicitement arbitrées. A05 à A08 restent ouverts.
+- **Statut** : Tranche technique intégrée par #32 au commit `e49d802`, lot 2 encore ouvert. Parmi les arbitrages A01 à A08, seules les orientations A01 à A04 sont explicitement arbitrées. A05 à A08 restent ouverts.
 - **Date** : 2026-11-11
 - **Références** : [0026](0026-contrats-encaissements-especes.md), [0027](0027-restitution-excedents-jamais-affectes.md), [0028](0028-projections-reglements-et-ajustements.md).
 
@@ -55,7 +55,7 @@ Les vues familiales conservent leurs types et permissions. Elles ne recopient ni
 
 ## Limites et vérification
 
-Les deux capacités d'écriture restent désactivées par défaut. Il n'existe ni crédit libre, remboursement, restitution, rectification de caisse, panier multi-obligations ni fournisseur. La restitution V1 reste exigée pour terminer le lot 2 ; la conservation des réceptions et affectations immuables prépare la provenance, sans prétendre fournir ses réservations et contrôles complets.
+Les deux capacités d'écriture restent désactivées par défaut. Il n'existe ni crédit libre, remboursement, restitution effective, rectification de caisse, panier multi-obligations ni fournisseur. La restitution V1 reste exigée pour terminer le lot 2 ; les réservations ajoutées par [0030](0030-reservations-excedents-especes.md) complètent la protection du budget sans autoriser de remise physique. V10 complète V9 sans la réécrire et les affectations excluent désormais les montants réservés.
 
 Les tests sont exécutés sur PostgreSQL jetable : API, montants, droits, concurrence entre appels et instances, arrêt après commit avant réponse, SQL direct, audit défaillant, péremption et régressions M003. L'absence de `SETTLED` dans une énumération historique est remplacée par une preuve fonctionnelle : une remise complète reste `WAIVED`, avec zéro règlement, et une écriture de paiement sans source reste impossible.
 

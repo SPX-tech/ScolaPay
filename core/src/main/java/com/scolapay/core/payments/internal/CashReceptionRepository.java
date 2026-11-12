@@ -16,10 +16,13 @@ class CashReceptionRepository {
     record Reception(
             UUID id, String reference, UUID idempotencyKey, String currency,
             long amountReceivedMinor, long changeGivenMinor, Instant recordedAt,
-            UUID recordedByAccountId, LocalDate businessDate, String timezone, long allocatedMinor) {
+            UUID recordedByAccountId, LocalDate businessDate, String timezone, long allocatedMinor, long reservedMinor) {
 
         long amountRetainedMinor() {
             return amountReceivedMinor - changeGivenMinor;
+        }
+        long availableForAllocationMinor() {
+            return amountRetainedMinor() - allocatedMinor - reservedMinor;
         }
     }
 
@@ -27,7 +30,10 @@ class CashReceptionRepository {
             SELECT id, reference, idempotency_key, currency, amount_received_minor, change_given_minor,
                    recorded_at, recorded_by_account_id, business_date, timezone,
                    (SELECT COALESCE(sum(a.amount_minor),0) FROM cash_allocations a WHERE a.establishment_id=cash_receptions.establishment_id
-                     AND a.reception_id=cash_receptions.id) AS allocated_minor
+                     AND a.reception_id=cash_receptions.id) AS allocated_minor,
+                   (SELECT COALESCE(sum(r.amount_minor),0) FROM cash_excess_requests r
+                     WHERE r.establishment_id=cash_receptions.establishment_id AND r.reception_id=cash_receptions.id
+                     AND NOT EXISTS (SELECT 1 FROM cash_excess_decisions d WHERE d.request_id=r.id AND d.kind IN ('REJECTED','WITHDRAWN'))) AS reserved_minor
             FROM cash_receptions WHERE establishment_id = :establishmentId
             """;
 
@@ -71,11 +77,13 @@ class CashReceptionRepository {
         return new Reception(Columns.uuid(rs, "id"), rs.getString("reference"), Columns.uuid(rs, "idempotency_key"),
                 rs.getString("currency"), rs.getLong("amount_received_minor"), rs.getLong("change_given_minor"),
                 Columns.instant(rs, "recorded_at"), Columns.uuid(rs, "recorded_by_account_id"),
-                rs.getObject("business_date", LocalDate.class), rs.getString("timezone"), rs.getLong("allocated_minor"));
+                rs.getObject("business_date", LocalDate.class), rs.getString("timezone"), rs.getLong("allocated_minor"), rs.getLong("reserved_minor"));
     }
 
     Optional<Reception> lock(UUID establishmentId, UUID id) {
-        return jdbc.sql(SELECT + " AND id=:id FOR UPDATE")
-                .param("establishmentId", establishmentId).param("id", id).query(CashReceptionRepository::reception).optional();
+        boolean found=jdbc.sql("SELECT id FROM cash_receptions WHERE establishment_id=:establishmentId AND id=:id FOR UPDATE")
+                .param("establishmentId", establishmentId).param("id", id).query(UUID.class).optional().isPresent();
+        // Les sommes sont relues après l'attente du verrou, avec un nouvel instantané READ COMMITTED.
+        return found ? find(establishmentId,id) : Optional.empty();
     }
 }
