@@ -29,7 +29,8 @@ class CashReceptionController {
     record View(
             UUID id, String reference, String currency, String amountReceivedMinor, String changeGivenMinor,
             String amountRetainedMinor, String unallocatedMinor, String settledMinor, String allocationState,
-            String proofNature, Instant recordedAt, UUID recordedByAccountId, LocalDate businessDate, String timezone) {
+            String proofNature, Instant recordedAt, UUID recordedByAccountId, LocalDate businessDate, String timezone,
+            String historicalAllocatedMinor, String reservedMinor, String availableForAllocationMinor) {
 
         static View of(Reception reception) {
             return new View(reception.id(), reception.reference(), reception.currency(),
@@ -38,7 +39,8 @@ class CashReceptionController {
                     Long.toString(reception.allocatedMinor()), reception.allocatedMinor() == 0 ? "UNALLOCATED"
                             : reception.allocatedMinor() == reception.amountRetainedMinor() ? "ALLOCATED" : "PARTIALLY_ALLOCATED",
                     "INTERNAL_CASH_DECLARATION", reception.recordedAt(),
-                    reception.recordedByAccountId(), reception.businessDate(), reception.timezone());
+                    reception.recordedByAccountId(), reception.businessDate(), reception.timezone(),
+                    Long.toString(reception.allocatedMinor()), Long.toString(reception.reservedMinor()), Long.toString(reception.availableForAllocationMinor()));
         }
     }
 

@@ -79,6 +79,7 @@ scolapay:
   payments:
     cash-receptions-enabled: ${SCOLAPAY_CASH_RECEPTIONS_ENABLED:false}
     cash-allocations-enabled: ${SCOLAPAY_CASH_ALLOCATIONS_ENABLED:false}
+    cash-excess-reservations-enabled: ${SCOLAPAY_CASH_EXCESS_RESERVATIONS_ENABLED:false}
   bootstrap:
     # Ne crée le premier opérateur que si ces deux valeurs sont fournies.
     operator-contact: ${SCOLAPAY_BOOTSTRAP_OPERATOR_CONTACT:}
