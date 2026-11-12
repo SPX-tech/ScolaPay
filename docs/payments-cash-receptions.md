@@ -27,7 +27,9 @@ La devise est celle de l'établissement. L'auteur, l'horodatage, la date locale 
 
 La réponse conserve `id`, `reference`, `currency`, `amountReceivedMinor`, `changeGivenMinor`, `amountRetainedMinor`, `recordedAt`, `recordedByAccountId`, `businessDate` et `timezone`. Les champs courants `unallocatedMinor` et `settledMinor` suivent les affectations confirmées : initialement montant conservé et zéro, puis montant conservé moins affectations et cumul affecté. `allocationState` est dérivé : `UNALLOCATED`, `PARTIALLY_ALLOCATED` ou `ALLOCATED`. `proofNature` reste `INTERNAL_CASH_DECLARATION`. Les montants JSON sont des chaînes, suivant 0012.
 
-Ces codes décrivent la couverture technique de la réception, distincte des codes d'obligation proposés pour revue. Ils ne constituent pas un arbitrage métier A08. La référence `CR-{uuid}` n'est ni un numéro fiscal ni une preuve externe de présence des billets. Les faits physiques déclarés sont immuables ; leur couverture courante peut évoluer. Un rejeu conserve la même réception et ces faits, sans restaurer les fonds déjà affectés. Aucun PDF fiscal, transfert de caisse, crédit libre, restitution ou rectification n'est disponible.
+V10 ajoute `historicalAllocatedMinor`, `reservedMinor` et `availableForAllocationMinor` suivant le [contrat de réservation](payments-cash-excess.md). Le non-affecté inclut les réservations : il ne doit plus être interprété comme un budget libre à affecter. Une approbation ne constate aucune sortie physique ; les faits de réception et règlements restent inchangés.
+
+Ces codes décrivent la couverture technique de la réception, distincte des codes d'obligation proposés pour revue. Ils ne constituent pas un arbitrage métier A08. La référence `CR-{uuid}` n'est ni un numéro fiscal ni une preuve externe de présence des billets. Les faits physiques déclarés sont immuables ; leur couverture courante peut évoluer. Un rejeu conserve la même réception et ces faits, sans restaurer les fonds déjà affectés. Aucun PDF fiscal, transfert de caisse, crédit libre, restitution effective ou rectification n'est disponible.
 
 ## Permissions et confidentialité
 
@@ -73,10 +75,10 @@ Les orientations A01 à A04 sont validées. La nouvelle chaîne applique A02 aux
 
 A05 à A08 restent partiellement ouverts : identité du remettant et bénéficiaire, mandat, dates métier et arriérés, rectifications, statuts et justificatifs finaux. La restitution des seuls excédents jamais affectés reste acquise, avec justification, second compte approbateur, remise physique confirmée et trace. Son parcours reste fermé tant que permissions détaillées, bénéficiaire et preuves ne sont pas suffisamment définis.
 
-La [livraison de règlement](payments-cash-settlements.md) ajoute le port public de `billing` et la transaction affectation-preuve-journal-audit reliée à la réception confirmée. Elle doit être revue avec toutes les preuves de 0028. Les activations restent fermées pour tout usage réel ; restitution et contrôle quotidien ne sont pas livrés par cette chaîne.
+La [livraison de règlement](payments-cash-settlements.md), intégrée par #32, ajoute le port public de `billing` et la transaction affectation-preuve-journal-audit reliée à la réception confirmée. Les [réservations](payments-cash-excess.md) en revue préparent la restitution, sans autoriser le geste physique. Les activations restent fermées pour tout usage réel ; restitution effective et contrôle quotidien ne sont pas livrés par ces chaînes.
 
 ## Validation
 
-Les tests réels couvrent les API, rôles, isolation, montants, relectures, concurrence, audit atomique, contraintes SQL et maintien de l'interdiction de règlement. Une sonde de test dans une JVM séparée vérifie l'arrêt après commit avant réponse, les reprises et la concurrence entre deux instances. Les migrations et sommes de contrôle doivent rester identiques au redémarrage.
+Les tests réels couvrent les API, rôles, isolation, montants, relectures, concurrence, audit atomique, contraintes SQL et maintien de l'interdiction de règlement sans affectation confirmée. Une sonde de test dans une JVM séparée vérifie l'arrêt après commit avant réponse, les reprises et la concurrence entre deux instances. Les migrations et sommes de contrôle doivent rester identiques au redémarrage.
 
 Les preuves exactes de la tête revue figurent dans la PR et les artefacts GitHub Actions. Aucune compilation ni suite lourde n'est exécutée sur le poste ou le VPS. Aucun déploiement, fournisseur réel ou portail Families n'est activé.

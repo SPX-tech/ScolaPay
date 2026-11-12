@@ -212,4 +212,26 @@ class CashExcessReservationTest extends CashExcessScenario {
                 "idempotencyKey",UUID.randomUUID(),"amountMinor","1","reason","Motif","beneficiaryAccountId",UUID.randomUUID())).status()).isEqualTo(400);
         assertThat(count("cash_excess_requests",t)).isZero();
     }
+
+    @Test void unLienFamilialNeDonneAucunDroitDeCaisseEtFamiliesResteFerme() {
+        Tenant t=newTenant();UUID source=receive(t,t.adminToken(),20000),key=UUID.randomUUID();
+        UUID id=request(t,source,key,15000,"Demande privée").id("id");String guardian=newGuardian(t,newStudent(t));
+        assertThat(get(t.path("/payments/excess-requests/"+id),guardian).status()).isEqualTo(404);
+        assertThat(get(t.path("/payments/excess-requests/by-key/"+key),guardian).status()).isEqualTo(404);
+        assertThat(request(t,guardian,source,UUID.randomUUID(),1,"Parenté sans droit").status()).isEqualTo(404);
+        assertThat(decision(t,guardian,id,UUID.randomUUID(),"approval",null).status()).isEqualTo(404);
+        assertThat(get("/api/v2/me/students",guardian).status()).isEqualTo(404);
+    }
+
+    @Test void uneCleDeDecisionNePeutChangerDAuteurDeDemandeOuDeContenu() {
+        Tenant t=newTenant();UUID source=receive(t,t.adminToken(),20000),id=request(t,source,UUID.randomUUID(),10000,"Demande").id("id");
+        String director=newStaff(t,"DIRECTOR");UUID key=UUID.randomUUID();
+        assertThat(decision(t,director,id,key,"rejection","Examen clos").status()).isEqualTo(201);
+        assertThat(decision(t,director,id,key,"rejection","Autre motif").code()).isEqualTo("CASH_EXCESS_KEY_CONFLICT");
+        assertThat(decision(t,newStaff(t,"ACCOUNTANT"),id,key,"rejection","Examen clos").code()).isEqualTo("CASH_EXCESS_KEY_CONFLICT");
+        UUID other=request(t,source,UUID.randomUUID(),10000,"Autre demande").id("id");
+        assertThat(decision(t,director,other,key,"approval",null).code()).isEqualTo("CASH_EXCESS_KEY_CONFLICT");
+        assertThat(excess(t,other).text("state")).isEqualTo("REQUESTED");
+        assertThat(count("cash_excess_decisions",t)).isEqualTo(1);
+    }
 }

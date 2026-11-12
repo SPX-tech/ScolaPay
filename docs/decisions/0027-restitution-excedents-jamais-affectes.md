@@ -3,7 +3,7 @@
 - **Statut** : Décision métier acceptée par le propriétaire lors de l'engagement du lot 1 de la Mission 004. Le modèle de provenance, les noms des états et les contrats proposés sont soumis à la revue documentaire.
 - **Date** : 2026-11-11
 - **Décideur** : propriétaire du projet
-- **Implémentation** : aucune, restitution incluse dans la cible V1.
+- **Implémentation** : réservations et décisions budgétaires partielles en revue ([0030](0030-reservations-excedents-especes.md)). Aucune remise physique ni restitution effective opérationnelle ; la cible V1 reste à compléter.
 - **Complète** : [0026](0026-contrats-encaissements-especes.md), [0019](0019-nature-des-documents-et-numerotation.md) et les invariants de la Mission 003.
 - **Remplace** : aucune décision de facturation.
 
@@ -16,6 +16,8 @@ Une somme ayant été affectée ne peut jamais retrouver cette éligibilité par
 La propriété concerne les fractions de la réception. Une réception partiellement affectée peut donc comporter un excédent restituable. Interdire toute restitution dès qu'une partie de la réception a été affectée serait trop restrictif.
 
 ## Provenance proposée
+
+Le modèle ci-dessous est la cible complète, distincte du calcul conservateur F/H/Q de la tranche sans compensation ni sortie décrit en 0030. Les états de remise proposés ne sont pas tous implémentés. La décision métier de restitution reste acquise ; le code de réservation ne tranche pas les modalités encore ouvertes.
 
 Les références de provenance sont immuables et suivent les montants à travers les affectations et leurs compensations. L'éligibilité ne se déduit pas du seul montant actuellement non affecté.
 
@@ -52,7 +54,7 @@ Dans le troisième cas, une contrepassation libre laissant des fonds anciennemen
 
 ## Circuit proposé et points d'autorisation
 
-Les états ci-dessous sont des noms de contrat proposés. Les attributions aux rôles, la preuve de remise et les délais restent en A01, A04 et A05.
+Les états ci-dessous sont des noms de contrat proposés. Les orientations A01 à A04 sont validées ; les permissions détaillées de remise, la preuve et les délais attendent encore leurs modalités et les arbitrages A05 à A08. `APPROVED_PENDING_HANDOVER` n'est pas l'état livré : l'examen technique limité produit `APPROVED_RESERVED`, de portée `RESERVATION_ONLY_V1`, sans autorisation de remise.
 
 | État de la demande | Action | Effet |
 | --- | --- | --- |

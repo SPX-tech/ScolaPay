@@ -1,6 +1,6 @@
 # Mission 004 : encaissements espèces et affectations
 
-**Lot 1 terminé**, #30 intégrée. **Lot 2 en cours** : #31 fusionnée au commit `6a2fdaa` pour les réceptions ; [première chaîne de règlement d'une obligation](../payments-cash-settlements.md) en revue, désactivée par défaut. La restitution reste fermée et le lot 2 n'est pas terminé. La Mission 003 reste techniquement clôturée.
+**Lot 1 terminé**, #30 intégrée. **Lot 2 en cours** : #31 fusionnée au commit `6a2fdaa` pour les réceptions ; #32 fusionnée au commit `e49d802` pour la [première chaîne de règlement d'une obligation](../payments-cash-settlements.md). Les [réservations d'excédents](../payments-cash-excess.md) sont en revue ; aucune remise physique n'est opérationnelle. Toutes les nouvelles capacités financières restent désactivées par défaut. Le lot 2 n'est pas terminé et la Mission 003 reste techniquement clôturée.
 
 La restitution en V1 des excédents jamais affectés et les orientations A01 à A04 reçues au démarrage du lot 2 sont validées. Les autres propositions de permissions détaillées, de statuts et de procédures ci-dessous ne constituent pas des arbitrages acquis.
 
@@ -158,4 +158,8 @@ Les propositions ont été confrontées aux ports `CurrentActor`, `Establishment
 
 Le lot documentaire vérifie la cohérence des références, la distinction entre état réel et cible et le périmètre du diff. Les futurs invariants seront prouvés par la vraie API, des transactions concurrentes et du SQL direct sur PostgreSQL jetable dans GitHub Actions.
 
-Le lot 1 est terminé. #31 a intégré la première PR de réceptions non affectées. La présente chaîne autorise techniquement un règlement seulement depuis une réception existante et avec toutes les gardes de [0029](../decisions/0029-premier-reglement-especes.md), sous activation de test explicite. Le lot 2 reste incomplet tant que ses autres exigences, dont la restitution limitée, ne sont pas opérationnelles. La Mission 003 reste clôturée, Families fermé et les fournisseurs désactivés. Aucun frontend, déploiement, import réel ou migration persistante n'est autorisé.
+Le lot 1 est terminé. #31 a intégré les réceptions et #32 le règlement d'une obligation avec les gardes de [0029](../decisions/0029-premier-reglement-especes.md), sous activation de test explicite. La tranche de [0030](../decisions/0030-reservations-excedents-especes.md) réserve seulement le budget jamais affecté et conserve les demandes et décisions ; elle ne réalise pas la restitution limitée exigée pour terminer le lot 2.
+
+Pour S05, seule l'éligibilité de la fraction jamais affectée et sa réservation sont livrées ; S06 distingue approbation et sortie, S08 couvre la double consommation. S07 reste un refus de remise, **pas** une preuve de confirmation physique idempotente. S09/S10 conservent les refus de compensation et la consommation historique ; les variantes de rectification restent fermées. Le modèle complet de provenance et les scénarios cibles ci-dessus ne sont pas déclarés intégralement implémentés.
+
+Avant activation de la remise : arbitrer identité du bénéficiaire et mandat, habilitations du geste physique, justificatif, incident et transition des réservations `RESERVATION_ONLY_V1`. A05 à A08 demeurent ouverts ; aucune approbation budgétaire n'est rétroactivement une autorisation physique. Le secours A03 et le contrôle quotidien A04 restent à réaliser avant pilote. La Mission 003 reste clôturée, Families fermé et les fournisseurs désactivés. Aucun frontend, déploiement, import réel ou migration persistante n'est autorisé.

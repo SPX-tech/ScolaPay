@@ -96,7 +96,7 @@ Les corrections de personnes conservent l'identité et le compte. Une révision 
 
 ## Déclarations d'espèces
 
-Les [déclarations d'espèces](../docs/payments-cash-receptions.md), intégrées par #31, servent à la [première chaîne de règlement](../docs/payments-cash-settlements.md). `SCOLAPAY_CASH_RECEPTIONS_ENABLED=false` et `SCOLAPAY_CASH_ALLOCATIONS_ENABLED=false` par défaut ; les lectures de preuve autorisées survivent à la désactivation. V9 ajoute l'affectation et son journal lié, sans réécrire V1 à V8. Les écritures exigent `READ COMMITTED`, les lectures composites gardent leurs instantanés cohérents. Restitution, rectification, crédit libre et document fiscal restent indisponibles ; le lot 2 demeure ouvert et aucun pilote n'est prêt.
+Les [déclarations d'espèces](../docs/payments-cash-receptions.md), intégrées par #31, servent à la [première chaîne de règlement](../docs/payments-cash-settlements.md), intégrée par #32. `SCOLAPAY_CASH_RECEPTIONS_ENABLED=false` et `SCOLAPAY_CASH_ALLOCATIONS_ENABLED=false` par défaut ; les lectures de preuve autorisées survivent à la désactivation. V9 ajoute l'affectation et son journal lié. V10 ajoute les [réservations d'excédents](../docs/payments-cash-excess.md), sans réécrire V1 à V9, et exclut ces réservations du disponible d'affectation. `SCOLAPAY_CASH_EXCESS_RESERVATIONS_ENABLED=false` par défaut ; même activé en test, ce flag ne permet aucune remise physique. Les écritures exigent `READ COMMITTED`, les lectures composites gardent leurs instantanés cohérents. Restitution effective, rectification, crédit libre et document fiscal restent indisponibles ; le lot 2 demeure ouvert et aucun pilote n'est prêt.
 
 ## Ajouter un module
 

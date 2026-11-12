@@ -9,6 +9,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -165,6 +168,43 @@ class CashExcessSqlTest extends CashExcessScenario {
         assertThat(count("cash_allocations",t)).isZero();assertThat(journalSize(o)).isEqualTo(1);
         allocation(t,source,o,actor,5000);
         assertThat(funds(t,source).text("availableForAllocationMinor")).isEqualTo("0");
+    }
+
+    @Test void desTransactionsSqlConcurrentesNePeuventDepasserLaProvenance() throws Exception {
+        School s=school();Tenant t=s.tenant();UUID o=issuedObligation(s),source=receive(t,t.adminToken(),20000);
+        UUID actor=get("/api/v2/me",t.adminToken()).id("id");
+        Raw r=new Raw(t,source,actor,UUID.randomUUID(),UUID.randomUUID(),Instant.now().truncatedTo(ChronoUnit.MICROS));
+        CountDownLatch barrier=new CountDownLatch(1);
+        try(var executor=Executors.newVirtualThreadPerTaskExecutor()){
+            var a=executor.submit(()->{barrier.await();return acceptedSql(()->allocation(t,source,o,actor,15000));});
+            var b=executor.submit(()->{barrier.await();return acceptedSql(()->commit(r,Map.of()));});
+            barrier.countDown();assertThat(List.of(a.get(15,TimeUnit.SECONDS),b.get(15,TimeUnit.SECONDS)))
+                    .containsExactlyInAnyOrder(true,false);
+        }
+        var balance=funds(t,source);
+        assertThat(Long.parseLong(balance.text("historicalAllocatedMinor"))+Long.parseLong(balance.text("reservedMinor"))).isEqualTo(15000);
+        assertThat(balance.text("availableForAllocationMinor")).isEqualTo("5000");
+    }
+
+    boolean acceptedSql(Runnable write){
+        try{write.run();return true;}
+        catch(org.springframework.dao.DataIntegrityViolationException refused){
+            assertThat(refused.getMostSpecificCause()).isInstanceOf(java.sql.SQLException.class);
+            assertThat(((java.sql.SQLException)refused.getMostSpecificCause()).getSQLState()).isEqualTo("23514");
+            assertThat(refused.getMessage()).containsAnyOf("Budget jamais affecte","fonds reserves");return false;
+        }
+    }
+
+    @Test void uneApprobationSansAuditNeDevientJamaisUnFaitDurable() {
+        Raw r=raw();commit(r,Map.of());UUID reviewer=get("/api/v2/me",newStaff(r.tenant(),"DIRECTOR")).id("id");
+        assertThatThrownBy(()->new TransactionTemplate(transactions).executeWithoutResult(tx->event(r,UUID.randomUUID(),reviewer,"APPROVED",null)))
+                .isInstanceOf(RuntimeException.class).hasStackTraceContaining("audit lie");
+        assertThat(excess(r.tenant(),r.id()).text("state")).isEqualTo("REQUESTED");
+        assertThat(funds(r.tenant(),r.source()).text("reservedMinor")).isEqualTo("15000");
+        assertThatThrownBy(()->decide(r,reviewer,"REJECTED",null)).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(()->decide(r,reviewer,"APPROVED","Note interdite")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(()->decide(r,reviewer,"REJECTED"," \t ")).isInstanceOf(RuntimeException.class);
+        assertThat(count("cash_excess_decisions",r.tenant())).isZero();decide(r,reviewer,"APPROVED",null);
     }
 
     void allocation(Tenant t,UUID source,UUID obligation,UUID actor,long amount) {

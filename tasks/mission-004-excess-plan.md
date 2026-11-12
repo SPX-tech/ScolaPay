@@ -13,10 +13,13 @@ Choix techniques proposés pour revue : demandes par le déclarant habilité, ap
 ## Vérification et livraison
 
 - [x] Examiner ADR 0027 et les invariants V8/V9, conserver A05 à A08 ouverts.
-- [ ] Écrire les tests HTTP et observer l'échec fonctionnel en CI avant implémentation.
-- [ ] Construire demandes/décisions immuables, preuves et audit atomiques, clés idempotentes et refus des états inconnus.
-- [ ] Ajouter V10 sans réécrire V1 à V9, intégrer les réservations au budget d'affectation.
-- [ ] Vérifier S05-S10, approbations multiples, retrait/rejet, confidentialité, SQL direct/NULL, commit défaillant, concurrence et reprise entre JVM.
+- [x] Écrire les tests HTTP et observer l'échec fonctionnel en CI avant implémentation : [43180735222](https://github.com/SPX-tech/ScolaPay/actions/runs/43180735222), compilation réussie, deux assertions attendues 201 / obtenues 404, aucune erreur ni test ignoré.
+- [x] Construire demandes/décisions immuables, preuves et audit atomiques, clés idempotentes et refus des états inconnus : [premier vert](https://github.com/SPX-tech/ScolaPay/actions/runs/43182191344), deux tests.
+- [x] Ajouter V10 sans réécrire V1 à V9, intégrer les réservations au budget d'affectation.
+- [x] Vérifier les fractions réservables S05/S06/S08 et les refus S09/S10, approbations multiples, retrait/rejet, confidentialité, SQL direct/NULL, commit défaillant, concurrence et reprise entre JVM : [43186931814](https://github.com/SPX-tech/ScolaPay/actions/runs/43186931814), 207 tests dont 33 propres aux excédents, zéro échec, erreur ou test ignoré.
+- [ ] Valider la tête finale avec les compléments SQL concurrents, la suite Java complète et Containers.
 - Les résultats de la tête finale et ses limites seront consignés dans la PR en brouillon. Le lot 2 reste ouvert ; A03/A04 demeurent nécessaires avant pilote.
+
+S07 reste un test de refus du chemin de remise, pas une confirmation effective idempotente. Les scénarios complets de sortie et le modèle de provenance avec compensations ne sont pas déclarés livrés.
 
 Aucune opération financière réelle, migration persistante, fournisseur, frontend, ouverture Families, fusion ou modification des protections de main.
