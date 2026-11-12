@@ -43,6 +43,7 @@ final class TestDatabases {
                 "--spring.datasource.username=" + POSTGRES.getUsername(),
                 "--spring.datasource.password=" + POSTGRES.getPassword(),
                 "--scolapay.security.jwt-secret=" + IntegrationTest.JWT_SECRET,
+                "--scolapay.payments.identity-encryption-key=" + com.scolapay.core.payments.internal.CashIdentityFixtures.KEY,
                 "--scolapay.bootstrap.operator-contact=" + IntegrationTest.OPERATOR_CONTACT,
                 "--scolapay.bootstrap.operator-password=" + IntegrationTest.OPERATOR_PASSWORD);
     }

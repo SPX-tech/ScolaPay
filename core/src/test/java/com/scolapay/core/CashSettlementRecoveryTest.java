@@ -50,7 +50,7 @@ class CashSettlementRecoveryTest {
         UUID obligation=jdbc.sql("SELECT id FROM obligations WHERE establishment_id=:tenant AND student_record_id=:student")
                 .param("tenant",school.id()).param("student",student).query(UUID.class).single();
         var receipt=api.post(school.path("/payments/cash-receptions"),actor,Map.of("idempotencyKey",UUID.randomUUID(),
-                "amountReceivedMinor","100000","changeGivenMinor","0","cashReceivedConfirmed",true));
+                "amountReceivedMinor","100000","changeGivenMinor","0","cashReceivedConfirmed",true,"remitter",IntegrationTest.REMITTER));
         assertThat(receipt.status()).as(receipt.raw()).isEqualTo(201);
         return new Fixture(school,obligation,receipt.id("id"));
     }
@@ -63,7 +63,8 @@ class CashSettlementRecoveryTest {
         Instance first=start(true,true,true); Fixture f=setup(first.api());
         UUID key=UUID.randomUUID(); var originalHistory=history();
         assertThat(originalHistory).extracting(row->row.get("version"))
-                .containsExactly("1","2","3","4","5","6","7","7.1","7.2","8","9","10");
+                .containsExactly("1","2","3","4","5","6","7","7.1","7.2","8","9","10","11");
+        assertThat(originalHistory.get(12)).containsEntry("script","V11__remitter_identity_and_restitution_authorization.sql");
         assertThat(originalHistory.get(11)).containsEntry("script","V10__cash_excess_reservations.sql");
         try(var executor=Executors.newVirtualThreadPerTaskExecutor()) {
             var pending=executor.submit(()->first.api().post(path(f),f.school().adminToken(),command(f,key)));

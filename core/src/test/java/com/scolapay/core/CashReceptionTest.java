@@ -176,7 +176,7 @@ class CashReceptionTest extends BillingScenarioTest {
             assertThat(record(tenant, tenant.adminToken(), UUID.randomUUID(), "10", change).status()).isEqualTo(422);
         }
         Map<String, Object> body = new HashMap<>(Map.of("idempotencyKey", UUID.randomUUID(),
-                "amountReceivedMinor", "25000", "changeGivenMinor", "0", "cashReceivedConfirmed", false));
+                "amountReceivedMinor", "25000", "changeGivenMinor", "0", "cashReceivedConfirmed", false,"remitter",REMITTER));
         assertThat(post(tenant.path("/payments/cash-receptions"), tenant.adminToken(), body).status()).isEqualTo(422);
         body.remove("cashReceivedConfirmed");
         assertThat(post(tenant.path("/payments/cash-receptions"), tenant.adminToken(), body).status()).isEqualTo(400);
@@ -340,6 +340,7 @@ class CashReceptionTest extends BillingScenarioTest {
                 """).param("id", id).param("tenant", tenant.id()).param("reference", reference).param("key", UUID.randomUUID())
                 .param("currency", currency).param("received", received).param("change", change)
                 .param("confirmed", confirmed).param("actor", actor).update();
+        com.scolapay.core.payments.internal.CashIdentityFixtures.identifyRaw(jdbc,tenant.id(),id,actor);
     }
 
     void insertRawWithAudit(Tenant tenant, UUID id, UUID actor, String currency, long received, long change, Boolean confirmed, String reference) {
@@ -357,6 +358,6 @@ class CashReceptionTest extends BillingScenarioTest {
     Response record(Tenant tenant, String token, UUID key, String received, String change) {
         return post(tenant.path("/payments/cash-receptions"), token, Map.of(
                 "idempotencyKey", key, "amountReceivedMinor", received, "changeGivenMinor", change,
-                "cashReceivedConfirmed", true));
+                "cashReceivedConfirmed", true,"remitter",REMITTER));
     }
 }

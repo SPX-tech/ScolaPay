@@ -12,7 +12,7 @@ import tools.jackson.databind.JsonNode;
 abstract class CashSettlementScenario extends BillingScenarioTest {
     UUID receive(Tenant tenant,String actor,long amount) {
         Response response=post(tenant.path("/payments/cash-receptions"),actor,Map.of("idempotencyKey",UUID.randomUUID(),
-                "amountReceivedMinor",Long.toString(amount),"changeGivenMinor","0","cashReceivedConfirmed",true));
+                "amountReceivedMinor",Long.toString(amount),"changeGivenMinor","0","cashReceivedConfirmed",true,"remitter",REMITTER));
         assertThat(response.status()).as(response.raw()).isEqualTo(201);
         return response.id("id");
     }

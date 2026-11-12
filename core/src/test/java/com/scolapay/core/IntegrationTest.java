@@ -48,6 +48,7 @@ abstract class IntegrationTest {
     static final String PASSWORD = "une-phrase-de-passe-solide";
     static final String OPERATOR_CONTACT = "operateur@scolapay.test";
     static final String OPERATOR_PASSWORD = "phrase-de-passe-operateur";
+    static final Map<String,Object> REMITTER=com.scolapay.core.payments.internal.CashIdentityFixtures.REMITTER;
 
     private static final HttpClient HTTP = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
     private static final JsonMapper JSON = JsonMapper.builder().build();
@@ -59,6 +60,7 @@ abstract class IntegrationTest {
         registry.add("spring.datasource.password", TestDatabases.POSTGRES::getPassword);
         registry.add("spring.flyway.locations", () -> "classpath:db/migration,classpath:db/test-migration");
         registry.add("scolapay.portal.enabled", () -> "true");
+        registry.add("scolapay.payments.identity-encryption-key", () -> com.scolapay.core.payments.internal.CashIdentityFixtures.KEY);
         registry.add("scolapay.security.jwt-secret", () -> JWT_SECRET);
         registry.add("scolapay.bootstrap.operator-contact", () -> OPERATOR_CONTACT);
         registry.add("scolapay.bootstrap.operator-password", () -> OPERATOR_PASSWORD);
