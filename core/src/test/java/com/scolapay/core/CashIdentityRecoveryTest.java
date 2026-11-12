@@ -35,7 +35,7 @@ class CashIdentityRecoveryTest extends CashIdentityProbeScenario {
             table="cash_restitution_authorizations";action="payments.restitution.authorized";path=root+"/excess-requests/"+l.requestId()+"/"+operation;
         }
         String writePath=path,writer=actor,durableTable=table;Map<String,Object> body=command;var installed=history();
-        assertThat(installed).extracting(row->row.get("version")).containsExactly("1","2","3","4","5","6","7","7.1","7.2","8","9","10","11");
+        assertThat(installed).extracting(row->row.get("version")).containsExactly("1","2","3","4","5","6","7","7.1","7.2","8","9","10","11","12");
         assertThat(installed.subList(0,legacyHistory.size())).isEqualTo(legacyHistory);
         try(var executor=Executors.newVirtualThreadPerTaskExecutor()){
             var pending=executor.submit(()->first.api().post(writePath,writer,body));

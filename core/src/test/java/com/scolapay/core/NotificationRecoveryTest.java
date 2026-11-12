@@ -70,7 +70,7 @@ class NotificationRecoveryTest {
         Instance first = start("avant-listener", "--probe.drop-dispatch=true", originCapacity, originPeriod);
         List<Map<String, Object>> installed = migrationHistory();
         assertThat(installed).extracting(row -> row.get("version"))
-                .containsExactly("1", "2", "3", "4", "5", "6", "7", "7.1", "7.2", "8", "9", "10", "11");
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "7.1", "7.2", "8", "9", "10", "11", "12");
         assertThat(installed.get(6)).containsEntry("script", "V7__billing_parties.sql");
         assertThat(installed.get(7)).containsEntry("script", "V7_1__notification_delivery.sql");
         assertThat(installed.get(8)).containsEntry("script", "V7_2__auth_abuse_protection.sql");
@@ -78,6 +78,7 @@ class NotificationRecoveryTest {
         assertThat(installed.get(10)).containsEntry("script", "V9__single_obligation_cash_settlement.sql");
         assertThat(installed.get(11)).containsEntry("script", "V10__cash_excess_reservations.sql");
         assertThat(installed.get(12)).containsEntry("script", "V11__remitter_identity_and_restitution_authorization.sql");
+        assertThat(installed.get(13)).containsEntry("script", "V12__digital_payment_preparations.sql");
         assertThat(installed).allSatisfy(row -> {
             assertThat(row).containsEntry("success", true);
             assertThat(row.get("checksum")).isInstanceOf(Integer.class);

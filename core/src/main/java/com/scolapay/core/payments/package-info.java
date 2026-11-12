@@ -1,5 +1,5 @@
-/** Réceptions et affectations d'espèces confirmées, preuves internes et règlement via l'API de billing. */
+/** Préparations numériques et sources de paiement distinctes ; aucun statut externe ne crée seul un règlement. */
 @org.springframework.modulith.ApplicationModule(
-        displayName = "Encaissements",
+        displayName = "Paiements",
         allowedDependencies = {"shared", "audit", "establishment", "billing"})
 package com.scolapay.core.payments;

@@ -1,6 +1,7 @@
 package com.scolapay.core.billing.internal;
 
 import com.scolapay.core.billing.BillingSettlements;
+import com.scolapay.core.billing.BillingPaymentPreparation;
 import com.scolapay.core.establishment.EstablishmentAccess;
 import com.scolapay.core.establishment.Permission;
 import com.scolapay.core.schooling.AcademicCatalog;
@@ -16,7 +17,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-class BillingSettlementService implements BillingSettlements {
+class BillingSettlementService implements BillingSettlements, BillingPaymentPreparation {
     private final ObligationRepository obligations;
     private final EstablishmentAccess access;
     private final AcademicCatalog academics;
@@ -40,11 +41,25 @@ class BillingSettlementService implements BillingSettlements {
     @Transactional(propagation = Propagation.MANDATORY)
     public Position lock(UUID establishmentId, UUID obligationId) {
         access.require(establishmentId, Permission.CASH_ALLOCATE);
+        lockObligation(establishmentId,obligationId);
+        return position(establishmentId, obligationId);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Snapshot lockForPreparation(UUID establishmentId,UUID obligationId) {
+        access.require(establishmentId,Permission.DIGITAL_PAYMENT_PREPARE);
+        lockObligation(establishmentId,obligationId);
+        Position p=position(establishmentId,obligationId);
+        return new Snapshot(p.obligationId(),p.currency(),p.issuedMinor(),p.netBilledMinor(),p.settledMinor(),p.dueMinor(),
+                p.journalSize(),p.allocationAllowed(),p.blockedReason());
+    }
+
+    private void lockObligation(UUID establishmentId,UUID obligationId) {
         if (jdbc.sql("SELECT id FROM obligations WHERE establishment_id=:tenant AND id=:id FOR UPDATE")
                 .param("tenant", establishmentId).param("id", obligationId).query(UUID.class).optional().isEmpty()) {
             throw ApiException.notFound("OBLIGATION_NOT_FOUND", "Obligation introuvable.");
         }
-        return position(establishmentId, obligationId);
     }
 
     private Position position(UUID establishmentId, UUID obligationId) {
