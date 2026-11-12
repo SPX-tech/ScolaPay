@@ -213,14 +213,15 @@ class CashExcessReservationTest extends CashExcessScenario {
         assertThat(count("cash_excess_requests",t)).isZero();
     }
 
-    @Test void unLienFamilialNeDonneAucunDroitDeCaisseEtFamiliesResteFerme() {
+    @Test void memeAvecUnAccesAcademiqueFamilialUnLienNeDonneAucunDroitDeCaisse() {
         Tenant t=newTenant();UUID source=receive(t,t.adminToken(),20000),key=UUID.randomUUID();
         UUID id=request(t,source,key,15000,"Demande privée").id("id");String guardian=newGuardian(t,newStudent(t));
         assertThat(get(t.path("/payments/excess-requests/"+id),guardian).status()).isEqualTo(404);
         assertThat(get(t.path("/payments/excess-requests/by-key/"+key),guardian).status()).isEqualTo(404);
         assertThat(request(t,guardian,source,UUID.randomUUID(),1,"Parenté sans droit").status()).isEqualTo(404);
         assertThat(decision(t,guardian,id,UUID.randomUUID(),"approval",null).status()).isEqualTo(404);
-        assertThat(get("/api/v2/me/students",guardian).status()).isEqualTo(404);
+        // Le contexte partagé ouvre le portail pour exercer les droits ; les sondes de reprise vérifient sa fermeture par défaut.
+        assertThat(get("/api/v2/me/students",guardian).status()).isEqualTo(200);
     }
 
     @Test void uneCleDeDecisionNePeutChangerDAuteurDeDemandeOuDeContenu() {
