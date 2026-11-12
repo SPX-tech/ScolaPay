@@ -14,13 +14,16 @@ Référence stratégique et technique du projet, lisible sans l'historique des c
 | Mission 002 (fondation Java) | **Finalisée** : identités, établissements, inscriptions et liens familiaux dans `core/`. Testée en CI, jamais déployée |
 | Facturation, paiements, portail familles | **Facturation Java intégrée jusqu'au lot 6.** Aucun encaissement réel ni portail web construit |
 | Mission 003 (moteur de facturation) | **Techniquement clôturée pour le périmètre livré**, #29 fusionnée au commit `9f54029`. [Cadrage](missions/mission-003-billing-engine.md) et [bilan de validation](mission-003-validation.md) |
-| Mission 004 (encaissements espèces) | **Lot 1 terminé**, #30 intégrée ; réceptions #31 (`6a2fdaa`), premier règlement #32 (`e49d802`) et réservations #33 (`7b38965`) intégrés. **Lot 2 ouvert, identification et autorisation nominative en revue**, sans confirmation physique. A05 et deux modalités explicites validés ; autres modalités d'A06 à A08 ouvertes. Toutes les capacités restent désactivées par défaut. [Cadrage](missions/mission-004-cash-collections.md) |
+| Mission 004 (espèces, secondaire et facultatif) | **Compléments suspendus**, lot 2 non clôturé. Fondations #31 à #34 intégrées jusqu'à `0bb790f`, préservées et désactivées par défaut. Pas de restitution physique ; décisions signées d'A05 acquises et autres modalités d'A06 à A08 ouvertes. [Cadrage](missions/mission-004-cash-collections.md) |
+| Mission 005 (paiements scolaires numériques) | **Nouvelle priorité produit**, intégration de l'API Kadryza existante dans Core Java, **un compte marchand par établissement validé**. Première préparation locale d'intention en revue ; aucun appel externe, paiement confirmé ou règlement numérique. [Cadrage](missions/mission-005-digital-school-payments.md), [contrat étudié](mission-005-kadryza-contract-review.md) |
 | Android | **Hors de la feuille de route active**, code conservé comme référence ([0014](decisions/0014-android-hors-feuille-de-route.md)) |
 | Ordre de construction | Backend Java, puis interfaces web. L'APK viendra une fois les parcours métier et financiers stabilisés |
 
 ## Vision
 
-ScolaPay veut devenir une plateforme financière scolaire qui connecte les établissements, les parents et les étudiants, d'abord au Tchad (XAF, fuseau `Africa/Ndjamena`).
+ScolaPay vise prioritairement les établissements scolaires et familles du Tchad (XAF, `Africa/Ndjamena`). Le numérique est le cœur du produit : remplacer progressivement convocations papier, déplacements imposés et dépendance aux espèces par des avis de frais, rappels, paiements à distance et confirmations vérifiables. L'établissement doit distinguer dû, paiement confirmé, impayé, net marchand et versement effectivement reçu. Le cash est secondaire et facultatif.
+
+Kadryza Pay, API existante du propriétaire, assure les opérations de paiement et intégrations opérateurs. ScolaPay Core Java conserve les obligations, intentions, autorisations et écritures scolaires. Un compte marchand Kadryza par établissement est validé, sans configuration ou activation réelle. Aucun nouveau backend, microservice ou service Go ScolaPay n'est introduit par défaut.
 
 **Deux backends coexistent dans le dépôt.** `backend/` (NestJS) porte l'outil historique du personnel, centré sur l'encaissement cash, et sert désormais de référence. `core/` (Java) est le nouveau backend et concentre désormais tout l'effort : il modélise déjà les familles, mais aucune interface ne l'utilise encore. Aucun des deux n'est déployé.
 
@@ -58,14 +61,15 @@ ScolaPay veut devenir une plateforme financière scolaire qui connecte les étab
 | Outbox durable | Vérifié | Registre Spring Modulith, reprise après arrêt brutal et entre deux instances. **Utilisé par la facturation et la préparation des notifications** | `core/`, `OutboxReliabilityTest`, [0016](decisions/0016-outbox-durable.md) |
 | Contrôles de mise en service | Vérifié | Portail fermé par défaut, démarrage refusé si une condition manque. **Il ne peut pas être ouvert aujourd'hui** : règle du Tchad non confirmée, aucun canal SMS ; un e-mail seul ne suffit pas | `core/`, `GoLiveTest`, [0017](decisions/0017-controles-de-mise-en-service.md) |
 | Redevables, responsables, contributeurs | Vérifié, intégré dans `main`, portail fermé | Désignations explicites, vues typées, autorisations avant pagination, instantanés cohérents et confirmations NULL cohérentes. Corrections de nom/identifiant motivées et historisées ; compte et identité immuables | `BillingPartyTest`, `FamilyBillingViewTest`, `Lot6FinalizationRegressionTest`, `PartyCorrectionTest`, [0023](decisions/0023-personnes-liees-et-vues.md) |
-| Déclarations d'espèces | #31 intégrée, extension A05 en revue ; désactivées par défaut | Preuve physique déclarative et audit immuables. Une nouvelle réception exige désormais une identité privée liée ; les sources historiques restent relisibles et ne sont jamais réécrites | [Réceptions](payments-cash-receptions.md), [identification](payments-cash-identities.md), `CashReceptionTest`, `CashIdentityContractTest` |
+| Déclarations d'espèces | #31 et extension #34 intégrées, cash facultatif et désactivé par défaut | Preuve physique déclarative et audit immuables. Identité privée liée aux nouvelles réceptions ; sources historiques relisibles et jamais réécrites | [Réceptions](payments-cash-receptions.md), [identification](payments-cash-identities.md), `CashReceptionTest`, `CashIdentityContractTest` |
 | Règlement espèces d'une obligation | #32 intégrée au commit `e49d802`, désactivé par défaut | Port public `BillingSettlements`, transaction affectation-journal-preuve-audit, V9 additive, idempotence, couverture A02 et projections distinctes. Une source, son déclarant, une obligation d'année ouverte. Corrections non couvertes, remise physique d'excédents et rectification fermées | [Contrat et limites](payments-cash-settlements.md), `CashSettlementSqlTest`, `CashSettlementRecoveryTest` |
 | Réservations d'excédents jamais affectés | #33 intégrée au commit `7b38965`, désactivées par défaut | Budget historique commun aux affectations et réservations, seconde décision et audit V10. RESERVATION_ONLY_V1 reste un examen technique sans sortie ou remise physique ; aucune libération après approbation | [Contrat](payments-cash-excess.md), [0030](decisions/0030-reservations-excedents-especes.md), `CashExcessReservationTest`, `CashExcessSqlTest`, `CashExcessRecoveryTest` |
-| Identité et autorisation nominative | En revue, sans confirmation physique activable | Identité chiffrée à la réception sans compte imposé ; procédure signée et second examen des anciennes sources ; bénéficiaire limité au remettant vérifié, nouvelle autorisation NAMED_REMITTER_V1 distincte des anciennes décisions. Budget inchangé | [Contrat](payments-cash-identities.md), [0031](decisions/0031-identification-et-autorisation-de-restitution.md), `CashIdentitySqlTest`, `CashLegacyIdentityTest`, `CashIdentityRecoveryTest` |
-| Paiements numériques et comptabilité | Évolutions futures | Aucun code Java | [0006](decisions/0006-backend-java-spring-boot.md), [0008](decisions/0008-go-services-paiement.md) |
+| Identité et autorisation nominative cash | #34 intégrée au commit `0bb790f`, compléments suspendus | Identité chiffrée, procédure signée et second examen des anciennes sources ; NAMED_REMITTER_V1 distinct de RESERVATION_ONLY_V1, budget inchangé, aucune remise physique activable | [Contrat](payments-cash-identities.md), [0031](decisions/0031-identification-et-autorisation-de-restitution.md), `CashIdentitySqlTest`, `CashLegacyIdentityTest`, `CashIdentityRecoveryTest` |
+| Préparation numérique | Mission 005, première tranche en revue, désactivée par défaut | Intention locale pour une obligation en XAF, dû/version verrouillés, référence stable destinée à Kadryza, audit et idempotence. Aucun envoi, confirmation, règlement ou reçu définitif | [0032](decisions/0032-intentions-numeriques-et-integration-kadryza.md), `DigitalPaymentIntentTest`, `DigitalPaymentSqlTest`, `DigitalPaymentRecoveryTest` |
+| Comptabilité et versements numériques | Futurs lots, non construits | Aucun reçu numérique définitif ou preuve de versement à l'établissement ; frais et fonds disponibles distincts des intentions | [Mission 005](missions/mission-005-digital-school-payments.md) |
 | Portail web des familles | Prévu | L'API `/api/v2/me/students` existe mais reste fermée par défaut, aucune interface | [0007](decisions/0007-portail-familles-avant-apk.md) |
 | Application Android des familles | Hors feuille de route active | Rien. L'application `android/` sert le personnel | [0014](decisions/0014-android-hors-feuille-de-route.md) |
-| Services Go de paiement | Envisagé, sans échéance | Aucun code | [0008](decisions/0008-go-services-paiement.md) |
+| Services Go ScolaPay | Aucun chantier autorisé | Le Go de Kadryza reste chez le fournisseur ; Core Java intègre son API, sans réimplémenter les opérateurs | [0008](decisions/0008-go-services-paiement.md), [0032](decisions/0032-intentions-numeriques-et-integration-kadryza.md) |
 
 ### Code historique : `backend/`, `web/`, `android/`
 
@@ -126,7 +130,7 @@ Android Compose ┘            monolithe modulaire, Prisma 7
 | Montants | Entiers dans l'unité minimale ISO : francs entiers pour le XAF. Conversions de prestataire dans leurs connecteurs | [0012](decisions/0012-convention-monetaire.md) |
 | Web | Next.js/TypeScript conservé, écrans portés vers `/api/v2` au fil des domaines | [0011](decisions/0011-transition-depuis-nestjs.md) |
 | Familles | Véritable site web d'abord. L'APK vient dans une phase ultérieure | [0007](decisions/0007-portail-familles-avant-apk.md), [0014](decisions/0014-android-hors-feuille-de-route.md) |
-| Services financiers | Go envisagé, notamment pour les intégrations de prestataires, sans introduction immédiate | [0008](decisions/0008-go-services-paiement.md) |
+| Services financiers | Core Java intègre l'API Kadryza existante ; aucun nouveau backend, service Go ou microservice ScolaPay par défaut | [0008](decisions/0008-go-services-paiement.md), [0032](decisions/0032-intentions-numeriques-et-integration-kadryza.md) |
 
 **Règles :** NestJS n'est plus modifié, les sources de vérité financières ne sont jamais dupliquées, et facturer n'est pas encaisser : aucun paiement fictif ne rend une obligation réglée.
 
@@ -165,12 +169,14 @@ L'index complet est dans [`docs/decisions/`](decisions/README.md). À retenir :
 - **0024**, socle intégré par #27 : file chiffrée, remise des invitations et reprises externes bornées. Le principe des canaux Families explicitement autorisés est accepté. Sa mise en œuvre et ses tests sont différés avant toute ouverture, selon le modèle d'accès final.
 - **0025**, acceptée et intégrée par #28 : protection des routes publiques d'authentification par PostgreSQL, quotas bornés et politique explicite d'origine. Contention et collisions restent à mesurer avant montée en charge.
 - **0026 à 0028**, lot 1 terminé de Mission 004 : module d'encaissement distinct, restitution limitée et garanties avant tout règlement. A01 à A04 validés au lancement ; A05 et les précisions signées sont depuis validés explicitement en 0031. Les autres modalités d'A06 à A08 restent ouvertes.
-- **0030 et 0031** : réservations intégrées par #33, puis identification et nouvelle autorisation nominative en revue. Aucune confirmation physique activable, aucune approbation historique transformée ni libération automatique.
+- **0030 et 0031** : réservations #33 puis identification/autorisation nominative #34 intégrées. Compléments cash suspendus ; aucune confirmation physique, conversion automatique d'approbation ou libération de fonds.
+- **0032** : numérique prioritaire, intégration de Kadryza existant et compte marchand par établissement validés ; première intention locale sans règlement, architecture en revue. Droits Families, frais, issues incertaines et preuve de versement ne sont pas arbitrés par le code.
 
 ## Priorités actuelles
 
-1. **Mission 004, encaissements espèces** : lot 1 terminé, lot 2 ouvert. Après les réservations intégrées, revoir l'[identification et l'autorisation nominative](payments-cash-identities.md). La restitution effective reste à construire avec tentative durable, contrôle au guichet, justificatif signé et incidents. A05 est validé ; A06 à A08 restent ouverts pour leurs autres modalités. Pas de pilote avant le contrôle quotidien A04 et le secours A03 réalisés.
-2. **Mission 003 clôturée** : préserver les garanties et les limites du périmètre livré. Les futures interfaces Schools et Families restent à cadrer après les missions backend retenues.
+1. **Mission 005, numérique** : intégrer l'API Kadryza existante, en commençant par une intention scolaire locale sans argent confirmé. Avant une session externe : rattachement marchand propre à l'établissement, droits, frais et reprise sûre. Avant un règlement : preuve rapprochée, intégrité bilatérale, idempotence financière et règles de conflit du dû. Voir le [cadrage](missions/mission-005-digital-school-payments.md).
+2. **Communication et accès futur** : avis et rappels via notifications existantes à enrichir, mobile léger et reprise réseau. Aucun SMS ne prouve une identité ou un paiement ; Families reste fermé et sa politique de canaux et ses exigences juridiques restent à satisfaire.
+3. **Fondations préservées** : Mission 003 clôturée ; Mission 004 suspendue sans clôturer le lot 2 ou perdre ses garanties. A03/A04 restent nécessaires pour un futur pilote cash. Pas de frontend ou nouvelle tranche cash sans instruction.
 
 ## Risques connus
 
@@ -178,6 +184,8 @@ Dans `core/`, les limites connues sont listées dans [0010](decisions/0010-ident
 
 | Risque | Conséquence | Où |
 | --- | --- | --- |
+| Intention confondue avec paiement ou versement | Préparation locale uniquement ; frais, net marchand et versement ne sont pas des règlements scolaires. Aucun envoi ou confirmation activable dans cette tranche | [0032](decisions/0032-intentions-numeriques-et-integration-kadryza.md), [contrat de préparation](payments-digital-intents.md) |
+| Contrat et exploitation Kadryza à qualifier | Source versionnée étudiée, documentation parfois divergente, aucun état runtime ou test de confirmation sans fonds attesté. Rattachement marchand par établissement et reprise incertaine à vérifier avant session externe | [Revue contractuelle](mission-005-kadryza-contract-review.md) |
 | Remise externe non vérifiée | E-mail optionnel testé sur fournisseur local seulement, aucun SMS. Rebonds et réception en boîte non suivis ; configuration, domaine d'envoi et supervision restent nécessaires | [Guide des notifications](notifications.md), [0024](decisions/0024-notifications-et-remise-des-invitations.md) |
 | Réassociation des personnes financières | Le compte et le type sont immuables ; leur changement nécessiterait un parcours sensible distinct, jamais une correction de nom ou un doublon | [0023](decisions/0023-personnes-liees-et-vues.md#compte-associé-et-identité-financière) |
 | Règles juridiques non confirmées | L'âge légal enregistré pour le Tchad est provisoire. L'application refuse d'ouvrir le portail tant qu'il n'est pas confirmé | [0013](decisions/0013-majorite-et-autorisations-familiales.md#limites-et-conditions), [0017](decisions/0017-controles-de-mise-en-service.md) |
@@ -197,7 +205,7 @@ Dans le code historique :
 | --- | --- | --- |
 | Solde modifiable par `PATCH /students/:id` | Change la dette sans `Transaction` : seul l'audit la trace. `DEBT_ADJUSTMENT` et `REFUND` existent dans le schéma mais rien ne les produit | `students.service.ts` |
 | Rapports limités au cash | `MOBILE_PAYMENT` n'entre ni dans le rapport d'encaissements ni dans le tableau de bord. À trancher avant d'activer un prestataire | `reports.controller.ts`, `dashboard.service.ts` |
-| Contrat Kadryza inconnu | Webhook provisoire : montant et devise non rapprochés, états incertains après un délai réseau non définis | [D-004](architecture-scolapay-2.md#décision-004--prestataires-financiers-fermés-par-défaut) |
+| Ancien connecteur Kadryza impropre à l'intégration cible | Squelette NestJS conservé fermé. Mission 005 étudie l'API versionnée, sans réutiliser ce webhook provisoire comme preuve ou activer l'ancien chemin | [Revue contractuelle](mission-005-kadryza-contract-review.md) |
 | Unités monétaires | `Cents` affiché divisé par 100 pour XAF, sans exposant ISO. Tranché pour le nouveau backend, à ne jamais copier tel quel | [0012](decisions/0012-convention-monetaire.md) |
 | Isolation applicative seule | Pas de clé étrangère composite `(tenantId, id)`. Résolu dans `core/`, pas dans `backend/` | [D-002](architecture-scolapay-2.md#décision-002--isolation-explicite-par-établissement) |
 | Une seule instance d'API | Le garde du worker outbox est en mémoire : deux instances pourraient traiter le même événement | `outbox-worker.service.ts` |
@@ -224,20 +232,21 @@ La Mission 003 est techniquement clôturée dans `main` au commit `9f54029`. Ses
 
 La [portée des scénarios par lot](missions/mission-004-cash-collections.md#portée-des-scénarios-par-lot) exige le socle et les refus de sécurité dès le premier `SETTLEMENT`. Les preuves des parcours multi-obligations, multi-élèves et des rectifications ultérieures suivent l'introduction de ces capacités, sans différer leurs garanties ni accepter implicitement les recommandations métier.
 
-**Mission 004, lot 2 autorisé**
+**Mission 004, fondations intégrées, compléments suspendus**
 
-Le lot 1 est terminé par #30, les réceptions intégrées par #31 (`6a2fdaa`), les règlements par #32 (`e49d802`) et les réservations par #33 (`7b38965`). A05 est depuis validé : identifier le remettant sans compte imposé, vérifier le bénéficiaire à la remise, contrôler tout droit d'un tiers, demandeur et approbateur distincts sans troisième personne systématique. Les codes de statut ne tranchent toujours pas A08. Toutes les capacités financières restent désactivées pour usage réel.
+Le lot 1 est terminé par #30, les réceptions intégrées par #31 (`6a2fdaa`), les règlements par #32 (`e49d802`), les réservations par #33 (`7b38965`) et l'identification/autorisation nominative par #34 (`0bb790f`). A05 et les précisions signées restent validés ; les autres modalités d'A06 à A08 restent ouvertes. Le numérique est devenu prioritaire : aucun complément cash n'est entrepris sans nouvelle instruction et toutes ses capacités restent désactivées pour usage réel.
 
 Les décisions de portée `RESERVATION_ONLY_V1` demeurent des faits historiques immuables, sans autorisation physique. Le budget repose sur toutes les affectations historiques ; aucune libération après approbation ni expiration n'existe. La nouvelle tranche [0031](decisions/0031-identification-et-autorisation-de-restitution.md) exige une identité à la nouvelle réception et une déclaration signée examinée indépendamment pour les anciennes sources, puis prépare une nouvelle autorisation nominative distincte. Ces règles sont explicitement validées, comme le justificatif papier signé bénéficiaire/caissier à conserver par l'établissement.
 
 Cette tranche ne livre ni confirmation physique, ni preuve finale de remise, ni sortie monétaire ou résolution d'incident. Un contrôle final d'identité au guichet reste nécessaire. Le numérique signé, le contrôle des mandats et droits des tiers, les incidents et rectifications restent à cadrer ou réaliser. A06 à A08 sont ouverts pour leurs autres modalités. Le lot 2 reste ouvert, A03/A04 non réalisés et aucun pilote n'est prêt.
 
-**Ensuite, sans ordre arrêté**
+**Mission 005 et suites conditionnées**
 
 - Notifications : configurer et vérifier l'e-mail réel après revue, choisir un fournisseur SMS, raccorder la supervision et préciser la conservation. Le socle est construit, voir [le guide](notifications.md).
 - Portail web des familles ([0007](decisions/0007-portail-familles-avant-apk.md)), avec réinitialisation de mot de passe et renouvellement de session. Son ouverture réelle exige la confirmation juridique de [0013](decisions/0013-majorite-et-autorisations-familiales.md).
-- Portage de la caisse, des reçus et de la trésorerie vers `core/`.
-- Contrat d'un prestataire réel, puis besoins de services dédiés ([0008](decisions/0008-go-services-paiement.md)).
+- Intégration du contrat Kadryza déjà étudié : compte marchand par établissement validé, rattachements de test à qualifier, frais et droits Families à arbitrer ; aucun essai de confirmation sans argent réel présumé disponible. Voir [Mission 005](missions/mission-005-digital-school-payments.md).
+- Confirmation numérique et rapprochement des versements avec preuves, unicité financière et reprise ; aucune dette éteinte par la seule préparation ou notification.
+- Reprise cash, reçus et trésorerie seulement sur instruction distincte. Le besoin de tout nouveau service spécialisé reste à démontrer ; aucune duplication du moteur Kadryza.
 
 ## Vérifier le projet
 

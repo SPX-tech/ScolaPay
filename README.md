@@ -1,17 +1,17 @@
 # ScolaPay
 
-ScolaPay est une plateforme financière scolaire en construction. Ce dépôt contient le nouveau backend Java (`core/`) et l'application historique de gestion des paiements cash, conservée comme référence.
+ScolaPay est une plateforme financière scolaire en construction, destinée d'abord aux établissements et familles du Tchad. Le numérique est le cœur du produit : communiquer les frais, payer à distance et obtenir une confirmation vérifiable. La [Mission 005](docs/missions/mission-005-digital-school-payments.md) prépare l'intégration de l'API Kadryza existante avec le backend Java `core/`, qui conserve les obligations et la comptabilisation scolaires. Le cash reste secondaire et facultatif ; ses compléments sont suspendus sans dégrader les fondations livrées. Aucun fournisseur réel ou portail Families n'est activé.
 
 **Commencer par [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md)** : vision, état réel du projet, priorités, risques et prochaines étapes. Les décisions majeures sont dans [`docs/decisions/`](docs/decisions/README.md).
 
-Le projet est organise autour de trois parties:
+Le dépôt conserve plusieurs composants :
 
 - `core/`: nouveau backend Java et Spring Boot de ScolaPay 2.0, voir [`core/README.md`](core/README.md).
 - `backend/`: API REST NestJS, Prisma et PostgreSQL, conservée comme référence.
 - `web/`: dashboard admin Next.js.
 - `android/`: application mobile Android native en Kotlin et Jetpack Compose.
 
-La direction mobile du projet est Android-first. L'ancienne piste Flutter a ete retiree pour eviter de maintenir deux apps mobiles en parallele.
+Le backend Java précède les interfaces web Schools et Families, avec une cible mobile légère et adaptée aux connexions instables. Android reste hors de la feuille de route active ; son code historique est conservé comme référence.
 
 ## Stack
 
